@@ -89,12 +89,15 @@
 
             <!-- Level cleared -->
             <div class="card" id="screen-clear" data-screen="clear" hidden>
-              <h2 class="card__title">Level clear!</h2>
+              <h2 class="card__title" id="clear-title">Level clear!</h2>
               <p class="card__body">
                 Stage <strong id="clear-level">0</strong> sterilised.
                 Score <strong id="clear-score">0</strong>.
               </p>
-              <button class="button button--primary" data-next-level type="button">Next level</button>
+              <p class="card__best" id="clear-finale" hidden>Level 20 beaten - the bottle is clean!</p>
+              <button class="button button--primary" id="next-level" data-next-level type="button">
+                Next level
+              </button>
               <button class="button" data-quit type="button">Quit to title</button>
             </div>
 

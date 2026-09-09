@@ -25,7 +25,10 @@ const dom = {
   mute: el('mute'),
   pauseButton: el('pause-button'),
   touchpad: el('touchpad'),
+  clearTitle: el('clear-title'),
   clearLevel: el('clear-level'),
+  clearFinale: el('clear-finale'),
+  nextLevelButton: el('next-level'),
   clearScore: el('clear-score'),
   overSummary: el('over-summary'),
   overBest: el('over-best'),
@@ -139,6 +142,8 @@ function quitToTitle() {
 // ---- HUD ------------------------------------------------------------------
 
 function syncHud(force = false) {
+  // On the title screen the readouts describe the level being previewed.
+  const shown = game ?? (screen === 'title' ? titleBoardGame() : null);
   const score = game ? game.score : 0;
   if (score > settings.topScore) {
     settings.topScore = score;
@@ -148,9 +153,10 @@ function syncHud(force = false) {
   dom.topScore.textContent = settings.topScore.toLocaleString();
   dom.level.textContent = game ? game.level : settings.level;
   dom.speed.textContent = SPEEDS[game ? game.speedName : settings.speed].name;
-  dom.viruses.textContent = game ? game.virusesLeft : '-';
+  dom.viruses.textContent = shown ? shown.virusesLeft : '-';
   dom.seed.textContent = game ? game.seed : '-';
-  const ratio = game && game.startingViruses ? game.virusesLeft / game.startingViruses : 1;
+  const ratio =
+    shown && shown.startingViruses ? shown.virusesLeft / shown.startingViruses : 1;
   dom.virusBar.style.width = `${Math.round(ratio * 100)}%`;
   dom.chooseLevel.textContent = settings.level;
   if (force || game) drawPillPreview(dom.next, game ? game.nextColors : null);
@@ -190,13 +196,18 @@ function handleEvents() {
         audio.play('clear', event);
         renderer.addShake(2 + Math.min(6, event.viruses * 2 + event.combo));
         break;
-      case 'levelComplete':
+      case 'levelComplete': {
         audio.play('levelComplete');
         audio.stopMusic();
+        const finale = event.level >= MAX_LEVEL;
+        dom.clearTitle.textContent = finale ? 'Bottle empty!' : 'Level clear!';
         dom.clearLevel.textContent = event.level;
         dom.clearScore.textContent = game.score.toLocaleString();
+        dom.clearFinale.hidden = !finale;
+        dom.nextLevelButton.textContent = finale ? 'Play level 20 again' : 'Next level';
         showScreen('clear');
         break;
+      }
       case 'gameOver':
         audio.play('gameOver');
         audio.stopMusic();
@@ -398,12 +409,14 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 
-/** A quiet demo board so the bottle is not empty behind the title card. */
+/** The bottle behind the title card previews the level about to be played. */
 let demo = null;
+let demoLevel = -1;
 function titleBoardGame() {
-  if (!demo) {
-    demo = new Game({ level: 6, speed: 'LOW', seed: 20240501 });
+  if (!demo || demoLevel !== settings.level) {
+    demo = new Game({ level: settings.level, speed: 'LOW', seed: 20260501 + settings.level });
     demo.pill = null;
+    demoLevel = settings.level;
   }
   return demo;
 }

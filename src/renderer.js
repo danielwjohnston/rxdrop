@@ -1,4 +1,10 @@
-import { CLEAR_ANIMATION, LINK, VIRUS } from './constants.js';
+import {
+  CLEAR_ANIMATION,
+  LINK,
+  MUTATION_ANIMATION,
+  RESISTANCE_MAX,
+  VIRUS,
+} from './constants.js';
 import { pillCells } from './pill.js';
 import { PHASE } from './game.js';
 
@@ -83,6 +89,7 @@ export class Renderer {
     this.drawStack(game, layout, now);
     this.drawFallingPill(game, layout);
     this.drawClearing(game, layout);
+    this.drawMutations(game, layout, now);
     ctx.restore();
   }
 
@@ -155,7 +162,10 @@ export class Renderer {
       if (clearing.has(`${x},${y}`)) return;
       const px = layout.originX + x * layout.cell;
       const py = layout.originY + y * layout.cell;
-      if (c.type === VIRUS) this.drawVirus(px, py, layout.cell, c.color, now, x, y);
+      if (c.type === VIRUS) {
+        const resistance = (c.resistance ?? 0) / RESISTANCE_MAX;
+        this.drawVirus(px, py, layout.cell, c.color, now, x, y, resistance);
+      }
       else this.drawHalf(px, py, layout.cell, c.color, c.link);
     });
   }
@@ -219,6 +229,30 @@ export class Renderer {
         ctx.lineTo(cx + Math.cos(angle) * outer, cy + Math.sin(angle) * outer);
         ctx.stroke();
       }
+      ctx.restore();
+    }
+  }
+
+  /** A white flash over each virus that just changed colour. */
+  drawMutations(game, layout, now) {
+    if (!game.mutations || game.mutations.length === 0) return;
+    const t = Math.min(1, (game.phaseTimer ?? 0) / MUTATION_ANIMATION);
+    const { ctx } = this;
+    for (const { x, y } of game.mutations) {
+      const cx = layout.originX + (x + 0.5) * layout.cell;
+      const cy = layout.originY + (y + 0.5) * layout.cell;
+      ctx.save();
+      ctx.globalAlpha = (1 - t) * 0.9;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = Math.max(1.5, layout.cell * 0.08);
+      ctx.beginPath();
+      ctx.arc(cx, cy, layout.cell * (0.3 + t * 0.5), 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = (1 - t) * 0.35;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(cx, cy, layout.cell * 0.42 * (1 - t), 0, Math.PI * 2);
+      ctx.fill();
       ctx.restore();
     }
   }
@@ -289,11 +323,27 @@ export class Renderer {
     ctx.restore();
   }
 
-  /** A wobbling, blinking virus. */
-  drawVirus(px, py, cell, color, now, gx, gy) {
+  /**
+   * A wobbling, blinking virus. `resistance` (0..1) fades in a warning aura and
+   * speeds up the wobble, so a virus about to mutate looks agitated.
+   */
+  drawVirus(px, py, cell, color, now, gx, gy, resistance = 0) {
     const { ctx } = this;
     const tone = PALETTE[color];
-    const phase = now / 260 + (gx * 3 + gy * 5);
+    if (resistance > 0) {
+      const pulse = 0.5 + 0.5 * Math.sin(now / (240 - resistance * 140) + gx + gy);
+      ctx.save();
+      ctx.globalAlpha = 0.15 + resistance * 0.5 * pulse;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = Math.max(1, cell * 0.05);
+      ctx.setLineDash([cell * 0.12, cell * 0.1]);
+      ctx.lineDashOffset = now / 40;
+      ctx.beginPath();
+      ctx.arc(px + cell / 2, py + cell / 2, cell * 0.46, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+    const phase = now / (260 - resistance * 120) + (gx * 3 + gy * 5);
     const bob = Math.sin(phase) * cell * 0.035;
     const squash = 1 + Math.sin(phase * 2) * 0.04;
     const cx = px + cell / 2;

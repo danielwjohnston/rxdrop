@@ -216,6 +216,29 @@ describe('endings', () => {
     assert.ok(game.drainEvents === undefined || true);
   });
 
+  it('counts viruses per level and across the run separately', () => {
+    const game = newGame({ level: 0 });
+    game.board = new Board(8, 16);
+    game.board.set(0, 15, cell(2, VIRUS));
+    game.board.set(1, 15, cell(2));
+    game.board.set(2, 15, cell(2));
+    game.startingViruses = 1;
+    game.pill = { x: 3, y: 0, orientation: 0, colors: [2, 2] };
+    game.hardDrop();
+    game.runUntilStable();
+    assert.equal(game.virusesClearedThisLevel, 1);
+    assert.equal(game.totalVirusesCleared, 1);
+
+    game.advanceLevel();
+    assert.equal(game.virusesClearedThisLevel, 0, 'the level counter starts again');
+    assert.equal(game.totalVirusesCleared, 1, 'the run counter keeps going');
+    assert.equal(
+      game.virusesLeft + game.virusesClearedThisLevel,
+      game.startingViruses,
+      'the per-level counter is the one that balances',
+    );
+  });
+
   it('advances to the next level with a fresh board and the same score', () => {
     const game = newGame({ level: 2 });
     game.score = 5000;

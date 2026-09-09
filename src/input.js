@@ -23,9 +23,35 @@ const KEY_MAP = {
   KeyR: 'restart',
 };
 
+/**
+ * Versus splits the keyboard down the middle: player one on the left hand,
+ * player two on the arrows and the punctuation cluster.
+ */
+export const VERSUS_KEY_MAP = {
+  KeyQ: { player: 0, action: 'rotateCCW' },
+  KeyW: { player: 0, action: 'rotateCW' },
+  KeyA: { player: 0, action: 'left' },
+  KeyD: { player: 0, action: 'right' },
+  KeyS: { player: 0, action: 'softDrop' },
+  KeyE: { player: 0, action: 'hardDrop' },
+
+  ArrowLeft: { player: 1, action: 'left' },
+  ArrowRight: { player: 1, action: 'right' },
+  ArrowDown: { player: 1, action: 'softDrop' },
+  Comma: { player: 1, action: 'rotateCCW' },
+  Period: { player: 1, action: 'rotateCW' },
+  Slash: { player: 1, action: 'hardDrop' },
+
+  KeyP: { player: 0, action: 'pause' },
+  Escape: { player: 0, action: 'pause' },
+  Enter: { player: 0, action: 'confirm' },
+  KeyM: { player: 0, action: 'mute' },
+};
+
 /** Delayed auto-shift, so holding left or right slides the pill smoothly. */
 const DAS_DELAY = 170;
 const DAS_REPEAT = 45;
+const REPEATING = new Set(['left', 'right']);
 
 export class InputController {
   constructor({ onPress, onRelease }) {
@@ -34,22 +60,42 @@ export class InputController {
     this.held = new Map();
     this.gamepadState = new Map();
     this.listeners = [];
+    this.keyMap = KEY_MAP;
+    /** In versus each gamepad drives its own player. */
+    this.padsArePlayers = false;
+  }
+
+  /**
+   * Swaps the keyboard layout. Entries are either a plain action for player
+   * one, or { player, action } when the two players share the keyboard.
+   */
+  setKeyMap(map, { padsArePlayers = false } = {}) {
+    this.releaseAll();
+    this.keyMap = map;
+    this.padsArePlayers = padsArePlayers;
+  }
+
+  /** Resolves a key code to { player, action }, or null. */
+  binding(code) {
+    const entry = this.keyMap[code];
+    if (!entry) return null;
+    return typeof entry === 'string' ? { player: 0, action: entry } : entry;
   }
 
   attach(window_ = window) {
     this.window = window_;
     const onKeyDown = (event) => {
-      const action = KEY_MAP[event.code];
-      if (!action) return;
+      const bound = this.binding(event.code);
+      if (!bound) return;
       event.preventDefault();
       if (event.repeat) return;
-      this.press(action);
+      this.press(bound.action, bound.player);
     };
     const onKeyUp = (event) => {
-      const action = KEY_MAP[event.code];
-      if (!action) return;
+      const bound = this.binding(event.code);
+      if (!bound) return;
       event.preventDefault();
-      this.release(action);
+      this.release(bound.action, bound.player);
     };
     const onBlur = () => this.releaseAll();
 
@@ -71,12 +117,12 @@ export class InputController {
       const down = (event) => {
         event.preventDefault();
         button.classList.add('is-pressed');
-        this.press(action);
+        this.press(action, 0);
       };
       const up = (event) => {
         event.preventDefault();
         button.classList.remove('is-pressed');
-        this.release(action);
+        this.release(action, 0);
       };
       button.addEventListener('pointerdown', down);
       button.addEventListener('pointerup', up);
@@ -147,41 +193,42 @@ export class InputController {
     );
   }
 
-  press(action) {
-    if (this.held.has(action)) return;
-    this.held.set(action, { timer: 0, repeating: false });
-    this.onPress?.(action);
+  press(action, player = 0) {
+    const key = `${player}:${action}`;
+    if (this.held.has(key)) return;
+    this.held.set(key, { action, player, timer: 0, repeating: false });
+    this.onPress?.(action, { player });
   }
 
-  release(action) {
-    if (!this.held.delete(action)) return;
-    this.onRelease?.(action);
+  release(action, player = 0) {
+    const key = `${player}:${action}`;
+    if (!this.held.delete(key)) return;
+    this.onRelease?.(action, { player });
   }
 
-  tap(action) {
-    this.onPress?.(action);
-    this.onRelease?.(action);
+  tap(action, player = 0) {
+    this.onPress?.(action, { player });
+    this.onRelease?.(action, { player });
   }
 
   releaseAll() {
-    for (const action of [...this.held.keys()]) this.release(action);
+    for (const { action, player } of [...this.held.values()]) this.release(action, player);
   }
 
-  isHeld(action) {
-    return this.held.has(action);
+  isHeld(action, player = 0) {
+    return this.held.has(`${player}:${action}`);
   }
 
   /** Drives auto-repeat for the horizontal moves and polls any gamepad. */
   update(dt) {
-    for (const action of ['left', 'right']) {
-      const state = this.held.get(action);
-      if (!state) continue;
+    for (const state of this.held.values()) {
+      if (!REPEATING.has(state.action)) continue;
       state.timer += dt;
       const threshold = state.repeating ? DAS_REPEAT : DAS_DELAY;
       while (state.timer >= threshold) {
         state.timer -= threshold;
         state.repeating = true;
-        this.onPress?.(action, { repeat: true });
+        this.onPress?.(state.action, { player: state.player, repeat: true });
       }
     }
     this.pollGamepad();
@@ -205,11 +252,12 @@ export class InputController {
         // rather than a face button that is easy to catch mid-game.
         restart: pad.buttons[8]?.pressed,
       };
+      const player = this.padsArePlayers ? Math.min(pad.index, 1) : 0;
       for (const [action, pressed] of Object.entries(buttons)) {
         const key = `${pad.index}:${action}`;
         const was = this.gamepadState.get(key) ?? false;
-        if (pressed && !was) this.press(action);
-        else if (!pressed && was) this.release(action);
+        if (pressed && !was) this.press(action, player);
+        else if (!pressed && was) this.release(action, player);
         this.gamepadState.set(key, pressed);
       }
     }

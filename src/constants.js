@@ -57,3 +57,19 @@ export const CLEAR_ANIMATION = 320;
 
 /** Milliseconds between gravity steps while the stack settles after a clear. */
 export const SETTLE_INTERVAL = 70;
+
+/**
+ * Antibiotic resistance. Viruses that survive build resistance every
+ * RESISTANCE_INTERVAL capsules, and mutate to another colour on reaching
+ * RESISTANCE_MAX - so a setup you leave too long stops being a setup.
+ */
+export const RESISTANCE_INTERVAL = 8;
+export const RESISTANCE_MAX = 3;
+
+/** Milliseconds a mutation flashes before the new colour takes over. */
+export const MUTATION_ANIMATION = 420;
+
+/** Versus: how much garbage a clear sends, and the most one clear can send. */
+export const ATTACK_PER_EXTRA_CELL = 1;
+export const ATTACK_PER_COMBO = 2;
+export const ATTACK_CAP = 6;

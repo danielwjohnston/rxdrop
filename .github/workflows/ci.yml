@@ -20,15 +20,17 @@ jobs:
           node-version: ${{ matrix.node }}
       - run: npm test
 
-  browser:
-    name: Browser smoke test
+  gauntlet:
+    name: UltraGauntlet
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22.x'
-      # Playwright is only needed for this check, so it is not a dependency.
+      # Playwright is only needed for the browser stage, so it is not a
+      # dependency of the game itself.
       - run: npm install --no-save playwright@1.56.1
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:browser
+      # Nine stages, one gate: see docs/ultragauntlet.md.
+      - run: npm run gauntlet

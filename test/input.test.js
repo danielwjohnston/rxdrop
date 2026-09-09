@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { InputController, KEY_MAP } from '../src/input.js';
+import { InputController, KEY_MAP, VERSUS_KEY_MAP } from '../src/input.js';
 
 /** Minimal stand-in for `window`, so the controller can run under node. */
 function fakeWindow(pads = []) {
@@ -187,6 +187,90 @@ describe('gamepad', () => {
     one.releaseAll();
     controller.update(16);
     assert.deepEqual(released, ['left']);
+  });
+});
+
+describe('versus keyboard', () => {
+  const versusHarness = (pads = []) => {
+    const events = [];
+    const controller = new InputController({
+      onPress: (action, meta) => events.push(`down ${meta.player}:${action}`),
+      onRelease: (action, meta) => events.push(`up ${meta.player}:${action}`),
+    });
+    const window_ = fakeWindow(pads);
+    controller.attach(window_);
+    controller.setKeyMap(VERSUS_KEY_MAP, { padsArePlayers: true });
+    return { controller, window: window_, events };
+  };
+
+  it('splits the keyboard between the two players', () => {
+    const { window: w, events } = versusHarness();
+    for (const code of ['KeyA', 'KeyD', 'KeyW', 'KeyE', 'ArrowLeft', 'Period', 'Slash']) {
+      w.fire('keydown', { code });
+    }
+    assert.deepEqual(events, [
+      'down 0:left',
+      'down 0:right',
+      'down 0:rotateCW',
+      'down 0:hardDrop',
+      'down 1:left',
+      'down 1:rotateCW',
+      'down 1:hardDrop',
+    ]);
+  });
+
+  it('lets both players hold a direction at once', () => {
+    const { controller, window: w, events } = versusHarness();
+    w.fire('keydown', { code: 'KeyA' });
+    w.fire('keydown', { code: 'ArrowRight' });
+    assert.equal(controller.isHeld('left', 0), true);
+    assert.equal(controller.isHeld('right', 1), true);
+    assert.equal(controller.isHeld('left', 1), false);
+
+    events.length = 0;
+    controller.update(200);
+    assert.deepEqual(events.sort(), ['down 0:left', 'down 1:right'], 'each repeats for its own player');
+
+    w.fire('keyup', { code: 'KeyA' });
+    assert.equal(controller.isHeld('left', 0), false);
+    assert.equal(controller.isHeld('right', 1), true, 'one release must not drop the other');
+  });
+
+  it('keeps pause and mute shared', () => {
+    const { window: w, events } = versusHarness();
+    w.fire('keydown', { code: 'KeyP' });
+    w.fire('keydown', { code: 'KeyM' });
+    assert.deepEqual(events, ['down 0:pause', 'down 0:mute']);
+  });
+
+  it('gives each gamepad its own player', () => {
+    const one = fakePad();
+    const two = fakePad();
+    two.index = 1;
+    const { controller, events } = versusHarness([one, two]);
+    one.hold(14);
+    two.hold(15);
+    controller.update(16);
+    assert.deepEqual(events.sort(), ['down 0:left', 'down 1:right']);
+  });
+
+  it('sends every pad to player one outside versus', () => {
+    const pad = fakePad();
+    pad.index = 1;
+    const { controller, pressed } = harness([pad]);
+    pad.hold(14);
+    controller.update(16);
+    assert.deepEqual(pressed, ['left'], 'solo ignores which pad it came from');
+  });
+
+  it('drops held keys when the layout changes mid-game', () => {
+    const { controller, window: w, events } = versusHarness();
+    w.fire('keydown', { code: 'KeyA' });
+    events.length = 0;
+    controller.setKeyMap(KEY_MAP);
+    assert.deepEqual(events, ['up 0:left']);
+    w.fire('keydown', { code: 'KeyA' });
+    assert.deepEqual(events, ['up 0:left', 'down 0:left'], 'the solo map takes over');
   });
 });
 

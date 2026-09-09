@@ -3,11 +3,16 @@
 A Dr. Mario style falling-capsule puzzler that runs in the browser. Match four
 of a colour to wipe out the viruses, and try not to fill the bottle.
 
-No frameworks, no build step, no asset files: every pill, virus and sound
-effect is drawn or synthesised at runtime, and the whole game is a few hundred
-lines of plain ES modules.
+No frameworks and no build step: every pill, virus and sound effect is drawn or
+synthesised at runtime. It installs to a home screen, plays with the network
+off, has a daily challenge and local two-player versus, and adds one mechanic
+the genre has not had before - **antibiotic resistance**.
 
 ![RxDrop in play](assets/screenshot.png)
+
+Local versus, both bottles dealt the same layout and the same capsules:
+
+![Two-player versus](assets/versus.png)
 
 ## Play
 
@@ -29,6 +34,48 @@ A link can set up a specific game, which is handy for sharing a layout:
 http://localhost:8080/?level=12&speed=HIGH&seed=8675309
 ```
 
+## Modes
+
+**Solo** — the classic ladder. Pick a level from 0 to 20 and a speed, clear
+every virus, move on to the next level.
+
+**Daily** — one bottle a day, the same for everyone, derived from the UTC date
+alone. No server and no accounts: your device computes the same seed as
+everyone else's. Finishing gives you a spoiler-free result line to share, and
+your best attempt of the day is kept.
+
+**Versus** — two players on one keyboard (or a gamepad each). Both bottles get
+the same layout and the same capsules, so it is a contest of play rather than
+luck. Clear more than the minimum four, or set off a cascade, and the surplus
+falls into your opponent's bottle as loose garbage halves. You win by clearing
+your viruses first or by outlasting them.
+
+## Antibiotic resistance
+
+The optional twist, and the part that is new to this genre. Turn **Resistance**
+on and the viruses stop being patient furniture:
+
+- every virus carries a hidden resistance counter, seeded unevenly so they do
+  not all ripen at once
+- every eight capsules, all of them age by one
+- a virus that reaches the limit **mutates to a different colour** and resets
+
+A virus about to turn wears a pulsing dashed ring, and the panel shows how close
+the board is to its next mutation. The setup you have been carefully building
+around a red virus is worth nothing the moment it turns blue, so the mechanic
+punishes hoarding and rewards clearing while you can. A mutation never completes
+a run on its own: it is always a threat, never a free clear.
+
+It fits the theme exactly - leave an infection half-treated and it develops
+resistance.
+
+## Offline
+
+RxDrop is a progressive web app. Open it once and a service worker precaches
+every file; after that it runs with no network at all, and browsers will offer
+to install it to your home screen or desktop. The daily challenge works offline
+too, since the puzzle comes from the date rather than a server.
+
 ## Controls
 
 | Action | Keyboard | Touch | Gamepad |
@@ -43,6 +90,16 @@ http://localhost:8080/?level=12&speed=HIGH&seed=8675309
 
 Holding left or right auto-shifts after a short delay, so you can slide a
 capsule across the bottle in one press.
+
+In **versus** the keyboard splits in two, and a gamepad each works as well
+(pad one drives player one):
+
+| Action | Player 1 | Player 2 |
+| --- | --- | --- |
+| Move | <kbd>A</kbd> <kbd>D</kbd> | <kbd>&larr;</kbd> <kbd>&rarr;</kbd> |
+| Rotate | <kbd>Q</kbd> / <kbd>W</kbd> | <kbd>,</kbd> / <kbd>.</kbd> |
+| Soft drop | <kbd>S</kbd> | <kbd>&darr;</kbd> |
+| Hard drop | <kbd>E</kbd> | <kbd>/</kbd> |
 
 Gamepads use the standard layout, so the face buttons are A/B on an Xbox pad
 and cross/circle on a PlayStation one. Browsers only hand a page a gamepad
@@ -70,13 +127,23 @@ throws the current run away.
 ## Development
 
 ```sh
-npm test           # 83 unit tests, no dependencies, ~0.3s
+npm test           # 124 unit tests, no dependencies, well under a second
 npm run test:watch # re-run on change
 
 # End-to-end checks in a real browser (Playwright is not a dependency):
 npm i --no-save playwright && npx playwright install chromium
-npm run test:browser  # 16 checks: menus, controls, clearing, endings, mobile
+npm run test:browser  # 20 checks: menus, controls, versus, daily, offline, mobile
+
+npm run gauntlet   # the full protocol below: every stage, one gate
 ```
+
+### The UltraGauntlet
+
+`npm run gauntlet` runs nine adversarial stages in series - determinism, hostile
+clocks, boundaries, fuzzing, the resistance mechanic, versus garbage
+conservation, a frame-budget check, and the browser suite - and fails the run if
+any stage fails. [docs/ultragauntlet.md](docs/ultragauntlet.md) explains where
+it comes from, what each stage attacks, and the defects it has already caught.
 
 ### Layout
 
@@ -87,13 +154,19 @@ src/rng.js            seedable PRNG - one seed reproduces a whole game
 src/board.js          the grid: matching, gravity, cascades, virus layouts
 src/pill.js           capsule geometry, rotation with wall kicks, locking
 src/game.js           the state machine: lock, clear, cascade, spawn, score
+src/versus.js         two games, garbage routed between them
+src/daily.js          the date-seeded daily challenge
 src/renderer.js       canvas drawing
 src/audio.js          Web Audio synthesis: two chiptune loops and the effects
 src/input.js          keyboard, touch, swipe and gamepad
 src/main.js           screens, HUD, persistence and the animation loop
 test/                 unit tests for the rules, plus randomised soak runs
+sw.js                 service worker: precache everything, play offline
+manifest.webmanifest  installable app metadata
 tools/serve.js        the static server behind `npm start`
-tools/browser-check.mjs  end-to-end smoke test
+tools/browser-check.mjs  end-to-end checks in a real browser
+tools/gauntlet.mjs    the UltraGauntlet: nine stages, one gate
+docs/ultragauntlet.md what the gauntlet is and why each stage exists
 ```
 
 The rules live entirely in `board.js`, `pill.js` and `game.js`, which never

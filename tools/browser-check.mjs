@@ -58,7 +58,16 @@ process.on('exit', () => server.kill());
 
 await waitForServer();
 
-const browser = await chromium.launch();
+// Gamepad polling and the phase timers live in requestAnimationFrame, which
+// Chromium throttles in pages it considers backgrounded. These flags keep every
+// page running at full speed so the checks measure the game, not the harness.
+const browser = await chromium.launch({
+  args: [
+    '--disable-background-timer-throttling',
+    '--disable-backgrounding-occluded-windows',
+    '--disable-renderer-backgrounding',
+  ],
+});
 const checks = [];
 const errors = [];
 
@@ -79,7 +88,8 @@ try {
     await page.click('[data-adjust="level"][data-delta="1"]');
     await page.click('[data-speed="MEDIUM"]');
     assert.equal((await page.textContent('#choose-level')).trim(), '1');
-    assert.equal((await page.textContent('.segmented button.is-selected')).trim(), 'Med');
+    assert.equal((await page.textContent('[data-speed].is-selected')).trim(), 'Med');
+    assert.equal((await page.textContent('[data-mode].is-selected')).trim(), 'Solo');
   });
 
   await check('starting deals a pill and the level\'s viruses', async () => {
@@ -190,11 +200,14 @@ try {
     assert.equal(await page.isVisible('#screen-title'), true);
   });
 
+  await page.close();
+
   const mobile = await browser.newPage({
     viewport: { width: 390, height: 780 },
     isMobile: true,
     hasTouch: true,
   });
+  await mobile.bringToFront();
   mobile.on('pageerror', (error) => errors.push(`mobile pageerror: ${error.message}`));
 
   await check('a link can set up a specific game', async () => {
@@ -255,6 +268,7 @@ try {
 
   await check('a gamepad drives the game', async () => {
     const pad = await browser.newPage({ viewport: { width: 900, height: 800 } });
+    await pad.bringToFront();
     const padErrors = [];
     pad.on('pageerror', (error) => padErrors.push(error.message));
     // A synthetic standard-layout pad the checks can drive.
@@ -270,13 +284,24 @@ try {
       window.__pad = gamepad;
       navigator.getGamepads = () => [gamepad, null, null, null];
     });
-    const tap = (index, ms = 90) =>
-      pad.evaluate(async ([i, hold]) => {
-        window.__pad.buttons[i] = { pressed: true, value: 1 };
-        await new Promise((r) => setTimeout(r, hold));
-        window.__pad.buttons[i] = { pressed: false, value: 0 };
-        await new Promise((r) => setTimeout(r, 80));
-      }, [index, ms]);
+    const holdFrames = (page_, body) =>
+      page_.evaluate(async (args) => {
+        const waitFrames = (n) =>
+          new Promise((resolve) => {
+            let seen = 0;
+            const step = () => (++seen >= n ? resolve() : requestAnimationFrame(step));
+            requestAnimationFrame(step);
+          });
+        const { index, frames } = args;
+        if (index !== undefined) window.__pad.buttons[index] = { pressed: true, value: 1 };
+        if (args.axis !== undefined) window.__pad.axes[args.axis] = args.value;
+        await waitFrames(frames);
+        if (index !== undefined) window.__pad.buttons[index] = { pressed: false, value: 0 };
+        if (args.axis !== undefined) window.__pad.axes[args.axis] = 0;
+        await waitFrames(3);
+      }, body);
+
+    const tap = (index, frames = 5) => holdFrames(pad, { index, frames });
 
     await pad.goto(`${BASE}/?level=2&speed=LOW&seed=4242`, { waitUntil: 'networkidle' });
     await pad.click('[data-start]');
@@ -294,16 +319,18 @@ try {
       start.orientation,
     );
 
-    // Left stick held right auto-shifts more than one column.
-    const beforeShift = await pad.evaluate(() => window.rxdrop.game.pill.x);
-    await pad.evaluate(async () => {
-      window.__pad.axes[0] = 1;
-      await new Promise((r) => setTimeout(r, 550));
-      window.__pad.axes[0] = 0;
+    // Left stick held right auto-shifts more than one column. Park the capsule
+    // at the left wall first so there is always room to travel.
+    const beforeShift = await pad.evaluate(() => {
+      window.rxdrop.game.pill.x = 0;
+      return window.rxdrop.game.pill.x;
     });
+    // Long enough for the auto-shift delay plus several repeats.
+    await holdFrames(pad, { axis: 0, value: 1, frames: 45 });
+    const afterShift = await pad.evaluate(() => window.rxdrop.game.pill.x);
     assert.ok(
-      (await pad.evaluate(() => window.rxdrop.game.pill.x)) > beforeShift + 1,
-      'the stick should auto-shift',
+      afterShift >= beforeShift + 2,
+      `the stick should auto-shift (${beforeShift} -> ${afterShift})`,
     );
 
     const beforeDrop = await pad.evaluate(() => window.rxdrop.game.pillsPlaced);
@@ -320,17 +347,207 @@ try {
     assert.equal(await pad.evaluate(() => window.rxdrop.game.pillsPlaced), 0);
     assert.equal(await pad.evaluate(() => window.rxdrop.screen), 'playing');
 
-    await tap(9, 120); // Start pauses, and again to resume
+    await tap(9, 8); // Start pauses, and again to resume
     assert.equal(await pad.isVisible('#screen-pause'), true);
-    await tap(9, 120);
+    await tap(9, 8);
     assert.equal(await pad.evaluate(() => window.rxdrop.screen), 'playing');
 
     assert.deepEqual(padErrors, []);
     await pad.close();
   });
 
+  await mobile.close();
+
+  await check('resistance mode mutates the board and recovers', async () => {
+    const solo = await browser.newPage({ viewport: { width: 1000, height: 840 } });
+    await solo.bringToFront();
+    const soloErrors = [];
+    solo.on('pageerror', (error) => soloErrors.push(error.message));
+    await solo.goto(`${BASE}/?level=2&seed=99&resistance=1`, { waitUntil: 'networkidle' });
+    await solo.click('[data-mode="solo"]');
+    await solo.click('[data-start]');
+    await solo.waitForTimeout(300);
+
+    assert.equal(await solo.evaluate(() => window.rxdrop.game.resistance), true);
+    assert.equal(await solo.isVisible('#resistance-meter'), true);
+
+    // Ripen every virus and let the next resolution fire the mutation.
+    await solo.evaluate(() => {
+      const g = window.rxdrop.game;
+      g.pillsPlaced = 8;
+      g.resistanceTickedAt = null;
+      g.board.forEachCell((c) => {
+        if (c.type === 'virus') c.resistance = window.rxdrop.constants.RESISTANCE_MAX - 1;
+      });
+      g.finishResolution();
+    });
+    assert.equal(await solo.evaluate(() => window.rxdrop.game.phase), 'mutating');
+    await solo.waitForTimeout(700);
+    assert.equal(await solo.evaluate(() => window.rxdrop.game.phase), 'falling');
+    assert.equal(
+      await solo.evaluate(() => window.rxdrop.game.board.findMatches().size),
+      0,
+      'a mutation must not leave a free clear',
+    );
+    assert.deepEqual(soloErrors, []);
+    await solo.close();
+  });
+
+  await check('the daily is fixed by the date and reports a result', async () => {
+    const day = await browser.newPage({ viewport: { width: 1000, height: 840 } });
+    await day.bringToFront();
+    await day.goto(`${BASE}/?daily=2026-09-09`, { waitUntil: 'networkidle' });
+    await day.waitForTimeout(200);
+    assert.equal(await day.evaluate(() => window.rxdrop.mode), 'daily');
+    assert.equal(await day.isVisible('#daily-note'), true);
+    assert.equal(
+      await day.evaluate(() => document.getElementById('tunables').hidden),
+      true,
+      'the daily sets its own level and speed',
+    );
+
+    await day.click('[data-start]');
+    await day.waitForTimeout(300);
+    const setup = await day.evaluate(() => ({
+      level: window.rxdrop.game.level,
+      seed: window.rxdrop.game.seed,
+    }));
+
+    // End the run and check the result card and share line.
+    await day.evaluate(() => {
+      const g = window.rxdrop.game;
+      g.board.set(3, 0, { color: 0, type: 'pill', link: null });
+      g.spawnPill();
+    });
+    await day.waitForTimeout(400);
+    assert.equal(await day.isVisible('#screen-daily'), true);
+    const share = await day.textContent('#daily-share');
+    assert.match(share, /RxDrop Daily 2026-09-09/);
+    assert.ok(!share.includes(String(setup.seed)), 'the share line must not leak the seed');
+
+    // The same day reopened is the same puzzle.
+    await day.goto(`${BASE}/?daily=2026-09-09`, { waitUntil: 'networkidle' });
+    await day.click('[data-start]');
+    await day.waitForTimeout(300);
+    assert.deepEqual(
+      await day.evaluate(() => ({
+        level: window.rxdrop.game.level,
+        seed: window.rxdrop.game.seed,
+      })),
+      setup,
+    );
+    await day.close();
+  });
+
+  await check('versus runs two bottles on one keyboard', async () => {
+    const vs = await browser.newPage({ viewport: { width: 1000, height: 840 } });
+    await vs.bringToFront();
+    const vsErrors = [];
+    vs.on('pageerror', (error) => vsErrors.push(error.message));
+    await vs.goto(`${BASE}/?mode=versus`, { waitUntil: 'networkidle' });
+    await vs.click('[data-start]');
+    await vs.waitForTimeout(400);
+
+    assert.equal(await vs.evaluate(() => window.rxdrop.match.players.length), 2);
+    assert.equal(await vs.isVisible('#playfield-2'), true);
+    assert.equal(
+      await vs.evaluate(
+        () =>
+          window.rxdrop.match.players[0].board.toStrings().join('') ===
+          window.rxdrop.match.players[1].board.toStrings().join(''),
+      ),
+      true,
+      'both players get the same bottle',
+    );
+
+    // Both canvases must come out the same size, or one player is at a disadvantage.
+    const sizes = await vs.evaluate(() =>
+      ['board', 'board-2'].map((id) => {
+        const { width, height } = document.getElementById(id).getBoundingClientRect();
+        return { width: Math.round(width), height: Math.round(height) };
+      }),
+    );
+    assert.deepEqual(sizes[0], sizes[1], `bottles differ in size: ${JSON.stringify(sizes)}`);
+
+    const before = await vs.evaluate(() => window.rxdrop.match.players.map((p) => p.pill.x));
+    await vs.keyboard.press('KeyA');
+    await vs.keyboard.press('ArrowRight');
+    await vs.waitForTimeout(120);
+    const after = await vs.evaluate(() => window.rxdrop.match.players.map((p) => p.pill.x));
+    assert.equal(after[0], before[0] - 1, 'A moves player one');
+    assert.equal(after[1], before[1] + 1, 'the arrows move player two');
+
+    await vs.keyboard.press('KeyE');
+    await vs.keyboard.press('Slash');
+    await vs.waitForTimeout(300);
+    assert.deepEqual(
+      await vs.evaluate(() => window.rxdrop.match.players.map((p) => p.pillsPlaced)),
+      [1, 1],
+      'each player has their own hard drop',
+    );
+
+    // Garbage lands on the opponent, and the winner card appears.
+    await vs.evaluate(() => {
+      window.rxdrop.match.players[0].phase = 'lost';
+    });
+    await vs.waitForTimeout(300);
+    assert.equal(await vs.isVisible('#screen-versus'), true);
+    assert.match(await vs.textContent('#versus-title'), /Player 2 wins/);
+    assert.deepEqual(vsErrors, []);
+    await vs.close();
+  });
+
+  await check('it installs and plays with the network off', async () => {
+    const context = await browser.newContext({ viewport: { width: 900, height: 820 } });
+    const offline = await context.newPage();
+    await offline.bringToFront();
+    const offlineErrors = [];
+    offline.on('pageerror', (error) => offlineErrors.push(error.message));
+
+    await offline.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+    await offline.evaluate(() => navigator.serviceWorker.ready);
+    // Poll until precaching settles: a fixed sleep is load-dependent, and a
+    // busy machine turns it into a phantom failure.
+    const cached = await offline.evaluate(async () => {
+      const countFiles = async () => {
+        const names = await caches.keys();
+        if (names.length === 0) return 0;
+        const cache = await caches.open(names[0]);
+        return (await cache.keys()).length;
+      };
+      for (let attempt = 0; attempt < 60; attempt += 1) {
+        const files = await countFiles();
+        if (files >= 15) return files;
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      return countFiles();
+    });
+    assert.ok(cached >= 15, `only ${cached} files were precached`);
+
+    await context.setOffline(true);
+    await offline.reload({ waitUntil: 'domcontentloaded' });
+    await offline.waitForTimeout(900);
+    assert.equal(await offline.evaluate(() => navigator.onLine), false);
+    assert.equal(await offline.evaluate(() => Boolean(window.rxdrop)), true, 'the game booted offline');
+
+    await offline.click('[data-start]');
+    await offline.waitForTimeout(250);
+    for (let i = 0; i < 3; i += 1) {
+      await offline.keyboard.press('ArrowLeft');
+      await offline.keyboard.press('Space');
+      await offline.waitForTimeout(160);
+    }
+    assert.ok(
+      (await offline.evaluate(() => window.rxdrop.game.pillsPlaced)) >= 3,
+      'it should be playable with no network',
+    );
+    assert.deepEqual(offlineErrors, []);
+    await context.close();
+  });
+
   await check('it still plays without Web Audio or localStorage', async () => {
     const limited = await browser.newPage({ viewport: { width: 900, height: 800 } });
+    await limited.bringToFront();
     const limitedErrors = [];
     limited.on('pageerror', (error) => limitedErrors.push(error.message));
     limited.on('console', (message) => {

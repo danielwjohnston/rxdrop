@@ -6,6 +6,7 @@ import {
   MATCH_LENGTH,
   OPPOSITE_LINK,
   PILL,
+  RESISTANCE_MAX,
   VIRUS,
 } from './constants.js';
 
@@ -15,6 +16,11 @@ import {
  */
 export function cell(color, type = PILL, link = null) {
   return { color, type, link };
+}
+
+/** A virus, optionally already part-way to mutating. */
+export function virus(color, resistance = 0) {
+  return { color, type: VIRUS, link: null, resistance };
 }
 
 /** The playfield: a flat grid of cells (or null) plus the rules that act on it. */
@@ -217,6 +223,46 @@ export class Board {
     return stages;
   }
 
+  /**
+   * Ages every virus by one step of resistance and mutates the ones that have
+   * reached the limit. A mutation never completes a run on its own - the
+   * threat is that your setup no longer matches, not a free clear.
+   * Returns the cells that changed.
+   */
+  mutateViruses(rng, limit) {
+    const mutated = [];
+    this.forEachCell((c, x, y) => {
+      if (c.type !== VIRUS) return;
+      c.resistance = (c.resistance ?? 0) + 1;
+      if (c.resistance < limit) return;
+      const options = [];
+      for (let color = 0; color < 3; color += 1) {
+        if (color === c.color) continue;
+        if (createsRun(this, x, y, color, MATCH_LENGTH)) continue;
+        options.push(color);
+      }
+      if (options.length === 0) {
+        // Boxed in on every colour: hold at the limit and try again later.
+        c.resistance = limit - 1;
+        return;
+      }
+      const from = c.color;
+      c.color = options[rng.int(options.length)];
+      c.resistance = 0;
+      mutated.push({ x, y, from, to: c.color });
+    });
+    return mutated;
+  }
+
+  /** How close the most stubborn virus is to mutating, as 0..1. */
+  peakResistance(limit) {
+    let peak = 0;
+    this.forEachCell((c) => {
+      if (c.type === VIRUS) peak = Math.max(peak, (c.resistance ?? 0) / limit);
+    });
+    return Math.min(1, peak);
+  }
+
   toStrings() {
     const chars = ['r', 'y', 'b'];
     const rows = [];
@@ -259,7 +305,9 @@ export function generateLevel(board, level, rng) {
     for (let i = 0; i < COLOR_COUNT; i += 1) {
       const color = (first + i) % COLOR_COUNT;
       if (createsRun(board, x, y, color, 3)) continue;
-      board.set(x, y, cell(color, VIRUS));
+      // A spread of starting resistance staggers the mutations instead of
+      // detonating every virus on the same capsule.
+      board.set(x, y, virus(color, rng.int(RESISTANCE_MAX)));
       placed += 1;
       break;
     }

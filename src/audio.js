@@ -177,6 +177,25 @@ export class AudioEngine {
         }
         break;
       }
+      case 'mutate': {
+        // A sour, bending two-note figure: something on the board just changed
+        // under you.
+        this.tone(noteToFreq('B4'), {
+          duration: 0.22,
+          gain: 0.24,
+          type: 'sawtooth',
+          slide: noteToFreq('F4'),
+        });
+        this.tone(noteToFreq('F5'), {
+          start: 0.12,
+          duration: 0.26,
+          gain: 0.2,
+          type: 'square',
+          slide: noteToFreq('B4'),
+        });
+        this.noise({ start: 0.02, duration: 0.22, gain: 0.14, frequency: 700 });
+        break;
+      }
       case 'speedUp':
         for (let i = 0; i < 3; i += 1) {
           this.tone(noteToFreq(['G4', 'B4', 'D5'][i]), {

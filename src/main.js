@@ -67,6 +67,15 @@ const MODE_BLURBS = {
   versus: 'Two players, one keyboard. Clear more than four at once to dump garbage on your rival.',
 };
 
+/**
+ * Versus needs two sets of controls, and the touch pad only drives one player.
+ * Say so up front on a touch device rather than letting someone start a match
+ * they cannot play.
+ */
+const TOUCH_ONLY = typeof window.matchMedia === 'function'
+  && window.matchMedia('(pointer: coarse)').matches
+  && !window.matchMedia('(any-pointer: fine)').matches;
+
 const settings = loadSettings();
 const renderers = [new Renderer(dom.board), new Renderer(dom.board2)];
 const audio = new AudioEngine();
@@ -184,7 +193,10 @@ function setMode(next) {
   for (const button of document.querySelectorAll('[data-mode]')) {
     button.classList.toggle('is-selected', button.dataset.mode === next);
   }
-  dom.modeBlurb.textContent = MODE_BLURBS[next];
+  dom.modeBlurb.textContent =
+    next === 'versus' && TOUCH_ONLY
+      ? `${MODE_BLURBS[next]} On this device you will need a keyboard or two gamepads.`
+      : MODE_BLURBS[next];
   // The daily's level, speed and resistance come from the date.
   dom.tunables.hidden = next === 'daily';
   dom.controlsHint.hidden = next === 'versus';

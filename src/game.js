@@ -7,6 +7,7 @@ import {
   CLEAR_ANIMATION,
   COLOR_COUNT,
   LOCK_DELAY,
+  LOCK_RESETS,
   MATCH_LENGTH,
   MAX_LEVEL,
   MUTATION_ANIMATION,
@@ -14,6 +15,7 @@ import {
   RESISTANCE_INTERVAL,
   RESISTANCE_MAX,
   SETTLE_INTERVAL,
+  SPAWN_GRACE,
   SPAWN_X,
   SPAWN_Y,
   SPEEDS,
@@ -85,6 +87,7 @@ export class Game {
     this.softDropping = false;
     this.dropTimer = 0;
     this.lockTimer = 0;
+    this.lockResets = 0;
     this.phaseTimer = 0;
     this.combo = 0;
     this.clearingCells = [];
@@ -177,8 +180,12 @@ export class Game {
     this.pill = pill;
     this.dropTimer = 0;
     this.lockTimer = 0;
+    this.lockResets = 0;
+    // Spawning with nowhere to fall means the stack is at the neck; that
+    // capsule gets a longer fuse, see SPAWN_GRACE.
+    this.spawnedBlocked = !tryMove(this.board, pill, 0, 1);
     this.phase = PHASE.FALLING;
-    this.emit('spawn', { colors });
+    this.emit('spawn', { colors, blocked: this.spawnedBlocked });
   }
 
   togglePause() {
@@ -229,8 +236,26 @@ export class Game {
     return !this.paused && this.phase === PHASE.FALLING && this.pill !== null;
   }
 
+  /** How long the current capsule may rest before it sets. */
+  get lockBudget() {
+    return this.spawnedBlocked ? SPAWN_GRACE : LOCK_DELAY;
+  }
+
+  /**
+   * Keeps a capsule alive after a successful nudge. Airborne capsules always
+   * reset; a resting one gets LOCK_RESETS reprieves so a move made in time is
+   * never wasted, but it cannot be parked there indefinitely.
+   */
   resetLockTimerIfAirborne() {
-    if (tryMove(this.board, this.pill, 0, 1)) this.lockTimer = 0;
+    if (tryMove(this.board, this.pill, 0, 1)) {
+      this.lockTimer = 0;
+      this.lockResets = 0;
+      return;
+    }
+    if (this.lockResets < LOCK_RESETS) {
+      this.lockResets += 1;
+      this.lockTimer = 0;
+    }
   }
 
   // ---- simulation ---------------------------------------------------------
@@ -266,17 +291,16 @@ export class Game {
     while (this.dropTimer >= interval) {
       this.dropTimer -= interval;
       const next = tryMove(this.board, this.pill, 0, 1);
-      if (next) {
-        this.pill = next;
-        this.lockTimer = 0;
-      } else {
-        this.lockTimer += interval;
-      }
+      if (!next) break;
+      this.pill = next;
+      this.lockTimer = 0;
+      // Once it has fallen at all it is an ordinary capsule again.
+      this.spawnedBlocked = false;
     }
 
     if (!tryMove(this.board, this.pill, 0, 1)) {
       this.lockTimer += dt;
-      if (this.lockTimer >= LOCK_DELAY) this.lockCurrentPill();
+      if (this.lockTimer >= this.lockBudget) this.lockCurrentPill();
     }
   }
 

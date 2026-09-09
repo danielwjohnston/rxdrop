@@ -3,6 +3,7 @@ import { Game } from './game.js';
 import { VersusMatch } from './versus.js';
 import { dailyKey, dailySetup, isToday, shareText } from './daily.js';
 import { Renderer, drawPillPreview, drawVirusTally } from './renderer.js';
+import { pillCells } from './pill.js';
 import { AudioEngine } from './audio.js';
 import { InputController, KEY_MAP, VERSUS_KEY_MAP } from './input.js';
 
@@ -29,6 +30,7 @@ const dom = {
   resistanceMeter: el('resistance-meter'),
   resistanceFill: el('resistance-fill'),
   resistanceToggle: el('resistance'),
+  musicToggle: el('music'),
   seed: el('seed'),
   overlay: el('overlay'),
   chooseLevel: el('choose-level'),
@@ -105,6 +107,7 @@ function loadSettings() {
     topScore: 0,
     resistance: false,
     mode: 'solo',
+    music: true,
   };
   let stored = {};
   try {
@@ -123,6 +126,7 @@ function loadSettings() {
   }
   if (params.has('seed')) merged.seed = Number(params.get('seed')) >>> 0;
   if (params.has('resistance')) merged.resistance = params.get('resistance') !== '0';
+  if (params.has('music')) merged.music = params.get('music') !== '0';
   if (params.has('daily')) {
     merged.mode = 'daily';
     merged.dailyKey = params.get('daily');
@@ -144,6 +148,7 @@ function saveSettings() {
         muted: settings.muted,
         topScore: settings.topScore,
         resistance: settings.resistance,
+        music: settings.music,
         mode,
       }),
     );
@@ -683,6 +688,14 @@ async function copyShare(button) {
   }, 1600);
 }
 
+dom.musicToggle.addEventListener('change', () => {
+  audio.resume();
+  settings.music = dom.musicToggle.checked;
+  saveSettings();
+  // Only pick the music back up if there is a game to score.
+  audio.setMusicEnabled(settings.music, { resume: screen === 'playing' });
+});
+
 dom.resistanceToggle.addEventListener('change', () => {
   settings.resistance = dom.resistanceToggle.checked;
   saveSettings();
@@ -796,11 +809,14 @@ window.rxdrop = {
   renderer: renderers[0],
   renderers,
   settings,
+  pillCells,
   constants: { RESISTANCE_MAX },
 };
 
 setMuted(settings.muted);
 syncSpeedButtons();
+dom.musicToggle.checked = settings.music;
+audio.setMusicEnabled(settings.music, { resume: false });
 dom.resistanceToggle.checked = settings.resistance;
 setMode(settings.mode);
 showScreen('title');

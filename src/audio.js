@@ -64,6 +64,8 @@ export class AudioEngine {
     this.musicGain = null;
     this.sfxGain = null;
     this.muted = false;
+    /** Music can be turned off on its own, leaving the effects audible. */
+    this.musicEnabled = true;
     this.trackName = 'fever';
     this.timer = null;
     this.nextNoteTime = 0;
@@ -89,6 +91,24 @@ export class AudioEngine {
     }
     if (this.ctx.state === 'suspended') this.ctx.resume();
     return true;
+  }
+
+  /**
+   * Turns the music on or off without touching the sound effects. Returns the
+   * new state so callers can persist it.
+   */
+  setMusicEnabled(enabled, { resume = true } = {}) {
+    this.musicEnabled = Boolean(enabled);
+    if (!this.musicEnabled) {
+      this.stopMusic();
+    } else if (resume && this.ctx) {
+      this.startMusic();
+    }
+    return this.musicEnabled;
+  }
+
+  toggleMusic(options) {
+    return this.setMusicEnabled(!this.musicEnabled, options);
   }
 
   setMuted(muted) {
@@ -257,7 +277,7 @@ export class AudioEngine {
   }
 
   startMusic(name = this.trackName) {
-    if (!this.ctx || this.playing) return;
+    if (!this.ctx || this.playing || !this.musicEnabled) return;
     this.trackName = TRACKS[name] ? name : 'fever';
     this.playing = true;
     this.cursor = { lead: 0, bass: 0, step: 0 };

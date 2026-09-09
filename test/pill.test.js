@@ -48,6 +48,82 @@ describe('pill geometry', () => {
   });
 });
 
+describe('rotation stays in its columns', () => {
+  const columnsOf = (pill) => [...new Set(pillCells(pill).map((c) => c.x))].sort((a, b) => a - b);
+
+  it('never walks a horizontal capsule into a third column', () => {
+    // The bug this pins: with a pivot-and-orbit model, rotating twice moved the
+    // capsule one column left, so you had to nudge it back after every flip.
+    const board = new Board();
+    let pill = createPill([0, 1], 3, 6);
+    const spans = [];
+    for (let i = 0; i < 8; i += 1) {
+      spans.push(columnsOf(pill));
+      pill = tryRotate(board, pill, 1);
+    }
+    const horizontal = spans.filter((s) => s.length === 2);
+    const vertical = spans.filter((s) => s.length === 1);
+    for (const span of horizontal) assert.deepEqual(span, [3, 4]);
+    for (const span of vertical) assert.deepEqual(span, [3], 'vertical sits in the left column');
+  });
+
+  it('holds its columns rotating the other way too', () => {
+    const board = new Board();
+    let pill = createPill([2, 0], 5, 6);
+    for (let i = 0; i < 8; i += 1) {
+      pill = tryRotate(board, pill, -1);
+      const span = columnsOf(pill);
+      assert.ok(
+        span.every((x) => x === 5 || x === 6),
+        `counter-clockwise drifted to ${JSON.stringify(span)}`,
+      );
+    }
+  });
+
+  it('swaps the colours in place, without moving a cell', () => {
+    const board = new Board();
+    const pill = createPill([0, 2], 3, 6);
+    const twice = tryRotate(board, tryRotate(board, pill, 1), 1);
+
+    const before = pillCells(pill);
+    const after = pillCells(twice);
+    assert.deepEqual(
+      after.map((c) => ({ x: c.x, y: c.y })),
+      before.map((c) => ({ x: c.x, y: c.y })),
+      'the cells must not move',
+    );
+    assert.deepEqual(after.map((c) => c.color), before.map((c) => c.color).reverse());
+  });
+
+  it('a full turn returns the exact same cells and colours', () => {
+    const board = new Board();
+    for (const direction of [1, -1]) {
+      const pill = createPill([1, 2], 4, 8);
+      let turned = pill;
+      for (let i = 0; i < 4; i += 1) turned = tryRotate(board, turned, direction);
+      assert.deepEqual(pillCells(turned), pillCells(pill));
+    }
+  });
+
+  it('only ever takes two shapes', () => {
+    const board = new Board();
+    let pill = createPill([0, 1], 3, 6);
+    const shapes = new Set();
+    for (let i = 0; i < 4; i += 1) {
+      shapes.add(JSON.stringify(pillCells(pill).map(({ x, y }) => [x, y])));
+      pill = tryRotate(board, pill, 1);
+    }
+    assert.equal(shapes.size, 2, 'horizontal and vertical, nothing else');
+  });
+
+  it('a vertical capsule can sit against the right wall', () => {
+    const board = new Board();
+    const vertical = createPill([0, 1], board.width - 1, 6, 1);
+    assert.equal(fits(board, vertical), true);
+    assert.deepEqual(columnsOf(vertical), [board.width - 1]);
+  });
+});
+
 describe('collision', () => {
   it('refuses to move into a wall', () => {
     const board = new Board();

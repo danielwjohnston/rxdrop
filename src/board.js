@@ -236,40 +236,46 @@ export class Board {
 /**
  * Fills the bottom of the board with viruses for the given level.
  *
- * Like the original, the number of viruses is 4 * (level + 1) and higher
- * levels stack them closer to the neck of the bottle. Placements that would
- * create three of a colour in a line are rejected so a level never starts
- * one move away from solving itself.
+ * As in the original, a level holds 4 * (level + 1) viruses and higher levels
+ * stack them closer to the neck of the bottle. Placements that would put three
+ * of a colour in a line are rejected, so no level starts one move from solving
+ * itself; every colour is tried for a cell before the cell is abandoned.
  */
 export function generateLevel(board, level, rng) {
-  const virusCount = Math.min(4 * (level + 1), 4 * (MAX_LEVEL_FOR_COUNT + 1));
-  const topRow = Math.max(
-    MIN_VIRUS_ROW,
-    board.height - MIN_VIRUS_ROWS - Math.floor(Math.min(level, 16) / 2),
-  );
-  const usableRows = board.height - 1 - topRow + 1;
-  const capacity = usableRows * board.width;
-  const target = Math.min(virusCount, Math.floor(capacity * 0.75));
+  const topRow = virusTopRow(board, level);
+  const capacity = (board.height - topRow) * board.width;
+  const target = Math.min(4 * (level + 1), Math.floor(capacity * 0.85));
 
   let placed = 0;
-  let guard = 0;
-  while (placed < target && guard < 20000) {
-    guard += 1;
+  let attempts = 0;
+  const limit = capacity * 400;
+  while (placed < target && attempts < limit) {
+    attempts += 1;
     const x = rng.int(board.width);
     const y = topRow + rng.int(board.height - topRow);
     if (!board.isEmpty(x, y)) continue;
-    // Cycle colours so each is used roughly evenly, as the NES game does.
-    const color = (placed + rng.int(COLOR_COUNT)) % COLOR_COUNT;
-    if (createsRun(board, x, y, color, 3)) continue;
-    board.set(x, y, cell(color, VIRUS));
-    placed += 1;
+    // Rotate the starting colour so no single colour dominates a layout.
+    const first = (placed + rng.int(COLOR_COUNT)) % COLOR_COUNT;
+    for (let i = 0; i < COLOR_COUNT; i += 1) {
+      const color = (first + i) % COLOR_COUNT;
+      if (createsRun(board, x, y, color, 3)) continue;
+      board.set(x, y, cell(color, VIRUS));
+      placed += 1;
+      break;
+    }
   }
   return placed;
 }
 
+/** The highest row viruses may occupy: ten rows at first, thirteen by level 12. */
+export function virusTopRow(board, level) {
+  const rows = Math.min(MAX_VIRUS_ROWS, MIN_VIRUS_ROWS + Math.floor(level / 4));
+  return Math.max(MIN_VIRUS_ROW, board.height - rows);
+}
+
 const MIN_VIRUS_ROW = 3;
 const MIN_VIRUS_ROWS = 10;
-const MAX_LEVEL_FOR_COUNT = 20;
+const MAX_VIRUS_ROWS = 13;
 
 /** True if putting `color` at (x, y) would make a line of `runLength`. */
 function createsRun(board, x, y, color, runLength) {

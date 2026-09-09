@@ -43,6 +43,11 @@ let game = null;
 let screen = 'title';
 let lastFrame = performance.now();
 let dangerMusic = false;
+/** When the current card appeared, so a mashed key cannot skip it instantly. */
+let screenShownAt = 0;
+const CONFIRM_LOCKOUT = 550;
+/** Only the end-of-game cards need the guard; pausing should resume at once. */
+const LOCKOUT_SCREENS = new Set(['over', 'clear']);
 
 const input = new InputController({
   onPress: (action, meta) => handlePress(action, meta),
@@ -99,6 +104,7 @@ function clampLevel(value) {
 
 function showScreen(name) {
   screen = name;
+  screenShownAt = performance.now();
   for (const [key, node] of Object.entries(screens)) node.hidden = key !== name;
   dom.overlay.hidden = name === 'playing';
   dom.pauseButton.textContent = name === 'paused' ? 'Resume' : 'Pause';
@@ -218,6 +224,9 @@ function handlePress(action, meta = {}) {
   if (screen !== 'playing') {
     if (meta.repeat) return;
     if (action === 'confirm' || action === 'hardDrop') {
+      if (LOCKOUT_SCREENS.has(screen) && performance.now() - screenShownAt < CONFIRM_LOCKOUT) {
+        return;
+      }
       const card = screens[screen];
       card?.querySelector('.button--primary')?.click();
       return;

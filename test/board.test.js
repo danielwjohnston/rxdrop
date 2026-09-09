@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { Board, cell, generateLevel } from '../src/board.js';
+import { Board, cell, generateLevel, virusTopRow } from '../src/board.js';
 import { LINK, PILL, VIRUS } from '../src/constants.js';
 import { createRng } from '../src/rng.js';
 
@@ -112,11 +112,38 @@ describe('resolve', () => {
 });
 
 describe('generateLevel', () => {
-  it('places 4 * (level + 1) viruses', () => {
-    for (const level of [0, 1, 5, 10]) {
+  it('places 4 * (level + 1) viruses at every level', () => {
+    for (let level = 0; level <= 20; level += 1) {
+      for (const seed of [1, 77, 5150]) {
+        const board = new Board();
+        generateLevel(board, level, createRng(seed));
+        assert.equal(
+          board.countViruses(),
+          4 * (level + 1),
+          `level ${level} seed ${seed} came up short`,
+        );
+      }
+    }
+  });
+
+  it('raises the virus ceiling with the level, but never past row 3', () => {
+    const board = new Board();
+    assert.equal(virusTopRow(board, 0), 6);
+    assert.equal(virusTopRow(board, 3), 6);
+    assert.equal(virusTopRow(board, 4), 5);
+    assert.equal(virusTopRow(board, 8), 4);
+    assert.equal(virusTopRow(board, 12), 3);
+    assert.equal(virusTopRow(board, 20), 3);
+  });
+
+  it('keeps viruses below the level\'s ceiling', () => {
+    for (const level of [0, 5, 11, 20]) {
       const board = new Board();
-      generateLevel(board, level, createRng(42 + level));
-      assert.equal(board.countViruses(), 4 * (level + 1));
+      generateLevel(board, level, createRng(level * 13 + 1));
+      const ceiling = virusTopRow(board, level);
+      board.forEachCell((c, x, y) => {
+        if (c.type === VIRUS) assert.ok(y >= ceiling, `virus at row ${y}, ceiling ${ceiling}`);
+      });
     }
   });
 

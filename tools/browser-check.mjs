@@ -223,6 +223,46 @@ try {
     assert.equal(layout.scrollsY, false, 'the game should fit on one screen');
   });
 
+  await check('it still plays without Web Audio or localStorage', async () => {
+    const limited = await browser.newPage({ viewport: { width: 900, height: 800 } });
+    const limitedErrors = [];
+    limited.on('pageerror', (error) => limitedErrors.push(error.message));
+    limited.on('console', (message) => {
+      if (message.type() === 'error') limitedErrors.push(message.text());
+    });
+    await limited.addInitScript(() => {
+      delete window.AudioContext;
+      delete window.webkitAudioContext;
+      const denied = () => {
+        throw new Error('storage denied');
+      };
+      Object.defineProperty(window, 'localStorage', {
+        configurable: true,
+        get: () => ({ getItem: denied, setItem: denied, removeItem: denied }),
+      });
+    });
+    await limited.goto(`${BASE}/?level=1&seed=7`, { waitUntil: 'networkidle' });
+    await limited.click('[data-start]');
+    await limited.waitForTimeout(250);
+    for (let i = 0; i < 3; i += 1) {
+      await limited.keyboard.press('ArrowLeft');
+      await limited.keyboard.press('KeyX');
+      await limited.keyboard.press('Space');
+      await limited.waitForTimeout(150);
+    }
+    await limited.click('#mute');
+    const state = await limited.evaluate(() => ({
+      screen: window.rxdrop.screen,
+      pills: window.rxdrop.game.pillsPlaced,
+      audio: window.rxdrop.audio.ctx,
+    }));
+    assert.equal(state.screen, 'playing');
+    assert.ok(state.pills >= 3, 'the game should keep accepting pills');
+    assert.equal(state.audio, null);
+    assert.deepEqual(limitedErrors, []);
+    await limited.close();
+  });
+
   await check('nothing logged an error', () => {
     assert.deepEqual(errors, []);
   });

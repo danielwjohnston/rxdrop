@@ -6,8 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "node tools/serve.js",
-    "test": "node --test \"test/*.test.js\"",
-    "test:watch": "node --test --watch \"test/*.test.js\"",
+    "test": "node --test",
+    "test:watch": "node --test --watch",
     "test:browser": "node tools/browser-check.mjs"
   },
   "engines": {

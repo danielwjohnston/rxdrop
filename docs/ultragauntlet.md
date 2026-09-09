@@ -73,6 +73,10 @@ The stages are not ceremony. Building this set surfaced real defects:
   giving player one a bottle three times the size of player two's.
 - **`boundaries`** codifies the virus-ceiling rule after viruses were found
   spawning two rows below the neck by level 6.
+- **`browser`** caught three checks that had hard-coded row 15 as the floor of
+  the bottle. They kept passing on a 16-row board for the wrong reason and went
+  red the moment the neck row made the board 17 rows tall - which is exactly
+  what a check pinned to a constant should do.
 
 ## Using it
 

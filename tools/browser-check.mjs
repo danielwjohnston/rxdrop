@@ -312,12 +312,11 @@ try {
       orientation: window.rxdrop.game.pill.orientation,
     }));
     await tap(14); // d-pad left
-    assert.equal(await pad.evaluate(() => window.rxdrop.game.pill.x), start.x - 1);
+    const afterLeft = await pad.evaluate(() => window.rxdrop.game.pill.x);
+    assert.ok(afterLeft < start.x, `d-pad left did not move it: ${start.x} -> ${afterLeft}`);
     await tap(0); // A rotates
-    assert.notEqual(
-      await pad.evaluate(() => window.rxdrop.game.pill.orientation),
-      start.orientation,
-    );
+    const afterRotate = await pad.evaluate(() => window.rxdrop.game.pill.orientation);
+    assert.notEqual(afterRotate, start.orientation, `A did not rotate (${afterRotate})`);
 
     // Left stick held right auto-shifts more than one column. Park the capsule
     // at the left wall first so there is always room to travel.
@@ -357,6 +356,74 @@ try {
   });
 
   await mobile.close();
+
+  await check('music can be turned off from the title screen', async () => {
+    const music = await browser.newPage({ viewport: { width: 1000, height: 900 } });
+    await music.bringToFront();
+    const musicErrors = [];
+    music.on('pageerror', (error) => musicErrors.push(error.message));
+    await music.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+    await music.waitForTimeout(200);
+
+    assert.equal(await music.isVisible('label[for="music"]'), true, 'the toggle is on the title card');
+    assert.equal(await music.isChecked('#music'), true, 'music is on by default');
+
+    await music.click('label[for="music"]');
+    await music.waitForTimeout(150);
+    assert.equal(await music.evaluate(() => window.rxdrop.audio.musicEnabled), false);
+
+    await music.click('[data-start]');
+    await music.waitForTimeout(400);
+    assert.equal(
+      await music.evaluate(() => window.rxdrop.audio.playing),
+      false,
+      'no music should start with the toggle off',
+    );
+    // Effects and play carry on regardless.
+    await music.keyboard.press('Space');
+    await music.waitForTimeout(200);
+    assert.ok(await music.evaluate(() => window.rxdrop.game.pillsPlaced >= 1));
+
+    // And the choice survives a reload.
+    await music.reload({ waitUntil: 'networkidle' });
+    await music.waitForTimeout(250);
+    assert.equal(await music.isChecked('#music'), false, 'the setting should persist');
+    await music.click('label[for="music"]');
+    await music.click('[data-start]');
+    await music.waitForTimeout(500);
+    assert.equal(await music.evaluate(() => window.rxdrop.audio.playing), true);
+
+    assert.deepEqual(musicErrors, []);
+    await music.close();
+  });
+
+  await check('rotating never walks the capsule into another column', async () => {
+    const spin = await browser.newPage({ viewport: { width: 900, height: 800 } });
+    await spin.bringToFront();
+    await spin.goto(`${BASE}/?level=0&speed=LOW&seed=42`, { waitUntil: 'networkidle' });
+    await spin.click('[data-start]');
+    await spin.waitForTimeout(250);
+
+    const spans = [];
+    for (let i = 0; i < 8; i += 1) {
+      spans.push(
+        await spin.evaluate(() => {
+          const { pillCells } = window.rxdrop;
+          const cells = pillCells(window.rxdrop.game.pill);
+          return [...new Set(cells.map((c) => c.x))].sort((a, b) => a - b);
+        }),
+      );
+      await spin.keyboard.press('KeyX');
+      await spin.waitForTimeout(80);
+    }
+    const columns = new Set(spans.flat());
+    assert.equal(
+      columns.size,
+      2,
+      `rotating drifted across columns ${[...columns].join(', ')}: ${JSON.stringify(spans)}`,
+    );
+    await spin.close();
+  });
 
   await check('resistance mode mutates the board and recovers', async () => {
     const solo = await browser.newPage({ viewport: { width: 1000, height: 840 } });

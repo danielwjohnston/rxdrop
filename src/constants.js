@@ -52,6 +52,20 @@ export const PILLS_PER_SPEED_UP = 10;
 /** Milliseconds a piece may rest on the stack before it locks. */
 export const LOCK_DELAY = 420;
 
+/**
+ * Moving or rotating a resting capsule buys another LOCK_DELAY, so a nudge you
+ * started in time always lands. Capped so the capsule cannot be stalled there
+ * forever.
+ */
+export const LOCK_RESETS = 8;
+
+/**
+ * A capsule that spawns with nowhere to fall gets longer, because the stack is
+ * at the neck and the whole run rides on one reaction to a capsule the player
+ * has had no chance to plan for. This never fires in ordinary play.
+ */
+export const SPAWN_GRACE = 1200;
+
 /** Milliseconds cleared cells stay on screen popping before they vanish. */
 export const CLEAR_ANIMATION = 320;
 

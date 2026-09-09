@@ -1,7 +1,14 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { Board, cell } from '../src/board.js';
-import { PILLS_PER_SPEED_UP, SPEEDS, VIRUS } from '../src/constants.js';
+import {
+  LOCK_DELAY,
+  LOCK_RESETS,
+  PILLS_PER_SPEED_UP,
+  SPAWN_GRACE,
+  SPEEDS,
+  VIRUS,
+} from '../src/constants.js';
 import { Game, PHASE } from '../src/game.js';
 import { pillCells } from '../src/pill.js';
 
@@ -107,6 +114,117 @@ describe('controls', () => {
     game.togglePause();
     tick(game, 3000);
     assert.ok(game.pill.y > y);
+  });
+});
+
+describe('the lock delay', () => {
+  /** Drops a capsule to the floor, then returns how long it stays adjustable. */
+  const restThenMeasure = (dropTimer) => {
+    const game = newGame({ level: 0, speed: 'LOW' });
+    while (game.pill.y < game.board.height - 1) {
+      game.pill = { ...game.pill, y: game.pill.y + 1 };
+    }
+    game.dropTimer = dropTimer;
+    game.lockTimer = 0;
+    let elapsed = 0;
+    while (game.pillsPlaced === 0 && elapsed < 5000) {
+      game.update(16);
+      elapsed += 16;
+    }
+    return elapsed;
+  };
+
+  it('gives the same adjustment window wherever the gravity tick falls', () => {
+    // The bug this pins: the lock timer was counted twice, so a capsule that
+    // landed late in the gravity cycle set almost instantly and there was no
+    // time to nudge it into a match.
+    const windows = [0, 100, 300, 500, 690].map(restThenMeasure);
+    for (const window of windows) {
+      assert.ok(
+        window >= LOCK_DELAY,
+        `only ${window}ms to adjust, expected at least ${LOCK_DELAY}ms`,
+      );
+    }
+    assert.equal(new Set(windows).size, 1, `windows varied: ${windows.join(', ')}`);
+  });
+
+  it('a nudge on a resting capsule buys another window', () => {
+    const game = newGame({ level: 0, speed: 'LOW' });
+    while (game.pill.y < game.board.height - 1) {
+      game.pill = { ...game.pill, y: game.pill.y + 1 };
+    }
+    for (let i = 0; i < 20; i += 1) game.update(16);
+    assert.equal(game.pillsPlaced, 0, 'should still be adjustable');
+    assert.equal(game.move(-1), true);
+    assert.equal(game.lockTimer, 0, 'a move on the floor keeps it alive');
+    assert.equal(game.lockResets, 1);
+  });
+
+  it('gives a capsule that spawns with nowhere to fall a longer fuse', () => {
+    // The stack is at the neck and the run rides on one reaction to a capsule
+    // the player never had a chance to plan for.
+    const game = newGame({ level: 0, speed: 'LOW' });
+    for (let y = 1; y < game.board.height; y += 1) {
+      game.board.set(3, y, cell(0));
+      game.board.set(4, y, cell(1));
+    }
+    game.spawnPill();
+
+    assert.equal(game.spawnedBlocked, true);
+    assert.equal(game.lockBudget, SPAWN_GRACE);
+    assert.ok(SPAWN_GRACE > LOCK_DELAY, 'the desperate case must be the generous one');
+
+    let elapsed = 0;
+    const placed = game.pillsPlaced;
+    while (game.pillsPlaced === placed && elapsed < 6000) {
+      game.update(16);
+      elapsed += 16;
+    }
+    assert.ok(elapsed >= SPAWN_GRACE, `only ${elapsed}ms to react`);
+  });
+
+  it('a late sideways move still saves a blocked spawn', () => {
+    const game = newGame({ level: 0, speed: 'LOW' });
+    for (let y = 1; y < game.board.height; y += 1) {
+      game.board.set(3, y, cell(0));
+      game.board.set(4, y, cell(1));
+    }
+    game.spawnPill();
+
+    // React at 300ms, about human reaction time plus a beat.
+    for (let t = 0; t < 300; t += 16) game.update(16);
+    assert.ok(game.pill, 'the capsule must still be in play');
+    assert.equal(game.move(1), true);
+
+    let elapsed = 0;
+    while (game.pill && game.pill.y < 3 && elapsed < 6000) {
+      game.update(16);
+      elapsed += 16;
+    }
+    assert.ok(!game.isOver, 'the run should be saved');
+  });
+
+  it('an ordinary capsule keeps the short fuse', () => {
+    const game = newGame({ level: 0, speed: 'LOW' });
+    assert.equal(game.spawnedBlocked, false);
+    assert.equal(game.lockBudget, LOCK_DELAY);
+  });
+
+  it('cannot be stalled on the floor forever', () => {
+    const game = newGame({ level: 0, speed: 'LOW' });
+    while (game.pill.y < game.board.height - 1) {
+      game.pill = { ...game.pill, y: game.pill.y + 1 };
+    }
+    let nudges = 0;
+    for (let frame = 0; frame < 4000 && game.pillsPlaced === 0; frame += 1) {
+      if (frame % 10 === 0 && game.pill) {
+        game.move(nudges % 2 === 0 ? -1 : 1);
+        nudges += 1;
+      }
+      game.update(16);
+    }
+    assert.equal(game.pillsPlaced, 1, 'it must set eventually');
+    assert.ok(nudges > LOCK_RESETS, 'the player kept nudging past the cap');
   });
 });
 

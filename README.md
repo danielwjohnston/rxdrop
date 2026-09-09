@@ -91,6 +91,7 @@ a keyboard or two controllers, since the touch pad only drives player one.
 | --- | --- | --- | --- |
 | Move | <kbd>←</kbd> <kbd>→</kbd> or <kbd>A</kbd> <kbd>D</kbd> | buttons, or drag the bottle | d-pad / left stick |
 | Rotate | <kbd>Z</kbd> / <kbd>X</kbd>, <kbd>↑</kbd> | buttons, or tap the bottle | A / B |
+
 | Soft drop | <kbd>↓</kbd> or <kbd>S</kbd> | button, or swipe down | d-pad down |
 | Hard drop | <kbd>Space</kbd> | DROP, or flick down | d-pad up / Y |
 | Pause | <kbd>P</kbd> or <kbd>Esc</kbd> | Pause | Start |
@@ -99,6 +100,12 @@ a keyboard or two controllers, since the touch pad only drives player one.
 
 Holding left or right auto-shifts after a short delay, so you can slide a
 capsule across the bottle in one press.
+
+Rotation works as it does in the original: a capsule has two shapes, not four
+positions. Horizontal always spans the same two columns and vertical always
+sits in the left one of that pair, so rotating never walks the capsule sideways
+- rotating twice just swaps the colours where they stand. Music can be turned
+off on its own from the title screen; the sound effects stay.
 
 In **versus** the keyboard splits in two, and a gamepad each works as well
 (pad one drives player one):
@@ -136,12 +143,12 @@ throws the current run away.
 ## Development
 
 ```sh
-npm test           # 124 unit tests, no dependencies, well under a second
+npm test           # 136 unit tests, no dependencies, well under a second
 npm run test:watch # re-run on change
 
 # End-to-end checks in a real browser (Playwright is not a dependency):
 npm i --no-save playwright && npx playwright install chromium
-npm run test:browser  # 20 checks: menus, controls, versus, daily, offline, mobile
+npm run test:browser  # 22 checks: menus, controls, versus, daily, offline, mobile
 
 npm run gauntlet   # the full protocol below: every stage, one gate
 ```

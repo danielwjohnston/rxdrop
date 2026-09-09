@@ -2,40 +2,44 @@ import { LINK, PILL, SPAWN_X, SPAWN_Y } from './constants.js';
 import { cell } from './board.js';
 
 /**
- * A capsule in play. `orientation` places the second half relative to the
- * pivot half: 0 right, 1 up, 2 left, 3 down. Rotating clockwise walks 0->1->2->3,
- * which reproduces the original's "rotate twice to swap the colours" feel.
+ * A capsule in play. There are four rotation states but only two shapes, which
+ * is how the original behaves and why it feels predictable:
+ *
+ *   0  horizontal, colours as dealt      cells (x, y) and (x + 1, y)
+ *   1  vertical,   colours as dealt      cells (x, y) and (x, y - 1)
+ *   2  horizontal, colours swapped       cells (x, y) and (x + 1, y)
+ *   3  vertical,   colours swapped       cells (x, y) and (x, y - 1)
+ *
+ * States 2 and 3 occupy exactly the same cells as 0 and 1 and only reverse the
+ * colours. A capsule therefore never walks sideways as you rotate it: horizontal
+ * always spans the same two columns, and vertical always sits in the left one of
+ * that pair. Rotating twice swaps the colours in place, as it should.
  */
-export const ORIENTATION_OFFSETS = Object.freeze([
-  [1, 0],
-  [0, -1],
-  [-1, 0],
-  [0, 1],
-]);
-
-const LINK_FOR_ORIENTATION = [LINK.RIGHT, LINK.UP, LINK.LEFT, LINK.DOWN];
-const PARTNER_LINK = [LINK.LEFT, LINK.DOWN, LINK.RIGHT, LINK.UP];
+export const HORIZONTAL_OFFSET = Object.freeze([1, 0]);
+export const VERTICAL_OFFSET = Object.freeze([0, -1]);
 
 export function createPill(colors, x = SPAWN_X, y = SPAWN_Y, orientation = 0) {
   return { x, y, orientation, colors: [...colors] };
 }
 
-/** The two board cells a pill currently occupies, pivot first. */
+/** The two board cells a pill currently occupies, anchor first. */
 export function pillCells(pill) {
-  const [dx, dy] = ORIENTATION_OFFSETS[pill.orientation];
+  // States 2 and 3 are states 0 and 1 with the colours the other way round.
+  const swapped = pill.orientation >= 2;
+  const first = swapped ? pill.colors[1] : pill.colors[0];
+  const second = swapped ? pill.colors[0] : pill.colors[1];
+
+  if (isHorizontal(pill)) {
+    const [dx, dy] = HORIZONTAL_OFFSET;
+    return [
+      { x: pill.x, y: pill.y, color: first, link: LINK.RIGHT },
+      { x: pill.x + dx, y: pill.y + dy, color: second, link: LINK.LEFT },
+    ];
+  }
+  const [dx, dy] = VERTICAL_OFFSET;
   return [
-    {
-      x: pill.x,
-      y: pill.y,
-      color: pill.colors[0],
-      link: LINK_FOR_ORIENTATION[pill.orientation],
-    },
-    {
-      x: pill.x + dx,
-      y: pill.y + dy,
-      color: pill.colors[1],
-      link: PARTNER_LINK[pill.orientation],
-    },
+    { x: pill.x, y: pill.y, color: first, link: LINK.UP },
+    { x: pill.x + dx, y: pill.y + dy, color: second, link: LINK.DOWN },
   ];
 }
 

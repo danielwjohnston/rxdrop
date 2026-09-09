@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta
+      name="description"
+      content="RxDrop - a Dr. Mario style falling-capsule puzzle game that runs in your browser."
+    />
+    <meta name="theme-color" content="#0b1020" />
+    <title>RxDrop</title>
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="src/styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="masthead">
+        <h1 class="logo"><span class="logo-rx">Rx</span><span class="logo-drop">Drop</span></h1>
+        <p class="tagline">Line up four. Clear the viruses. Don't fill the bottle.</p>
+      </header>
+
+      <main class="stage">
+        <section class="panel panel--left" aria-label="Score">
+          <div class="readout">
+            <span class="readout__label">Score</span>
+            <span class="readout__value" id="score">0</span>
+          </div>
+          <div class="readout">
+            <span class="readout__label">Top</span>
+            <span class="readout__value readout__value--muted" id="top-score">0</span>
+          </div>
+          <div class="readout readout--split">
+            <div>
+              <span class="readout__label">Level</span>
+              <span class="readout__value" id="level">0</span>
+            </div>
+            <div>
+              <span class="readout__label">Speed</span>
+              <span class="readout__value" id="speed">LOW</span>
+            </div>
+          </div>
+          <div class="next">
+            <span class="readout__label">Next</span>
+            <canvas id="next" width="120" height="60" aria-label="Next capsule"></canvas>
+          </div>
+        </section>
+
+        <section class="playfield">
+          <canvas id="board" aria-label="Play area"></canvas>
+
+          <div class="overlay" id="overlay" hidden>
+            <!-- Title screen -->
+            <div class="card" id="screen-title" data-screen="title">
+              <h2 class="card__title">RxDrop</h2>
+              <p class="card__body">
+                Rotate the capsules and stack four of a colour in a row to wipe out
+                the viruses.
+              </p>
+              <div class="chooser">
+                <span class="chooser__label">Level</span>
+                <button class="chooser__step" data-adjust="level" data-delta="-1" type="button" aria-label="Lower level">&minus;</button>
+                <output class="chooser__value" id="choose-level">0</output>
+                <button class="chooser__step" data-adjust="level" data-delta="1" type="button" aria-label="Raise level">+</button>
+              </div>
+              <div class="chooser">
+                <span class="chooser__label">Speed</span>
+                <div class="segmented" role="group" aria-label="Speed">
+                  <button type="button" data-speed="LOW" class="is-selected">Low</button>
+                  <button type="button" data-speed="MEDIUM">Med</button>
+                  <button type="button" data-speed="HIGH">Hi</button>
+                </div>
+              </div>
+              <button class="button button--primary" data-start type="button">Start game</button>
+              <p class="card__hint">
+                Move <kbd>&larr;</kbd><kbd>&rarr;</kbd> &middot; Rotate <kbd>Z</kbd><kbd>X</kbd>
+                &middot; Soft drop <kbd>&darr;</kbd> &middot; Hard drop <kbd>Space</kbd>
+                &middot; Pause <kbd>P</kbd> &middot; Mute <kbd>M</kbd>
+              </p>
+            </div>
+
+            <!-- Pause -->
+            <div class="card" id="screen-pause" data-screen="paused" hidden>
+              <h2 class="card__title">Paused</h2>
+              <p class="card__body">Take a breath. The viruses aren't going anywhere.</p>
+              <button class="button button--primary" data-resume type="button">Resume</button>
+              <button class="button" data-quit type="button">Quit to title</button>
+            </div>
+
+            <!-- Level cleared -->
+            <div class="card" id="screen-clear" data-screen="clear" hidden>
+              <h2 class="card__title">Level clear!</h2>
+              <p class="card__body">
+                Stage <strong id="clear-level">0</strong> sterilised.
+                Score <strong id="clear-score">0</strong>.
+              </p>
+              <button class="button button--primary" data-next-level type="button">Next level</button>
+              <button class="button" data-quit type="button">Quit to title</button>
+            </div>
+
+            <!-- Game over -->
+            <div class="card" id="screen-over" data-screen="over" hidden>
+              <h2 class="card__title">Bottle full</h2>
+              <p class="card__body">
+                <span id="over-summary">The viruses win this round.</span>
+              </p>
+              <button class="button button--primary" data-retry type="button">Try again</button>
+              <button class="button" data-quit type="button">Quit to title</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel panel--right" aria-label="Status">
+          <div class="readout">
+            <span class="readout__label">Viruses</span>
+            <span class="readout__value readout__value--big" id="viruses">0</span>
+          </div>
+          <div class="virus-bar" aria-hidden="true">
+            <div class="virus-bar__fill" id="virus-bar"></div>
+          </div>
+          <canvas id="virus-tally" class="tally" height="70" aria-hidden="true"></canvas>
+          <button class="button button--ghost" id="mute" type="button" aria-pressed="false">
+            Sound: on
+          </button>
+          <button class="button button--ghost" id="pause-button" type="button">Pause</button>
+          <p class="seed">seed <span id="seed">0</span></p>
+        </section>
+      </main>
+
+      <nav class="touchpad" id="touchpad" aria-label="Touch controls">
+        <button type="button" data-action="left" aria-label="Move left">&#9664;</button>
+        <button type="button" data-action="softDrop" aria-label="Soft drop">&#9660;</button>
+        <button type="button" data-action="right" aria-label="Move right">&#9654;</button>
+        <button type="button" data-action="rotateCCW" aria-label="Rotate counter-clockwise">&#8630;</button>
+        <button type="button" data-action="hardDrop" aria-label="Hard drop">DROP</button>
+        <button type="button" data-action="rotateCW" aria-label="Rotate clockwise">&#8631;</button>
+      </nav>
+
+      <footer class="colophon">
+        <span>An original Dr. Mario style puzzler. No assets, no dependencies - it is all drawn and synthesised in the browser.</span>
+      </footer>
+    </div>
+
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>

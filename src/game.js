@@ -88,6 +88,19 @@ export class Game {
     return this.queue[0];
   }
 
+  /**
+   * How far the falling pill has travelled toward the next row (0..1), so the
+   * renderer can slide it smoothly instead of snapping a whole cell at a time.
+   */
+  get dropProgress() {
+    if (this.phase !== PHASE.FALLING || !this.pill) return 0;
+    if (!tryMove(this.board, this.pill, 0, 1)) return 0;
+    const interval = this.softDropping
+      ? Math.min(SOFT_DROP_INTERVAL, this.dropInterval)
+      : this.dropInterval;
+    return Math.max(0, Math.min(1, this.dropTimer / interval));
+  }
+
   get isOver() {
     return this.phase === PHASE.LOST || this.phase === PHASE.WON;
   }

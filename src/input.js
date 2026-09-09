@@ -91,8 +91,12 @@ export class InputController {
     }
   }
 
-  /** Swipes on the playfield: drag to move, flick down to drop, tap to rotate. */
+  /**
+   * Swipes on the playfield: drag to move, flick down to drop, tap to rotate.
+   * `cellSize` may be a function, so the thresholds follow the rendered board.
+   */
   attachSwipe(element, { cellSize = 32 } = {}) {
+    const cell = () => (typeof cellSize === 'function' ? cellSize() || 32 : cellSize);
     let start = null;
     let lastStepX = 0;
     let moved = false;
@@ -107,7 +111,7 @@ export class InputController {
       if (!start) return;
       const dx = event.clientX - start.x;
       const dy = event.clientY - start.y;
-      const threshold = Math.max(24, cellSize * 0.8);
+      const threshold = Math.max(24, cell() * 0.8);
       const steps = Math.trunc(dx / threshold);
       if (steps !== lastStepX) {
         const direction = steps > lastStepX ? 'right' : 'left';
@@ -127,7 +131,7 @@ export class InputController {
       const elapsed = performance.now() - start.time;
       this.release('softDrop');
       if (!moved && Math.hypot(dx, dy) < 12 && elapsed < 350) this.tap('rotateCW');
-      else if (dy > cellSize * 3 && elapsed < 260 && Math.abs(dx) < cellSize) this.tap('hardDrop');
+      else if (dy > cell() * 3 && elapsed < 260 && Math.abs(dx) < cell()) this.tap('hardDrop');
       start = null;
     };
 

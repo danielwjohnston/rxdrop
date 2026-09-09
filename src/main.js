@@ -379,7 +379,7 @@ document.addEventListener('visibilitychange', () => {
 
 input.attach(window);
 input.attachTouch(dom.touchpad);
-input.attachSwipe(dom.board, { cellSize: 32 });
+input.attachSwipe(dom.board, { cellSize: () => renderer.layout?.cell });
 
 window.addEventListener('resize', () => renderer.resize());
 

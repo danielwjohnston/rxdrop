@@ -223,6 +223,36 @@ try {
     assert.equal(layout.scrollsY, false, 'the game should fit on one screen');
   });
 
+  await check('dragging, tapping and flicking the bottle work', async () => {
+    const box = await mobile.locator('#board').boundingBox();
+    const cx = box.x + box.width / 2;
+    const cy = box.y + box.height / 2;
+    const { x: startX, cell } = await mobile.evaluate(() => ({
+      x: window.rxdrop.game.pill.x,
+      cell: window.rxdrop.renderer.layout.cell,
+    }));
+
+    await mobile.mouse.move(cx, cy);
+    await mobile.mouse.down();
+    for (let i = 1; i <= 4; i += 1) await mobile.mouse.move(cx + i * cell * 0.5, cy, { steps: 2 });
+    await mobile.mouse.up();
+    await mobile.waitForTimeout(120);
+    const dragged = await mobile.evaluate(() => window.rxdrop.game.pill.x);
+    assert.ok(dragged > startX, `drag should slide the pill right (${startX} -> ${dragged})`);
+
+    const spun = await rotateByTap(mobile, cx, cy);
+    assert.notEqual(spun.after, spun.before, 'a tap should rotate the pill');
+
+    const before = await mobile.evaluate(() => window.rxdrop.game.pillsPlaced);
+    await mobile.mouse.move(cx, cy - 80);
+    await mobile.mouse.down();
+    await mobile.mouse.move(cx, cy + 120, { steps: 3 });
+    await mobile.mouse.up();
+    await mobile.waitForTimeout(250);
+    const after = await mobile.evaluate(() => window.rxdrop.game.pillsPlaced);
+    assert.equal(after, before + 1, 'a downward flick should hard drop');
+  });
+
   await check('it still plays without Web Audio or localStorage', async () => {
     const limited = await browser.newPage({ viewport: { width: 900, height: 800 } });
     const limitedErrors = [];
@@ -285,6 +315,14 @@ async function check(name, fn) {
   } catch (error) {
     checks.push({ name, error: error.message.split('\n')[0] });
   }
+}
+
+async function rotateByTap(page, x, y) {
+  const before = await page.evaluate(() => window.rxdrop.game.pill.orientation);
+  await page.mouse.click(x, y);
+  await page.waitForTimeout(120);
+  const after = await page.evaluate(() => window.rxdrop.game.pill.orientation);
+  return { before, after };
 }
 
 function snapshot(page) {

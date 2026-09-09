@@ -5,11 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta
       name="description"
-      content="RxDrop - a Dr. Mario style falling-capsule puzzle game that runs in your browser."
+      content="RxDrop - a Dr. Mario style falling-capsule puzzle game that runs in your browser, offline, with a daily challenge and local versus."
     />
     <meta name="theme-color" content="#0b1020" />
     <title>RxDrop</title>
     <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="assets/icon-192.png" />
+    <link rel="manifest" href="manifest.webmanifest" />
     <link rel="stylesheet" href="src/styles.css" />
   </head>
   <body>
@@ -19,7 +21,7 @@
         <p class="tagline">Line up four. Clear the viruses. Don't fill the bottle.</p>
       </header>
 
-      <main class="stage">
+      <main class="stage" id="stage">
         <section class="panel panel--left" aria-label="Score">
           <div class="readout">
             <span class="readout__label">Score</span>
@@ -45,33 +47,70 @@
           </div>
         </section>
 
-        <section class="playfield">
-          <canvas id="board" aria-label="Play area"></canvas>
+        <div class="fields" id="fields">
+          <section class="playfield">
+            <div class="vs-hud" id="vs-hud-0" hidden>
+              <span class="vs-hud__name">P1</span>
+              <span class="vs-hud__count" id="vs-viruses-0">0</span>
+              <span class="vs-hud__incoming" id="vs-incoming-0"></span>
+            </div>
+            <canvas id="board" aria-label="Play area"></canvas>
+          </section>
+
+          <section class="playfield playfield--second" id="playfield-2" hidden>
+            <div class="vs-hud" id="vs-hud-1">
+              <span class="vs-hud__name">P2</span>
+              <span class="vs-hud__count" id="vs-viruses-1">0</span>
+              <span class="vs-hud__incoming" id="vs-incoming-1"></span>
+            </div>
+            <canvas id="board-2" aria-label="Player two play area"></canvas>
+          </section>
 
           <div class="overlay" id="overlay" hidden>
-            <!-- Title screen -->
+            <!-- Title -->
             <div class="card" id="screen-title" data-screen="title">
               <h2 class="card__title">RxDrop</h2>
-              <p class="card__body">
+
+              <div class="segmented segmented--wide" role="group" aria-label="Mode">
+                <button type="button" data-mode="solo" class="is-selected">Solo</button>
+                <button type="button" data-mode="daily">Daily</button>
+                <button type="button" data-mode="versus">Versus</button>
+              </div>
+
+              <p class="card__body" id="mode-blurb">
                 Rotate the capsules and stack four of a colour in a row to wipe out
                 the viruses.
               </p>
-              <div class="chooser">
-                <span class="chooser__label">Level</span>
-                <button class="chooser__step" data-adjust="level" data-delta="-1" type="button" aria-label="Lower level">&minus;</button>
-                <output class="chooser__value" id="choose-level">0</output>
-                <button class="chooser__step" data-adjust="level" data-delta="1" type="button" aria-label="Raise level">+</button>
-              </div>
-              <div class="chooser">
-                <span class="chooser__label">Speed</span>
-                <div class="segmented" role="group" aria-label="Speed">
-                  <button type="button" data-speed="LOW" class="is-selected">Low</button>
-                  <button type="button" data-speed="MEDIUM">Med</button>
-                  <button type="button" data-speed="HIGH">Hi</button>
+
+              <div class="tunables" id="tunables">
+                <div class="chooser">
+                  <span class="chooser__label">Level</span>
+                  <button class="chooser__step" data-adjust="level" data-delta="-1" type="button" aria-label="Lower level">&minus;</button>
+                  <output class="chooser__value" id="choose-level">0</output>
+                  <button class="chooser__step" data-adjust="level" data-delta="1" type="button" aria-label="Raise level">+</button>
                 </div>
+                <div class="chooser">
+                  <span class="chooser__label">Speed</span>
+                  <div class="segmented" role="group" aria-label="Speed">
+                    <button type="button" data-speed="LOW" class="is-selected">Low</button>
+                    <button type="button" data-speed="MEDIUM">Med</button>
+                    <button type="button" data-speed="HIGH">Hi</button>
+                  </div>
+                </div>
+                <label class="switch" for="resistance">
+                  <input type="checkbox" id="resistance" />
+                  <span class="switch__track"><span class="switch__thumb"></span></span>
+                  <span class="switch__text">
+                    <strong>Resistance</strong>
+                    <small>Viruses you leave alive mutate colour</small>
+                  </span>
+                </label>
               </div>
+
+              <p class="daily-note" id="daily-note" hidden></p>
+
               <button class="button button--primary" data-start type="button">Start game</button>
-              <p class="card__hint">
+              <p class="card__hint" id="controls-hint">
                 Move <kbd>&larr;</kbd><kbd>&rarr;</kbd> &middot; Rotate <kbd>Z</kbd><kbd>X</kbd>
                 &middot; Soft drop <kbd>&darr;</kbd> &middot; Hard drop <kbd>Space</kbd>
                 &middot; Pause <kbd>P</kbd> &middot; Mute <kbd>M</kbd>
@@ -111,8 +150,25 @@
               <button class="button button--primary" data-retry type="button">Try again</button>
               <button class="button" data-quit type="button">Quit to title</button>
             </div>
+
+            <!-- Daily finished -->
+            <div class="card" id="screen-daily" data-screen="daily" hidden>
+              <h2 class="card__title" id="daily-title">Daily done</h2>
+              <p class="card__body" id="daily-summary"></p>
+              <pre class="share" id="daily-share"></pre>
+              <button class="button button--primary" data-copy type="button">Copy result</button>
+              <button class="button" data-quit type="button">Quit to title</button>
+            </div>
+
+            <!-- Versus result -->
+            <div class="card" id="screen-versus" data-screen="versus" hidden>
+              <h2 class="card__title" id="versus-title">Player 1 wins</h2>
+              <p class="card__body" id="versus-summary"></p>
+              <button class="button button--primary" data-rematch type="button">Rematch</button>
+              <button class="button" data-quit type="button">Quit to title</button>
+            </div>
           </div>
-        </section>
+        </div>
 
         <section class="panel panel--right" aria-label="Status">
           <div class="readout">
@@ -121,6 +177,10 @@
           </div>
           <div class="virus-bar" aria-hidden="true">
             <div class="virus-bar__fill" id="virus-bar"></div>
+          </div>
+          <div class="meter" id="resistance-meter" hidden>
+            <span class="readout__label">Resistance</span>
+            <div class="meter__track"><div class="meter__fill" id="resistance-fill"></div></div>
           </div>
           <canvas id="virus-tally" class="tally" height="70" aria-hidden="true"></canvas>
           <button class="button button--ghost" id="mute" type="button" aria-pressed="false">
@@ -141,7 +201,7 @@
       </nav>
 
       <footer class="colophon">
-        <span>An original Dr. Mario style puzzler. No assets, no dependencies - it is all drawn and synthesised in the browser.</span>
+        <span id="offline-note">An original Dr. Mario style puzzler. No dependencies - drawn and synthesised in the browser.</span>
       </footer>
     </div>
 

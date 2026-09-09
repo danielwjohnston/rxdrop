@@ -1,18 +1,25 @@
 import {
+  ATTACK_CAP,
+  ATTACK_PER_COMBO,
+  ATTACK_PER_EXTRA_CELL,
   BOARD_HEIGHT,
   BOARD_WIDTH,
   CLEAR_ANIMATION,
   COLOR_COUNT,
   LOCK_DELAY,
+  MATCH_LENGTH,
   MAX_LEVEL,
+  MUTATION_ANIMATION,
   PILLS_PER_SPEED_UP,
+  RESISTANCE_INTERVAL,
+  RESISTANCE_MAX,
   SETTLE_INTERVAL,
   SPAWN_X,
   SPAWN_Y,
   SPEEDS,
   VIRUS,
 } from './constants.js';
-import { Board, generateLevel } from './board.js';
+import { Board, cell, generateLevel } from './board.js';
 import {
   createPill,
   fits,
@@ -27,6 +34,7 @@ export const PHASE = Object.freeze({
   FALLING: 'falling',
   CLEARING: 'clearing',
   SETTLING: 'settling',
+  MUTATING: 'mutating',
   WON: 'won',
   LOST: 'lost',
 });
@@ -45,7 +53,10 @@ export class Game {
     seed = Date.now(),
     width = BOARD_WIDTH,
     height = BOARD_HEIGHT,
+    resistance = false,
   } = {}) {
+    /** Antibiotic resistance: surviving viruses mutate. Off in classic play. */
+    this.resistance = Boolean(resistance);
     this.level = Math.max(0, Math.min(level, MAX_LEVEL));
     this.speedName = SPEEDS[speed] ? speed : 'LOW';
     this.speed = SPEEDS[this.speedName];
@@ -53,6 +64,7 @@ export class Game {
     this.width = width;
     this.height = height;
     this.score = 0;
+    /** Lifetime across levels, like the score. Per level, see below. */
     this.totalVirusesCleared = 0;
     this.events = [];
     this.paused = false;
@@ -67,6 +79,8 @@ export class Game {
     this.board = new Board(this.width, this.height);
     generateLevel(this.board, this.level, this.rng);
     this.startingViruses = this.board.countViruses();
+    /** Cleared on this board only, so it always pairs with startingViruses. */
+    this.virusesClearedThisLevel = 0;
     this.pillsPlaced = 0;
     this.softDropping = false;
     this.dropTimer = 0;
@@ -77,6 +91,11 @@ export class Game {
     this.tossing = null;
     this.bag = [];
     this.queue = [this.drawColors(), this.drawColors()];
+    /** Garbage capsules sent by an opponent, applied before the next spawn. */
+    this.incoming = [];
+    /** Garbage this player has earned and not yet handed to the opponent. */
+    this.pendingAttack = [];
+    this.mutations = [];
     this.phase = PHASE.FALLING;
     this.pill = null;
     this.spawnPill();
@@ -229,6 +248,9 @@ export class Game {
       case PHASE.SETTLING:
         this.updateSettling(dt);
         break;
+      case PHASE.MUTATING:
+        this.updateMutating(dt);
+        break;
       default:
         break;
     }
@@ -285,12 +307,16 @@ export class Game {
     const viruses = this.clearingCells.filter((c) => c.type === VIRUS).length;
     this.score += this.scoreFor(viruses, this.combo);
     this.totalVirusesCleared += viruses;
+    this.virusesClearedThisLevel += viruses;
+    const attack = this.attackFor(this.clearingCells, this.combo);
+    this.pendingAttack.push(...attack);
     this.phase = PHASE.CLEARING;
     this.phaseTimer = 0;
     this.emit('clear', {
       viruses,
       cells: this.clearingCells.length,
       combo: this.combo,
+      attack: attack.length,
     });
   }
 
@@ -304,6 +330,55 @@ export class Game {
     let points = 0;
     for (let i = 0; i < viruses; i += 1) points += base * 2 ** i;
     return points * combo;
+  }
+
+  /**
+   * Garbage a clear sends to an opponent: one capsule per cell past the
+   * minimum run, plus a bonus for each cascade stage. Colours match what was
+   * cleared, so the junk you receive tells you what your opponent is doing.
+   */
+  attackFor(cells, combo) {
+    const extra = Math.max(0, cells.length - MATCH_LENGTH) * ATTACK_PER_EXTRA_CELL;
+    const count = Math.min(ATTACK_CAP, extra + (combo - 1) * ATTACK_PER_COMBO);
+    return Array.from({ length: count }, (_, i) => cells[i % cells.length].color);
+  }
+
+  /** Takes the garbage this player has earned, handing ownership to the caller. */
+  takeAttack() {
+    const attack = this.pendingAttack;
+    this.pendingAttack = [];
+    return attack;
+  }
+
+  /** Queues garbage from an opponent; it lands before the next capsule. */
+  queueGarbage(colors) {
+    if (!colors || colors.length === 0) return;
+    this.incoming.push(...colors);
+    this.emit('garbageQueued', { count: colors.length });
+  }
+
+  /**
+   * Drops queued garbage in as loose halves, spread across distinct columns so
+   * it lands as an awkward sprinkle rather than a single tower.
+   */
+  dropGarbage() {
+    const columns = Array.from({ length: this.board.width }, (_, i) => i);
+    for (let i = columns.length - 1; i > 0; i -= 1) {
+      const j = this.rng.int(i + 1);
+      [columns[i], columns[j]] = [columns[j], columns[i]];
+    }
+    const dropped = [];
+    for (const color of this.incoming) {
+      const x = columns.find((column) => this.board.isEmpty(column, 0));
+      if (x === undefined) break;
+      this.board.set(x, 0, cell(color));
+      columns.splice(columns.indexOf(x), 1);
+      dropped.push({ x, color });
+      if (columns.length === 0) break;
+    }
+    this.incoming = [];
+    if (dropped.length > 0) this.emit('garbage', { cells: dropped.length });
+    return dropped;
   }
 
   updateClearing(dt) {
@@ -337,7 +412,47 @@ export class Game {
       this.emit('levelComplete', { level: this.level });
       return;
     }
+    if (this.tickResistance()) return;
+    if (this.incoming.length > 0) {
+      this.dropGarbage();
+      this.phase = PHASE.SETTLING;
+      this.phaseTimer = 0;
+      return;
+    }
     this.spawnPill();
+  }
+
+  /**
+   * Ages the viruses every few capsules when resistance is on. Returns true if
+   * a mutation is playing, which holds the next capsule until it finishes.
+   */
+  tickResistance() {
+    if (!this.resistance) return false;
+    if (this.pillsPlaced === 0) return false;
+    if (this.pillsPlaced % RESISTANCE_INTERVAL !== 0) return false;
+    if (this.resistanceTickedAt === this.pillsPlaced) return false;
+    this.resistanceTickedAt = this.pillsPlaced;
+    const mutations = this.board.mutateViruses(this.rng, RESISTANCE_MAX);
+    if (mutations.length === 0) return false;
+    this.mutations = mutations;
+    this.phase = PHASE.MUTATING;
+    this.phaseTimer = 0;
+    this.emit('mutate', { count: mutations.length });
+    return true;
+  }
+
+  updateMutating(dt) {
+    this.phaseTimer += dt;
+    if (this.phaseTimer < MUTATION_ANIMATION) return;
+    this.mutations = [];
+    // A mutation never completes a run, so the board is still settled here.
+    this.finishResolution();
+  }
+
+  /** How close the board is to its next mutation, as 0..1, for the HUD. */
+  get resistanceLevel() {
+    if (!this.resistance) return 0;
+    return this.board.peakResistance(RESISTANCE_MAX);
   }
 
   /** Starts the next level, keeping the score. */

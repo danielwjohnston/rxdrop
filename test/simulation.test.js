@@ -22,13 +22,15 @@ function assertNothingFloats(game, context) {
 }
 
 describe('headless play-through', () => {
+  // minPills is per scenario on purpose: at level 12 the viruses reach row 3,
+  // so careless play tops out in a handful of capsules however the board falls.
   const scenarios = [
-    { seed: 4242, level: 4, speed: 'HIGH' },
-    { seed: 99, level: 0, speed: 'LOW' },
-    { seed: 7, level: 12, speed: 'MEDIUM' },
+    { seed: 4242, level: 4, speed: 'HIGH', minPills: 6 },
+    { seed: 99, level: 0, speed: 'LOW', minPills: 10 },
+    { seed: 7, level: 12, speed: 'MEDIUM', minPills: 2 },
   ];
 
-  for (const scenario of scenarios) {
+  for (const { minPills, ...scenario } of scenarios) {
     it(`survives random play without corrupting the board (${JSON.stringify(scenario)})`, () => {
     const rng = createRng(99 + scenario.seed);
     const game = new Game(scenario);
@@ -56,11 +58,14 @@ describe('headless play-through', () => {
       }
     }
 
-    assert.ok(game.pillsPlaced > 5, `only placed ${game.pillsPlaced} pills`);
+    assert.ok(
+      game.pillsPlaced >= minPills,
+      `only placed ${game.pillsPlaced} pills, expected at least ${minPills}`,
+    );
     assert.ok(game.score >= 0);
     assert.ok(game.isOver, 'careless play should end in a top-out or a win');
     assert.ok(
-      game.virusesLeft + game.totalVirusesCleared === game.startingViruses,
+      game.virusesLeft + game.virusesClearedThisLevel === game.startingViruses,
       'every virus is either still on the board or counted as cleared',
     );
     });

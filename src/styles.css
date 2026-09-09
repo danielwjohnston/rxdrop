@@ -713,6 +713,12 @@ body.is-versus .playfield {
     min-height: 0;
   }
 
+  /* On a phone the app already fills the viewport, so versus should use all
+     the height it is given rather than a fixed share of it. */
+  body.is-versus .fields {
+    height: 100%;
+  }
+
   .playfield {
     min-height: 0;
   }

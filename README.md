@@ -76,6 +76,15 @@ every file; after that it runs with no network at all, and browsers will offer
 to install it to your home screen or desktop. The daily challenge works offline
 too, since the puzzle comes from the date rather than a server.
 
+**On iPhone and iPad**, Safari does not show an install prompt - installing is
+manual: **Share → Add to Home Screen**. Launched from the home screen it runs
+full screen with no browser chrome. Service workers and the Cache API have
+worked on iOS since 11.3, so offline play works the same way; iOS 26 opens
+home-screen sites as web apps by default, and the `apple-mobile-web-app-*`
+tags here cover older versions. Two iOS quirks worth knowing: sound only starts
+after your first tap (Safari requires a gesture before audio), and versus needs
+a keyboard or two controllers, since the touch pad only drives player one.
+
 ## Controls
 
 | Action | Keyboard | Touch | Gamepad |

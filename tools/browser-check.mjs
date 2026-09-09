@@ -138,10 +138,11 @@ try {
       const g = window.rxdrop.game;
       for (let y = 0; y < g.board.height; y += 1)
         for (let x = 0; x < g.board.width; x += 1) g.board.set(x, y, null);
-      g.board.set(0, 15, { color: 2, type: 'virus', link: null });
-      g.board.set(1, 15, { color: 2, type: 'virus', link: null });
-      g.board.set(2, 15, { color: 2, type: 'pill', link: null });
-      g.board.set(7, 15, { color: 0, type: 'virus', link: null });
+      const floor = g.board.height - 1;
+      g.board.set(0, floor, { color: 2, type: 'virus', link: null });
+      g.board.set(1, floor, { color: 2, type: 'virus', link: null });
+      g.board.set(2, floor, { color: 2, type: 'pill', link: null });
+      g.board.set(7, floor, { color: 0, type: 'virus', link: null });
       g.startingViruses = 3;
       g.score = 0;
       g.pill = { x: 3, y: 0, orientation: 0, colors: [2, 2] };
@@ -161,9 +162,10 @@ try {
       const g = window.rxdrop.game;
       for (let y = 0; y < g.board.height; y += 1)
         for (let x = 0; x < g.board.width; x += 1) g.board.set(x, y, null);
-      g.board.set(0, 15, { color: 1, type: 'virus', link: null });
-      g.board.set(1, 15, { color: 1, type: 'pill', link: null });
-      g.board.set(2, 15, { color: 1, type: 'pill', link: null });
+      const floor = g.board.height - 1;
+      g.board.set(0, floor, { color: 1, type: 'virus', link: null });
+      g.board.set(1, floor, { color: 1, type: 'pill', link: null });
+      g.board.set(2, floor, { color: 1, type: 'pill', link: null });
       g.pill = { x: 3, y: 0, orientation: 0, colors: [1, 1] };
       g.hardDrop();
     });
@@ -176,6 +178,35 @@ try {
     assert.equal(state.level, 2);
     assert.equal(state.viruses, 12);
     assert.equal(state.screen, 'playing');
+  });
+
+  await check('a bottle full to the lip deals into the neck, not a game over', async () => {
+    const state = await page.evaluate(() => {
+      const g = window.rxdrop.game;
+      const { NECK_ROWS } = window.rxdrop.constants;
+      // Solid from the lip to the floor under the spawn columns: the bottle is
+      // as full as it gets without anything having backed up into the neck.
+      for (let y = NECK_ROWS; y < g.board.height; y += 1) {
+        // Alternating colours so the fill is a wall, not a pending clear.
+        for (const x of [3, 4]) g.board.set(x, y, { color: (x + y) % 3, type: 'pill', link: null });
+      }
+      g.spawnPill();
+      return {
+        phase: g.phase,
+        rows: window.rxdrop.pillCells(g.pill).map((c) => c.y),
+        neckRows: NECK_ROWS,
+      };
+    });
+    assert.equal(state.phase, 'falling', 'a full bottle body is not a loss');
+    assert.deepEqual(state.rows, [0, 0], 'the capsule waits in the neck');
+    await page.waitForTimeout(150);
+    // And it can still be steered out of the full columns.
+    await page.keyboard.down('ArrowLeft');
+    await page.waitForTimeout(400);
+    await page.keyboard.up('ArrowLeft');
+    const after = await snapshot(page);
+    assert.ok(after.x < 3, `expected the capsule to slide left, at column ${after.x}`);
+    assert.notEqual(after.phase, 'lost');
   });
 
   await check('a blocked spawn ends the game and records a top score', async () => {
@@ -694,6 +725,7 @@ function snapshot(page) {
     viruses: window.rxdrop.game?.virusesLeft ?? null,
     score: window.rxdrop.game?.score ?? null,
     paused: window.rxdrop.game?.paused ?? null,
+    phase: window.rxdrop.game?.phase ?? null,
     x: window.rxdrop.game?.pill?.x ?? null,
     orientation: window.rxdrop.game?.pill?.orientation ?? null,
     hudScore: document.getElementById('score').textContent,

@@ -2,10 +2,16 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { Board, cell } from '../src/board.js';
 import {
+  BOARD_BODY_HEIGHT,
+  BOARD_HEIGHT,
   LOCK_DELAY,
   LOCK_RESETS,
+  NECK_ROWS,
+  PILL,
   PILLS_PER_SPEED_UP,
   SPAWN_GRACE,
+  SPAWN_X,
+  SPAWN_Y,
   SPEEDS,
   VIRUS,
 } from '../src/constants.js';
@@ -398,5 +404,68 @@ describe('speed', () => {
 
   it('HI starts faster than LOW', () => {
     assert.ok(new Game({ speed: 'HIGH' }).dropInterval < new Game({ speed: 'LOW' }).dropInterval);
+  });
+});
+
+describe('the neck row', () => {
+  /** Fills the two spawn columns solid from `fromRow` to the floor. */
+  const fillSpawnColumns = (game, fromRow) => {
+    for (let y = fromRow; y < game.board.height; y += 1) {
+      // Alternating colours so the fill is a wall, not a pending clear.
+      for (const x of [SPAWN_X, SPAWN_X + 1]) {
+        game.board.set(x, y, cell(PILL, (x + y) % 3, null));
+      }
+    }
+  };
+
+  it('sits above the bottle body, and capsules are dealt into it', () => {
+    assert.equal(BOARD_HEIGHT, BOARD_BODY_HEIGHT + NECK_ROWS);
+    assert.ok(SPAWN_Y < NECK_ROWS, 'capsules spawn in the neck, not in the bottle');
+  });
+
+  it('holds no viruses, so the bottle body is the whole puzzle', () => {
+    const game = newGame({ level: 20 });
+    for (let x = 0; x < game.board.width; x += 1) {
+      for (let y = 0; y < NECK_ROWS; y += 1) assert.equal(game.board.get(x, y), null);
+    }
+  });
+
+  it('still deals a capsule when the body is full to the lip', () => {
+    const game = newGame();
+    fillSpawnColumns(game, NECK_ROWS);
+    game.spawnPill();
+    assert.equal(game.phase, PHASE.FALLING, 'a full body is not a loss');
+    assert.deepEqual(
+      pillCells(game.pill).map(({ y }) => y),
+      [SPAWN_Y, SPAWN_Y],
+    );
+    assert.ok(game.spawnedBlocked, 'it has nowhere to fall, so it gets the long fuse');
+    assert.equal(game.lockBudget, SPAWN_GRACE);
+  });
+
+  it('gives the player time to steer that capsule off the full columns', () => {
+    const game = newGame();
+    fillSpawnColumns(game, NECK_ROWS);
+    game.spawnPill();
+    tick(game, 300);
+    for (let i = 0; i < 3; i += 1) game.move(-1);
+    assert.deepEqual(
+      pillCells(game.pill).map(({ x }) => x),
+      [0, 1],
+      'the capsule slides along the neck',
+    );
+    tick(game, 2000);
+    assert.notEqual(game.phase, PHASE.LOST);
+    for (let x = 0; x < game.board.width; x += 1) {
+      assert.equal(game.board.get(x, SPAWN_Y), null, 'it fell out of the neck');
+    }
+  });
+
+  it('ends the run only once the neck itself is blocked', () => {
+    const game = newGame();
+    fillSpawnColumns(game, 0);
+    game.spawnPill();
+    assert.equal(game.phase, PHASE.LOST);
+    assert.ok(game.drainEvents().some((e) => e.type === 'gameOver'));
   });
 });

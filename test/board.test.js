@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { Board, cell, generateLevel, virusTopRow } from '../src/board.js';
-import { LINK, PILL, VIRUS } from '../src/constants.js';
+import { LINK, NECK_ROWS, PILL, VIRUS } from '../src/constants.js';
 import { createRng } from '../src/rng.js';
 
 describe('Board.from', () => {
@@ -126,14 +126,17 @@ describe('generateLevel', () => {
     }
   });
 
-  it('raises the virus ceiling with the level, but never past row 3', () => {
+  it('raises the virus ceiling with the level, but never into the neck', () => {
     const board = new Board();
-    assert.equal(virusTopRow(board, 0), 6);
-    assert.equal(virusTopRow(board, 3), 6);
-    assert.equal(virusTopRow(board, 4), 5);
-    assert.equal(virusTopRow(board, 8), 4);
-    assert.equal(virusTopRow(board, 12), 3);
-    assert.equal(virusTopRow(board, 20), 3);
+    // Ten rows up from the bottom at first, thirteen by level 12 - which on a
+    // 17-row board leaves the neck row and the three under it clear.
+    assert.equal(virusTopRow(board, 0), 7);
+    assert.equal(virusTopRow(board, 3), 7);
+    assert.equal(virusTopRow(board, 4), 6);
+    assert.equal(virusTopRow(board, 8), 5);
+    assert.equal(virusTopRow(board, 12), 4);
+    assert.equal(virusTopRow(board, 20), 4);
+    assert.ok(virusTopRow(board, 20) > NECK_ROWS);
   });
 
   it('keeps viruses below the level\'s ceiling', () => {
@@ -167,7 +170,7 @@ describe('generateLevel', () => {
     const board = new Board();
     generateLevel(board, 20, createRng(9));
     for (let x = 0; x < board.width; x += 1) {
-      for (let y = 0; y < 3; y += 1) assert.equal(board.get(x, y), null);
+      for (let y = 0; y < 4; y += 1) assert.equal(board.get(x, y), null);
     }
   });
 });

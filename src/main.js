@@ -1,4 +1,4 @@
-import { MAX_LEVEL, RESISTANCE_MAX, SPEEDS, VIRUS } from './constants.js';
+import { MAX_LEVEL, NECK_ROWS, RESISTANCE_MAX, SPEEDS, VIRUS } from './constants.js';
 import { Game } from './game.js';
 import { VersusMatch } from './versus.js';
 import { dailyKey, dailySetup, isToday, shareText } from './daily.js';
@@ -810,7 +810,7 @@ window.rxdrop = {
   renderers,
   settings,
   pillCells,
-  constants: { RESISTANCE_MAX },
+  constants: { NECK_ROWS, RESISTANCE_MAX },
 };
 
 setMuted(settings.muted);

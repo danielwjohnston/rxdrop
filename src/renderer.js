@@ -2,6 +2,7 @@ import {
   CLEAR_ANIMATION,
   LINK,
   MUTATION_ANIMATION,
+  NECK_ROWS,
   RESISTANCE_MAX,
   VIRUS,
 } from './constants.js';
@@ -15,7 +16,8 @@ export const PALETTE = [
   { base: '#37b6ff', light: '#a7e4ff', dark: '#0a4f8a', glow: '#7fd4ff' },
 ];
 
-const NECK_ROWS = 1.6;
+/** Height of the spout above the bottle's shoulders, in cells. */
+const SPOUT_ROWS = 1.1;
 const BOTTLE_PAD = 0.35;
 
 /** Draws the bottle, the stack and the pill in play onto a 2D canvas. */
@@ -55,14 +57,14 @@ export class Renderer {
     const cell = Math.floor(
       Math.min(
         usableW / (board.width + BOTTLE_PAD * 2),
-        usableH / (board.height + NECK_ROWS + BOTTLE_PAD),
+        usableH / (board.height + SPOUT_ROWS + BOTTLE_PAD),
       ),
     );
     const fieldW = cell * board.width;
     const fieldH = cell * board.height;
     const originX = Math.round((this.cssWidth - fieldW) / 2);
     const originY = Math.round(
-      (this.cssHeight - fieldH - cell * NECK_ROWS) / 2 + cell * NECK_ROWS,
+      (this.cssHeight - fieldH - cell * SPOUT_ROWS) / 2 + cell * SPOUT_ROWS,
     );
     return { cell, fieldW, fieldH, originX, originY };
   }
@@ -105,21 +107,35 @@ export class Renderer {
     ctx.fillStyle = glass;
     ctx.fill();
 
-    // Faint grid inside the bottle so the columns read clearly.
     ctx.save();
     tracePath(ctx, shape);
     ctx.clip();
+
+    // The neck row sits above the lip: recessed, ungridded, never a virus's
+    // home. Capsules pass through it, and the run only ends when one cannot.
+    ctx.fillStyle = 'rgba(2, 5, 18, 0.72)';
+    ctx.fillRect(shape.left, shape.top, shape.right - shape.left, shape.lip - shape.top);
+
+    // Faint grid inside the bottle so the columns read clearly.
     ctx.strokeStyle = 'rgba(139, 214, 255, 0.09)';
     ctx.lineWidth = 1;
     ctx.beginPath();
     for (let i = 1; i < game.board.width; i += 1) {
-      ctx.moveTo(originX + i * cell, originY);
+      ctx.moveTo(originX + i * cell, shape.lip);
       ctx.lineTo(originX + i * cell, originY + fieldH);
     }
-    for (let j = 1; j < game.board.height; j += 1) {
+    for (let j = NECK_ROWS + 1; j < game.board.height; j += 1) {
       ctx.moveTo(originX, originY + j * cell);
       ctx.lineTo(originX + fieldW, originY + j * cell);
     }
+    ctx.stroke();
+
+    // The lip itself, so the neck reads as separate from the bottle.
+    ctx.strokeStyle = 'rgba(139, 214, 255, 0.4)';
+    ctx.lineWidth = Math.max(1, cell * 0.06);
+    ctx.beginPath();
+    ctx.moveTo(shape.left, shape.lip);
+    ctx.lineTo(shape.right, shape.lip);
     ctx.stroke();
 
     // Soft sheen hugging the inside of the left wall.
@@ -495,7 +511,9 @@ function bottleShape({ cell, fieldW, fieldH, originX, originY }) {
     neckR: cell * 0.3,
     neckLeft: originX + fieldW / 2 - neckW / 2,
     neckRight: originX + fieldW / 2 + neckW / 2,
-    neckTop: originY - pad - cell * NECK_ROWS,
+    neckTop: originY - pad - cell * SPOUT_ROWS,
+    // Bottom of the neck row: the lip capsules drop past to enter the bottle.
+    lip: originY + cell * NECK_ROWS,
   };
 }
 

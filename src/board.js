@@ -315,13 +315,17 @@ export function generateLevel(board, level, rng) {
   return placed;
 }
 
-/** The highest row viruses may occupy: ten rows at first, thirteen by level 12. */
+/**
+ * The highest row viruses may occupy: ten rows at first, thirteen by level 12.
+ * Measured from the bottom, so the neck row on top never holds a virus and the
+ * ceiling sits where it always did.
+ */
 export function virusTopRow(board, level) {
   const rows = Math.min(MAX_VIRUS_ROWS, MIN_VIRUS_ROWS + Math.floor(level / 4));
   return Math.max(MIN_VIRUS_ROW, board.height - rows);
 }
 
-const MIN_VIRUS_ROW = 3;
+const MIN_VIRUS_ROW = 4;
 const MIN_VIRUS_ROWS = 10;
 const MAX_VIRUS_ROWS = 13;
 

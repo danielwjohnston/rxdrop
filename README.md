@@ -125,9 +125,9 @@ throws the current run away.
 
 ## Rules
 
-- The bottle is 8 columns by 16 rows and starts with `4 × (level + 1)` viruses,
-  from 4 at level 0 up to 84 at level 20. Higher levels stack them closer to
-  the neck.
+- The bottle is 8 columns by 16 rows, with one more row above it for the neck.
+  It starts with `4 × (level + 1)` viruses, from 4 at level 0 up to 84 at level
+  20. Higher levels stack them closer to the neck.
 - Capsules fall in two halves, each one of three colours. Line up **four or
   more** of one colour in a row or column and they are destroyed - viruses
   included.
@@ -137,18 +137,20 @@ throws the current run away.
 - Each virus in a single clear is worth double the last: at LOW speed one virus
   scores 100, two score 300, three score 700, and so on. MED and HI pay more.
 - Gravity gets faster every ten capsules.
-- Clear every virus to finish the level. If a new capsule cannot fit at the top
-  of the bottle, the game is over.
+- Clear every virus to finish the level. Filling the bottle to the brim is not
+  a loss on its own: capsules are dealt into the neck above it, and you get a
+  long fuse to steer one clear. The run ends only once the neck is blocked too,
+  which means capsules have genuinely backed up out of the bottle.
 
 ## Development
 
 ```sh
-npm test           # 136 unit tests, no dependencies, well under a second
+npm test           # 141 unit tests, no dependencies, well under a second
 npm run test:watch # re-run on change
 
 # End-to-end checks in a real browser (Playwright is not a dependency):
 npm i --no-save playwright && npx playwright install chromium
-npm run test:browser  # 22 checks: menus, controls, versus, daily, offline, mobile
+npm run test:browser  # 23 checks: menus, controls, versus, daily, offline, mobile
 
 npm run gauntlet   # the full protocol below: every stage, one gate
 ```

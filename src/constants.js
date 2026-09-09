@@ -1,10 +1,14 @@
 /**
  * Shared constants for RxDrop.
- * The playfield matches the original Dr. Mario bottle: 8 columns x 16 rows.
+ * The bottle is the original Dr. Mario's 8 columns x 16 rows, plus one row on
+ * top for the neck. Capsules spawn in the neck and fall into the bottle proper,
+ * so the stack has to actually back up into the neck before a run is over.
  */
 
 export const BOARD_WIDTH = 8;
-export const BOARD_HEIGHT = 16;
+export const BOARD_BODY_HEIGHT = 16;
+export const NECK_ROWS = 1;
+export const BOARD_HEIGHT = BOARD_BODY_HEIGHT + NECK_ROWS;
 
 /** Colour ids. The renderer and audio layers key off these. */
 export const COLORS = Object.freeze({ RED: 0, YELLOW: 1, BLUE: 2 });

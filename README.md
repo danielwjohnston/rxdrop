@@ -95,6 +95,20 @@ touch the DOM. That is what lets the test suite play thousands of frames
 headlessly and assert that the board never floats a capsule half or leaves a
 match unresolved.
 
+## Deploying
+
+`.github/workflows/pages.yml` publishes the repository to GitHub Pages on every
+push to `main` - the game is already static, so there is nothing to build.
+
+GitHub Pages has to be switched on once by a repository admin, under
+**Settings -> Pages -> Source -> "GitHub Actions"**. The workflow asks the
+`configure-pages` action to enable it automatically, but a workflow token is
+not always allowed to create the Pages site, in which case the deploy fails
+with `Create Pages site failed. Error: Resource not accessible by integration`
+until the switch is flipped by hand. After that, re-run the workflow (or push
+to `main`) and the game goes live at
+https://danielwjohnston.github.io/rxdrop/.
+
 ## Licence
 
 MIT - see [LICENSE](LICENSE). RxDrop is an original implementation inspired by

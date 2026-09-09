@@ -2,6 +2,7 @@ import {
   BOARD_HEIGHT,
   BOARD_WIDTH,
   CLEAR_ANIMATION,
+  COLOR_COUNT,
   LOCK_DELAY,
   MAX_LEVEL,
   PILLS_PER_SPEED_UP,
@@ -17,7 +18,6 @@ import {
   fits,
   hardDropPosition,
   lockPill,
-  randomColors,
   tryMove,
   tryRotate,
 } from './pill.js';
@@ -75,7 +75,8 @@ export class Game {
     this.combo = 0;
     this.clearingCells = [];
     this.tossing = null;
-    this.queue = [randomColors(this.rng), randomColors(this.rng)];
+    this.bag = [];
+    this.queue = [this.drawColors(), this.drawColors()];
     this.phase = PHASE.FALLING;
     this.pill = null;
     this.spawnPill();
@@ -124,9 +125,29 @@ export class Game {
     return events;
   }
 
+  /**
+   * Capsule colours come from a shuffled bag holding each of the nine colour
+   * pairs once, so every pair turns up in any nine capsules - the same trick
+   * the original uses to avoid long runs of one colour.
+   */
+  drawColors() {
+    if (this.bag.length === 0) {
+      const combinations = [];
+      for (let a = 0; a < COLOR_COUNT; a += 1) {
+        for (let b = 0; b < COLOR_COUNT; b += 1) combinations.push([a, b]);
+      }
+      for (let i = combinations.length - 1; i > 0; i -= 1) {
+        const j = this.rng.int(i + 1);
+        [combinations[i], combinations[j]] = [combinations[j], combinations[i]];
+      }
+      this.bag = combinations;
+    }
+    return this.bag.pop();
+  }
+
   spawnPill() {
     const colors = this.queue.shift();
-    this.queue.push(randomColors(this.rng));
+    this.queue.push(this.drawColors());
     const pill = createPill(colors, SPAWN_X, SPAWN_Y, 0);
     if (!fits(this.board, pill)) {
       this.pill = null;

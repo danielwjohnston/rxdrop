@@ -64,7 +64,7 @@ capsule across the bottle in one press.
 ## Development
 
 ```sh
-npm test           # 58 unit tests, no dependencies, ~0.3s
+npm test           # 60 unit tests, no dependencies, ~0.3s
 npm run test:watch # re-run on change
 
 # End-to-end checks in a real browser (Playwright is not a dependency):

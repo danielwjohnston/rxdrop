@@ -1,4 +1,4 @@
-import { COLOR_COUNT, LINK, PILL, SPAWN_X, SPAWN_Y } from './constants.js';
+import { LINK, PILL, SPAWN_X, SPAWN_Y } from './constants.js';
 import { cell } from './board.js';
 
 /**
@@ -18,10 +18,6 @@ const PARTNER_LINK = [LINK.LEFT, LINK.DOWN, LINK.RIGHT, LINK.UP];
 
 export function createPill(colors, x = SPAWN_X, y = SPAWN_Y, orientation = 0) {
   return { x, y, orientation, colors: [...colors] };
-}
-
-export function randomColors(rng) {
-  return [rng.int(COLOR_COUNT), rng.int(COLOR_COUNT)];
 }
 
 /** The two board cells a pill currently occupies, pivot first. */

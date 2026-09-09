@@ -34,6 +34,25 @@ describe('setup', () => {
     assert.equal(a.score, b.score);
   });
 
+  it('deals every colour pair once per nine capsules', () => {
+    const game = newGame();
+    // The queue has already taken a couple of pairs; finish that bag first.
+    while (game.bag.length > 0) game.drawColors();
+    for (let round = 0; round < 4; round += 1) {
+      const drawn = Array.from({ length: 9 }, () => game.drawColors().join(''));
+      assert.equal(new Set(drawn).size, 9, `round ${round} repeated a pair: ${drawn}`);
+    }
+  });
+
+  it('never deals a colour outside the palette', () => {
+    const game = newGame();
+    for (let i = 0; i < 60; i += 1) {
+      for (const color of game.drawColors()) {
+        assert.ok(Number.isInteger(color) && color >= 0 && color < 3);
+      }
+    }
+  });
+
   it('queues a preview of the next pill', () => {
     const game = newGame();
     assert.equal(game.nextColors.length, 2);

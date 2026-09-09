@@ -38,11 +38,17 @@ http://localhost:8080/?level=12&speed=HIGH&seed=8675309
 | Soft drop | <kbd>↓</kbd> or <kbd>S</kbd> | button, or swipe down | d-pad down |
 | Hard drop | <kbd>Space</kbd> | DROP, or flick down | d-pad up / Y |
 | Pause | <kbd>P</kbd> or <kbd>Esc</kbd> | Pause | Start |
-| Restart | <kbd>R</kbd> | - | - |
-| Mute | <kbd>M</kbd> | Sound | - |
+| Restart level | <kbd>R</kbd> | Restart, on the pause card | Back / Select |
+| Mute | <kbd>M</kbd> | Sound | X / Square |
 
 Holding left or right auto-shifts after a short delay, so you can slide a
 capsule across the bottle in one press.
+
+Gamepads use the standard layout, so the face buttons are A/B on an Xbox pad
+and cross/circle on a PlayStation one. Browsers only hand a page a gamepad
+after a button is pressed on it, so give the pad one press before expecting it
+to do anything. Restart sits on Back/Select rather than a face button, since it
+throws the current run away.
 
 ## Rules
 
@@ -64,12 +70,12 @@ capsule across the bottle in one press.
 ## Development
 
 ```sh
-npm test           # 60 unit tests, no dependencies, ~0.3s
+npm test           # 83 unit tests, no dependencies, ~0.3s
 npm run test:watch # re-run on change
 
 # End-to-end checks in a real browser (Playwright is not a dependency):
 npm i --no-save playwright && npx playwright install chromium
-npm run test:browser  # 15 checks: menus, controls, clearing, endings, mobile
+npm run test:browser  # 16 checks: menus, controls, clearing, endings, mobile
 ```
 
 ### Layout

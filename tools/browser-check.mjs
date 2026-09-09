@@ -253,6 +253,82 @@ try {
     assert.equal(after, before + 1, 'a downward flick should hard drop');
   });
 
+  await check('a gamepad drives the game', async () => {
+    const pad = await browser.newPage({ viewport: { width: 900, height: 800 } });
+    const padErrors = [];
+    pad.on('pageerror', (error) => padErrors.push(error.message));
+    // A synthetic standard-layout pad the checks can drive.
+    await pad.addInitScript(() => {
+      const gamepad = {
+        index: 0,
+        id: 'Synthetic Standard Pad',
+        mapping: 'standard',
+        connected: true,
+        axes: [0, 0, 0, 0],
+        buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })),
+      };
+      window.__pad = gamepad;
+      navigator.getGamepads = () => [gamepad, null, null, null];
+    });
+    const tap = (index, ms = 90) =>
+      pad.evaluate(async ([i, hold]) => {
+        window.__pad.buttons[i] = { pressed: true, value: 1 };
+        await new Promise((r) => setTimeout(r, hold));
+        window.__pad.buttons[i] = { pressed: false, value: 0 };
+        await new Promise((r) => setTimeout(r, 80));
+      }, [index, ms]);
+
+    await pad.goto(`${BASE}/?level=2&speed=LOW&seed=4242`, { waitUntil: 'networkidle' });
+    await pad.click('[data-start]');
+    await pad.waitForTimeout(250);
+
+    const start = await pad.evaluate(() => ({
+      x: window.rxdrop.game.pill.x,
+      orientation: window.rxdrop.game.pill.orientation,
+    }));
+    await tap(14); // d-pad left
+    assert.equal(await pad.evaluate(() => window.rxdrop.game.pill.x), start.x - 1);
+    await tap(0); // A rotates
+    assert.notEqual(
+      await pad.evaluate(() => window.rxdrop.game.pill.orientation),
+      start.orientation,
+    );
+
+    // Left stick held right auto-shifts more than one column.
+    const beforeShift = await pad.evaluate(() => window.rxdrop.game.pill.x);
+    await pad.evaluate(async () => {
+      window.__pad.axes[0] = 1;
+      await new Promise((r) => setTimeout(r, 550));
+      window.__pad.axes[0] = 0;
+    });
+    assert.ok(
+      (await pad.evaluate(() => window.rxdrop.game.pill.x)) > beforeShift + 1,
+      'the stick should auto-shift',
+    );
+
+    const beforeDrop = await pad.evaluate(() => window.rxdrop.game.pillsPlaced);
+    await tap(3); // Y hard drops
+    assert.equal(await pad.evaluate(() => window.rxdrop.game.pillsPlaced), beforeDrop + 1);
+
+    await tap(2); // X mutes, and again to unmute
+    assert.equal(await pad.evaluate(() => window.rxdrop.audio.muted), true);
+    await tap(2);
+    assert.equal(await pad.evaluate(() => window.rxdrop.audio.muted), false);
+
+    await tap(8); // Back/Select restarts the level
+    await pad.waitForTimeout(200);
+    assert.equal(await pad.evaluate(() => window.rxdrop.game.pillsPlaced), 0);
+    assert.equal(await pad.evaluate(() => window.rxdrop.screen), 'playing');
+
+    await tap(9, 120); // Start pauses, and again to resume
+    assert.equal(await pad.isVisible('#screen-pause'), true);
+    await tap(9, 120);
+    assert.equal(await pad.evaluate(() => window.rxdrop.screen), 'playing');
+
+    assert.deepEqual(padErrors, []);
+    await pad.close();
+  });
+
   await check('it still plays without Web Audio or localStorage', async () => {
     const limited = await browser.newPage({ viewport: { width: 900, height: 800 } });
     const limitedErrors = [];

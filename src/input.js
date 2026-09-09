@@ -200,6 +200,10 @@ export class InputController {
         rotateCCW: pad.buttons[1]?.pressed,
         hardDrop: pad.buttons[12]?.pressed || pad.buttons[3]?.pressed,
         pause: pad.buttons[9]?.pressed,
+        mute: pad.buttons[2]?.pressed,
+        // Restart throws the current run away, so it sits on Back/Select
+        // rather than a face button that is easy to catch mid-game.
+        restart: pad.buttons[8]?.pressed,
       };
       for (const [action, pressed] of Object.entries(buttons)) {
         const key = `${pad.index}:${action}`;

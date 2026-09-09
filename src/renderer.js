@@ -1,4 +1,4 @@
-import { CLEAR_ANIMATION, LINK, PILL, VIRUS } from './constants.js';
+import { CLEAR_ANIMATION, LINK, VIRUS } from './constants.js';
 import { pillCells } from './pill.js';
 import { PHASE } from './game.js';
 
@@ -492,5 +492,3 @@ function roundRectVariable(ctx, x, y, w, h, { tl, tr, br, bl }) {
   ctx.quadraticCurveTo(x, y, x + tl, y);
   ctx.closePath();
 }
-
-export { PILL, VIRUS };

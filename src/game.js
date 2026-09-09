@@ -9,6 +9,7 @@ import {
   SPAWN_X,
   SPAWN_Y,
   SPEEDS,
+  VIRUS,
 } from './constants.js';
 import { Board, generateLevel } from './board.js';
 import {
@@ -260,7 +261,7 @@ export class Game {
       const c = this.board.get(x, y);
       return { x, y, color: c.color, type: c.type };
     });
-    const viruses = this.clearingCells.filter((c) => c.type === 'virus').length;
+    const viruses = this.clearingCells.filter((c) => c.type === VIRUS).length;
     this.score += this.scoreFor(viruses, this.combo);
     this.totalVirusesCleared += viruses;
     this.phase = PHASE.CLEARING;

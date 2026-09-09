@@ -1,5 +1,5 @@
-import { MAX_LEVEL, SPEEDS } from './constants.js';
-import { Game, PHASE } from './game.js';
+import { MAX_LEVEL, SPEEDS, VIRUS } from './constants.js';
+import { Game } from './game.js';
 import { Renderer, drawPillPreview, drawVirusTally } from './renderer.js';
 import { AudioEngine } from './audio.js';
 import { InputController } from './input.js';
@@ -28,6 +28,7 @@ const dom = {
   clearLevel: el('clear-level'),
   clearScore: el('clear-score'),
   overSummary: el('over-summary'),
+  overBest: el('over-best'),
 };
 
 const screens = Object.fromEntries(
@@ -43,6 +44,8 @@ let game = null;
 let screen = 'title';
 let lastFrame = performance.now();
 let dangerMusic = false;
+/** The record to beat when the current game started, for the "new best" note. */
+let topScoreAtStart = 0;
 /** When the current card appeared, so a mashed key cannot skip it instantly. */
 let screenShownAt = 0;
 const CONFIRM_LOCKOUT = 550;
@@ -116,6 +119,7 @@ function startGame({ level = settings.level, speed = settings.speed, seed } = {}
   audio.resume();
   const chosenSeed = seed ?? (settings.seed ?? (Math.random() * 0xffffffff) >>> 0);
   settings.seed = undefined;
+  topScoreAtStart = settings.topScore;
   game = new Game({ level, speed, seed: chosenSeed });
   dangerMusic = false;
   audio.setTrack('chill');
@@ -156,7 +160,7 @@ function syncHud(force = false) {
 function virusCounts(board) {
   const counts = [0, 0, 0];
   board?.forEachCell((c) => {
-    if (c.type === 'virus') counts[c.color] += 1;
+    if (c.type === VIRUS) counts[c.color] += 1;
   });
   return counts;
 }
@@ -199,6 +203,7 @@ function handleEvents() {
         dom.overSummary.textContent =
           `${game.startingViruses - game.virusesLeft} of ${game.startingViruses} viruses cleared ` +
           `on level ${game.level}. Final score ${game.score.toLocaleString()}.`;
+        dom.overBest.hidden = game.score <= topScoreAtStart;
         showScreen('over');
         break;
       case 'spawn':
@@ -280,6 +285,7 @@ function pauseGame() {
   if (!game || game.isOver || screen !== 'playing') return;
   game.paused = true;
   audio.play('pause');
+  audio.stopMusic();
   showScreen('paused');
 }
 
@@ -288,6 +294,7 @@ function resumeGame() {
   game.paused = false;
   audio.play('resume');
   audio.resume();
+  audio.startMusic(dangerMusic ? 'fever' : 'chill');
   showScreen('playing');
   lastFrame = performance.now();
 }
@@ -330,7 +337,9 @@ document.addEventListener('click', (event) => {
   if (target.dataset.start !== undefined) startGame();
   else if (target.dataset.resume !== undefined) resumeGame();
   else if (target.dataset.quit !== undefined) quitToTitle();
-  else if (target.dataset.retry !== undefined) startGame({ level: game?.level ?? settings.level });
+  else if (target.dataset.retry !== undefined || target.dataset.restart !== undefined) {
+    startGame({ level: game?.level ?? settings.level, speed: game?.speedName ?? settings.speed });
+  }
   else if (target.dataset.nextLevel !== undefined) {
     game.advanceLevel();
     settings.level = game.level;

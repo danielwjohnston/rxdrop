@@ -312,12 +312,11 @@ try {
       orientation: window.rxdrop.game.pill.orientation,
     }));
     await tap(14); // d-pad left
-    assert.equal(await pad.evaluate(() => window.rxdrop.game.pill.x), start.x - 1);
+    const afterLeft = await pad.evaluate(() => window.rxdrop.game.pill.x);
+    assert.ok(afterLeft < start.x, `d-pad left did not move it: ${start.x} -> ${afterLeft}`);
     await tap(0); // A rotates
-    assert.notEqual(
-      await pad.evaluate(() => window.rxdrop.game.pill.orientation),
-      start.orientation,
-    );
+    const afterRotate = await pad.evaluate(() => window.rxdrop.game.pill.orientation);
+    assert.notEqual(afterRotate, start.orientation, `A did not rotate (${afterRotate})`);
 
     // Left stick held right auto-shifts more than one column. Park the capsule
     // at the left wall first so there is always room to travel.

@@ -287,7 +287,7 @@ which is a fact about the bot, not about the game.
 | Antibodies | Both parents in one cascade synthesise a compound that takes the strain and the ring around it. |
 | The neck row | A row above the bottle. Filling the bottle is not a loss until capsules back up into the neck. |
 | Apothecary Through Time | Five eras, five vessels, five physicians, five notes. |
-| Daily challenge | One seeded bottle a day, the same for everyone. |
+| Daily challenge | One seeded bottle a day, the same for everyone, with a seeded pair of modifiers named on the card. |
 | Versus | Two bottles on one keyboard, trading garbage. |
 | Offline play | Installs as a PWA and plays with the network off. |
 
@@ -295,6 +295,19 @@ which is a fact about the bot, not about the game.
 
 Every idea on this page is built. That is not a finish line - it is an empty
 inbox, and the whole point of the page is that anyone can fill it again.
+
+### What is knowingly not done
+
+Worth writing down so nobody has to rediscover it:
+
+- **Versus does not take modifiers.** Two bottles trading garbage still play the
+  plain rules. Some of them raise real questions for a two-player game - does a
+  blackout hit both bottles at once, does an outbreak on your side feed the
+  other one - and guessing at those answers is a worse outcome than leaving it
+  open.
+- **Rationing is the slow grind, not the deadly one.** It is honest about that
+  above. If the wanted texture is a difficulty spike rather than a longer game,
+  that is a different modifier and should be argued for as one.
 
 **Suggest one:** [mechanic](https://github.com/danielwjohnston/rxdrop/issues/new?template=mechanic.yml)
 · [challenge](https://github.com/danielwjohnston/rxdrop/issues/new?template=challenge.yml)

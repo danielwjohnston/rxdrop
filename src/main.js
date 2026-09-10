@@ -11,7 +11,7 @@ import { VersusMatch } from './versus.js';
 import { dailyKey, dailySetup, isToday, shareText } from './daily.js';
 import { Renderer, drawPillPreview, drawVirusTally } from './renderer.js';
 import { eraFor, entersEra } from './eras.js';
-import { collateralOf } from './board.js';
+import { collateralOf, hybridOf, isHybrid } from './board.js';
 import { drawDoctor, POSE_HOLD } from './doctors.js';
 import { pillCells } from './pill.js';
 import { AudioEngine } from './audio.js';
@@ -419,7 +419,9 @@ function previewSpeed() {
 }
 
 function virusCounts(board) {
-  const counts = [0, 0, 0];
+  // Three medicine tallies plus one for every hybrid strain, so a combined
+  // virus is counted somewhere rather than growing the array off the end.
+  const counts = [0, 0, 0, 0, 0, 0];
   board?.forEachCell((c) => {
     if (c.type === VIRUS) counts[c.color] += 1;
   });
@@ -453,6 +455,11 @@ function handleGameEvents() {
         renderers[0].addShake(2 + Math.min(6, event.viruses * 2 + event.combo));
         if (event.viruses > 0) react('cheer');
         if (event.collateral > 0) renderers[0].addShake(4);
+        break;
+      case 'antibody':
+        audio.play('antibody', event);
+        renderers[0].addShake(9);
+        react('cheer');
         break;
       case 'resist':
         audio.play('resist', event);
@@ -567,6 +574,10 @@ function handleMatchEvents() {
         renderer.addShake(4);
         dom.vsHud[event.player]?.classList.add('is-hit');
         setTimeout(() => dom.vsHud[event.player]?.classList.remove('is-hit'), 320);
+        break;
+      case 'antibody':
+        audio.play('antibody', event);
+        renderer.addShake(9);
         break;
       case 'resist':
         audio.play('resist', event);
@@ -961,6 +972,8 @@ window.rxdrop = {
   settings,
   pillCells,
   collateralOf,
+  hybridOf,
+  isHybrid,
   syncDropStyle,
   constants: { NECK_ROWS, RESISTANCE_MAX, TOLERANCE_AT },
 };

@@ -3,6 +3,10 @@ import {
   BOARD_WIDTH,
   COLLATERAL,
   COLOR_COUNT,
+  ANTIBODY_RADIUS,
+  HYBRIDS,
+  HYBRID_BASE,
+  HYBRID_DECAY,
   LINK,
   MATCH_LENGTH,
   OPPOSITE_LINK,
@@ -170,11 +174,12 @@ export class Board {
     }
 
     const collateral = tolerance ? this.collateralKills(cleared) : [];
+    const deliveries = tolerance ? this.hybridDeliveries(cleared) : [];
     // A virus killed by its collateral colour dies even if it was also in the
     // match shrugging off its own colour: the older drug wins the argument.
     const killed = new Set(collateral.map(({ x, y }) => `${x},${y}`));
     const resisted = shrugged.filter(({ x, y }) => !killed.has(`${x},${y}`));
-    return { cleared, resisted, collateral };
+    return { cleared, resisted, collateral, deliveries };
   }
 
   /**
@@ -199,13 +204,45 @@ export class Board {
   }
 
   /**
+   * Parent colours delivered beside a hybrid by this clear.
+   *
+   * A hybrid belongs to no run, so it can only ever be treated from alongside.
+   * Each delivery is remembered on the virus; both parents kill it whenever
+   * they arrive, which is what stops a hybrid being a dead end, and both in the
+   * SAME cascade synthesises an antibody.
+   */
+  hybridDeliveries(cleared) {
+    const deliveries = new Map();
+    for (const { x, y, color } of cleared) {
+      if (color >= HYBRID_BASE) continue;
+      for (const [dx, dy] of NEIGHBOURS) {
+        const nx = x + dx;
+        const ny = y + dy;
+        const c = this.get(nx, ny);
+        if (!isHybrid(c) || !parentsOf(c.color).includes(color)) continue;
+        const key = `${nx},${ny}`;
+        if (!deliveries.has(key)) deliveries.set(key, { x: nx, y: ny, color: c.color, colors: new Set() });
+        deliveries.get(key).colors.add(color);
+      }
+    }
+    return [...deliveries.values()];
+  }
+
+  /**
    * Applies a `matchOutcome`: the dead go, and everything that shrugged the
    * clear off sheds a stack of tolerance. Hammering a tolerant virus with the
    * wrong medicine is slow, but it is never useless - which is what keeps such
    * a virus answerable even with no collateral clear available.
    */
-  applyMatch(outcome) {
-    const dead = [...outcome.cleared, ...outcome.collateral];
+  applyMatch(outcome, chain) {
+    // Curing is worked out first, because what an antibody takes has to go in
+    // the same breath as the clear that synthesised it. A caller that needs the
+    // cells in advance - to animate them - resolves this itself and hands the
+    // result back on the outcome; everyone else gets it done here.
+    const cured = outcome.cured ?? this.cureHybrids(outcome.deliveries ?? [], chain);
+    const burst = outcome.antibody ?? this.burstFor(cured);
+
+    const dead = [...outcome.cleared, ...outcome.collateral, ...burst];
     const result = this.clearCells(dead.map(({ x, y }) => `${x},${y}`));
     for (const { x, y } of outcome.resisted) {
       const c = this.get(x, y);
@@ -213,7 +250,102 @@ export class Board {
     }
     result.resisted = outcome.resisted.length;
     result.collateral = outcome.collateral.length;
+    result.cured = cured.length;
+    result.antibodies = cured.filter((h) => h.antibody).length;
     return result;
+  }
+
+  /**
+   * Every cell a set of cured hybrids takes with it: each strain, plus the ring
+   * around the ones that were cured by a compound.
+   */
+  burstFor(cured) {
+    const seen = new Map();
+    for (const hybrid of cured) {
+      seen.set(`${hybrid.x},${hybrid.y}`, {
+        x: hybrid.x, y: hybrid.y, color: hybrid.color, type: VIRUS,
+      });
+      if (!hybrid.antibody) continue;
+      for (const hit of this.antibodyBurst(hybrid.x, hybrid.y)) {
+        seen.set(`${hit.x},${hit.y}`, hit);
+      }
+    }
+    return [...seen.values()];
+  }
+
+  /**
+   * Books in the parent colours this clear delivered to each hybrid, and
+   * resolves the ones that have now had both.
+   *
+   * Deliveries persist across turns, which is what makes a hybrid answerable:
+   * you never have to land both parents at once. Landing both in one cascade is
+   * the skilled version and synthesises an antibody. And a parent delivered to
+   * a strain that already has it wears the strain down instead, so a hybrid
+   * whose other parent is unreachable still comes apart eventually.
+   *
+   * `chain` is whatever token the caller uses for one uninterrupted cascade -
+   * a counter, an object, anything compared by identity. Deliveries carrying
+   * the same token count as arriving together, so the antibody play is the one
+   * the design describes: a yellow run clears, a blue half falls into the gap
+   * and completes a blue run, and the compound that makes is what the strain
+   * has no answer to. Pass nothing and each call stands alone.
+   */
+  cureHybrids(deliveries, chain = {}) {
+    const cured = [];
+    for (const { x, y, colors } of deliveries) {
+      const c = this.get(x, y);
+      if (!isHybrid(c)) continue;
+      const had = new Set(c.cured ?? []);
+      let repeated = false;
+      for (const color of colors) {
+        if (had.has(color)) repeated = true;
+        had.add(color);
+      }
+      c.cured = [...had];
+      // Parents delivered earlier in this same cascade still count as together.
+      if (c.chain !== chain) {
+        c.chain = chain;
+        c.chained = [];
+      }
+      c.chained = [...new Set([...c.chained, ...colors])];
+
+      const parents = parentsOf(c.color);
+      if (parents.every((parent) => had.has(parent))) {
+        // Both parents in one cascade is the compound the strain has no answer
+        // to; delivered further apart it still dies, just without the antibody.
+        const together = parents.every((parent) => c.chained.includes(parent));
+        cured.push({ x, y, color: c.color, antibody: together });
+        continue;
+      }
+      if (!repeated) continue;
+      c.decay = (c.decay ?? 0) + 1;
+      if (c.decay < HYBRID_DECAY) continue;
+      // Worn down: back to an ordinary virus of the colour that has been
+      // hitting it, which an ordinary line now clears.
+      const [delivered] = [...colors];
+      c.color = delivered;
+      c.resistance = 0;
+      c.cured = [];
+      c.decay = 0;
+      c.cappedBy = null;
+    }
+    return cured;
+  }
+
+  /**
+   * An antibody takes its hybrid out and the ring around it with it. Viruses in
+   * that ring die too - this is the payoff for the hardest play in the game.
+   */
+  antibodyBurst(x, y) {
+    const hit = [];
+    for (let dy = -ANTIBODY_RADIUS; dy <= ANTIBODY_RADIUS; dy += 1) {
+      for (let dx = -ANTIBODY_RADIUS; dx <= ANTIBODY_RADIUS; dx += 1) {
+        const c = this.get(x + dx, y + dy);
+        if (!c) continue;
+        hit.push({ x: x + dx, y: y + dy, color: c.color, type: c.type });
+      }
+    }
+    return hit;
   }
 
   clearCells(keys) {
@@ -283,11 +415,13 @@ export class Board {
    */
   resolve({ tolerance = false } = {}) {
     const stages = [];
+    // One resolve() is one cascade, so every clear inside it shares a token.
+    const chain = {};
     for (;;) {
       const matches = this.findMatches();
       if (matches.size === 0) break;
       const outcome = this.matchOutcome(matches, tolerance);
-      const cleared = this.applyMatch(outcome);
+      const cleared = this.applyMatch(outcome, chain);
       stages.push({ ...cleared, cells: [...matches] });
       // Every matched cell shrugged it off, so the board is otherwise
       // unchanged. Stop rather than rescan the same match: their tolerance has
@@ -308,8 +442,28 @@ export class Board {
     const mutated = [];
     this.forEachCell((c, x, y) => {
       if (c.type !== VIRUS) return;
+      // A hybrid has already combined; it ages by delivery, not by the clock.
+      if (isHybrid(c)) return;
+      const above = this.get(x, y - 1);
+      if (above && above.type !== VIRUS && above.color !== c.color) c.cappedBy = above.color;
       c.resistance = (c.resistance ?? 0) + 1;
       if (c.resistance < limit) return;
+      // Capped by the wrong medicine right to the end? Then it does not merely
+      // mutate, it combines with what has been sitting on it - but only where
+      // it can still be treated from alongside, because a hybrid belongs to no
+      // run and a boxed-in one would be unanswerable.
+      const combined = hybridOf(c.color, c.cappedBy ?? -1);
+      if (combined !== null && treatableFrom(this, x, y) >= 2) {
+        const from = c.color;
+        c.color = combined;
+        c.resistance = 0;
+        c.cappedBy = null;
+        c.cured = [];
+        c.decay = 0;
+        mutated.push({ x, y, from, to: combined, hybrid: true });
+        return;
+      }
+
       const options = [];
       for (let color = 0; color < 3; color += 1) {
         if (color === c.color) continue;
@@ -408,8 +562,43 @@ export function collateralOf(color) {
   return COLLATERAL[color];
 }
 
+/**
+ * How many orthogonal neighbours could ever hold medicine. Viruses never move,
+ * so a cell walled in by other viruses can never be treated from - and a hybrid
+ * there would be the one thing the formulary forbids.
+ */
+export function treatableFrom(board, x, y) {
+  let count = 0;
+  for (const [dx, dy] of NEIGHBOURS) {
+    const c = board.get(x + dx, y + dy);
+    if (!board.inBounds(x + dx, y + dy)) continue;
+    if (c && c.type === VIRUS) continue;
+    count += 1;
+  }
+  return count;
+}
+
+/** True for a hybrid strain: a colour no capsule is ever dealt in. */
+export function isHybrid(c) {
+  return Boolean(c) && c.type === VIRUS && c.color >= HYBRID_BASE;
+}
+
+/** The two primary colours a hybrid was combined from. */
+export function parentsOf(color) {
+  return HYBRIDS.find((h) => h.color === color)?.parents ?? [];
+}
+
+/** The hybrid two primaries combine into, or null if they are the same. */
+export function hybridOf(a, b) {
+  if (a === b) return null;
+  return HYBRIDS.find((h) => h.parents.includes(a) && h.parents.includes(b))?.color ?? null;
+}
+
 /** True once a virus has built enough resistance to shrug off its own colour. */
 export function isTolerant(c, threshold = TOLERANCE_AT) {
+  // A hybrid answers to a different rule entirely - both its parents - so it is
+  // never also "tolerant" of a primary it was never made of.
+  if (isHybrid(c)) return false;
   return Boolean(c) && c.type === VIRUS && (c.resistance ?? 0) >= threshold;
 }
 

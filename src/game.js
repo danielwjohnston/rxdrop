@@ -6,6 +6,7 @@ import {
   BOARD_WIDTH,
   CLEAR_ANIMATION,
   COLLATERAL_BONUS,
+  HYBRID_BONUS,
   DEAL_DELAY,
   SOFT_DROP_FACTOR,
   SOFT_DROP_MIN,
@@ -93,9 +94,11 @@ export class Game {
     this.lockResets = 0;
     this.phaseTimer = 0;
     this.combo = 0;
+    this.chain = {};
     this.clearingCells = [];
     this.resistedCells = [];
     this.outcome = null;
+    this.cured = [];
     this.dealTimer = 0;
     this.tossing = null;
     this.bag = [];
@@ -347,7 +350,19 @@ export class Game {
     // Tolerance rides on the resistance rule: with resistance off, a match
     // means exactly what it always did.
     this.outcome = this.board.matchOutcome(matches, this.resistance);
-    this.clearingCells = [...this.outcome.cleared, ...this.outcome.collateral];
+    // A hybrid answers to both its parents. Book the deliveries in now so the
+    // cells an antibody takes are part of the clear the player watches.
+    this.cured = this.board.cureHybrids(this.outcome.deliveries ?? [], this.chain);
+    this.outcome.cured = this.cured;
+    const dying = new Set(this.outcome.cleared.map(({ x, y }) => `${x},${y}`));
+    this.outcome.antibody = this.board
+      .burstFor(this.cured)
+      .filter(({ x, y }) => !dying.has(`${x},${y}`));
+    this.clearingCells = [
+      ...this.outcome.cleared,
+      ...this.outcome.collateral,
+      ...this.outcome.antibody,
+    ];
     this.resistedCells = this.outcome.resisted;
     this.phase = PHASE.CLEARING;
     this.phaseTimer = 0;
@@ -364,12 +379,18 @@ export class Game {
     this.combo += 1;
     const viruses = this.outcome.cleared.filter((c) => c.type === VIRUS).length;
     const collateral = this.outcome.collateral.length;
-    const killed = viruses + collateral;
+    const fromAntibody = this.outcome.antibody.filter((c) => c.type === VIRUS).length;
+    const killed = viruses + collateral + fromAntibody;
     this.score += this.scoreFor(killed, this.combo);
     // A collateral kill pays its payout again. Going back to the older
     // medicine is the play this whole mechanic exists to reward.
     if (collateral > 0) {
       this.score += this.scoreFor(collateral, this.combo) * (COLLATERAL_BONUS - 1);
+    }
+    // Synthesising a compound is the hardest play in the game and pays like it.
+    const antibodies = this.cured.filter((h) => h.antibody).length;
+    if (antibodies > 0) {
+      this.score += this.scoreFor(antibodies, this.combo) * HYBRID_BONUS;
     }
     this.totalVirusesCleared += killed;
     this.virusesClearedThisLevel += killed;
@@ -383,7 +404,10 @@ export class Game {
       cells: this.clearingCells.length,
       combo: this.combo,
       attack: attack.length,
+      cured: this.cured.length,
+      antibodies,
     });
+    if (antibodies > 0) this.emit('antibody', { count: antibodies });
   }
 
   /**
@@ -452,6 +476,8 @@ export class Game {
     if (this.phaseTimer < CLEAR_ANIMATION) return;
     // Applying the whole outcome at once keeps the shed tolerance in step with
     // the clear the player just watched.
+    // The outcome carries the cured strains and their bursts, resolved when the
+    // clear began so the player could watch them go; applyMatch takes the cells.
     if (this.outcome) this.board.applyMatch(this.outcome);
     const stalled = this.clearingCells.length === 0;
     this.clearingCells = [];
@@ -484,6 +510,9 @@ export class Game {
   }
 
   finishResolution() {
+    // The cascade is over. Parents delivered from here belong to the next one,
+    // so they no longer count as having arrived together.
+    this.chain = {};
     if (this.virusesLeft === 0) {
       this.phase = PHASE.WON;
       this.emit('levelComplete', { level: this.level });
@@ -514,7 +543,10 @@ export class Game {
     this.mutations = mutations;
     this.phase = PHASE.MUTATING;
     this.phaseTimer = 0;
-    this.emit('mutate', { count: mutations.length });
+    this.emit('mutate', {
+      count: mutations.length,
+      hybrids: mutations.filter((m) => m.hybrid).length,
+    });
     return true;
   }
 

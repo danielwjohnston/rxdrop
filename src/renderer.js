@@ -9,7 +9,8 @@ import {
 import { pillCells } from './pill.js';
 import { PHASE } from './game.js';
 import { ERAS, eraFor, paletteFor } from './eras.js';
-import { collateralOf, isTolerant } from './board.js';
+import { collateralOf, isHybrid, parentsOf } from './board.js';
+import { isTolerant } from './board.js';
 
 /**
  * The default medicine tones - the pharmaceutical era's, which is the look the
@@ -123,6 +124,7 @@ export class Renderer {
     this.drawFallingPill(game, layout);
     this.drawClearing(game, layout);
     this.drawResisted(game, layout);
+    this.drawAntibodies(game, layout);
     this.drawMutations(game, layout, now);
     ctx.restore();
   }
@@ -327,7 +329,7 @@ export class Renderer {
       if (c.type === VIRUS) {
         const resistance = (c.resistance ?? 0) / RESISTANCE_MAX;
         const tolerant = tolerance && isTolerant(c);
-        this.drawVirus(px, py, layout.cell, c.color, now, x, y, resistance, tolerant);
+        this.drawVirus(px, py, layout.cell, c.color, now, x, y, resistance, tolerant, isHybrid(c));
       }
       else this.drawHalf(px, py, layout.cell, c.color, c.link);
     });
@@ -396,6 +398,43 @@ export class Renderer {
       ctx.beginPath();
       ctx.arc(0, 0, layout.cell * 0.5, 0, Math.PI * 2);
       ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  /**
+   * The compound going off. An antibody is the hardest thing to earn in the
+   * game, so it gets the biggest moment: a ring in each parent colour thrown
+   * out from where the strain stood.
+   */
+  drawAntibodies(game, layout) {
+    if (game.phase !== PHASE.CLEARING || !game.cured?.length) return;
+    const { ctx } = this;
+    const t = Math.min(1, game.phaseTimer / CLEAR_ANIMATION);
+    for (const { x, y, color, antibody } of game.cured) {
+      if (!antibody) continue;
+      const cx = layout.originX + (x + 0.5) * layout.cell;
+      const cy = layout.originY + (y + 0.5) * layout.cell;
+      const parents = parentsOf(color);
+      ctx.save();
+      // One ring per parent, a beat apart, so the compound reads as two
+      // medicines arriving together rather than one big flash.
+      parents.forEach((parent, i) => {
+        const lead = Math.max(0, Math.min(1, (t - i * 0.15) / 0.85));
+        if (lead <= 0) return;
+        ctx.globalAlpha = (1 - lead) * 0.9;
+        ctx.strokeStyle = this.palette[parent].light;
+        ctx.lineWidth = Math.max(2, layout.cell * 0.16 * (1 - lead));
+        ctx.beginPath();
+        ctx.arc(cx, cy, layout.cell * (0.4 + lead * 1.9), 0, Math.PI * 2);
+        ctx.stroke();
+      });
+      // A white core that collapses, so the centre reads as the kill.
+      ctx.globalAlpha = Math.max(0, 1 - t * 1.6);
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(cx, cy, layout.cell * 0.5 * (1 - t), 0, Math.PI * 2);
+      ctx.fill();
       ctx.restore();
     }
   }
@@ -531,9 +570,9 @@ export class Renderer {
    * A wobbling, blinking virus. `resistance` (0..1) fades in a warning aura and
    * speeds up the wobble, so a virus about to mutate looks agitated.
    */
-  drawVirus(px, py, cell, color, now, gx, gy, resistance = 0, tolerant = false) {
+  drawVirus(px, py, cell, color, now, gx, gy, resistance = 0, tolerant = false, hybrid = false) {
     const { ctx } = this;
-    const tone = this.palette[color];
+    const tone = this.palette[color] ?? this.palette[0];
     if (tolerant) {
       // A tolerant virus no longer answers to its own colour, so the aura stops
       // being a warning and becomes an instruction: it is drawn in the colour
@@ -607,7 +646,28 @@ export class Renderer {
     body.addColorStop(1, tone.dark);
     ctx.fillStyle = body;
     ctx.beginPath();
-    if (style.bodyShape === 'hex') {
+    if (hybrid) {
+      // Two medicines fused. Drawn as the two parents side by side rather than
+      // as a new hue, so what killed it is written on it.
+      const [left, right] = parentsOf(color);
+      const r2 = r * 1.02;
+      ctx.arc(0, 0, r2, Math.PI * 0.5, Math.PI * 1.5);
+      ctx.fillStyle = this.palette[left].base;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(0, 0, r2, Math.PI * 1.5, Math.PI * 0.5);
+      ctx.fillStyle = this.palette[right].base;
+      ctx.fill();
+      // A seam, so the split reads as one organism rather than two halves.
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)';
+      ctx.lineWidth = Math.max(1, cell * 0.05);
+      ctx.beginPath();
+      ctx.moveTo(0, -r2);
+      ctx.lineTo(0, r2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(0, 0, r2, 0, Math.PI * 2);
+    } else if (style.bodyShape === 'hex') {
       for (let i = 0; i < 6; i += 1) {
         const a = (Math.PI * 2 * i) / 6 - Math.PI / 2;
         const px2 = Math.cos(a) * r * 1.04;
@@ -629,7 +689,7 @@ export class Renderer {
     } else {
       ctx.arc(0, 0, r, 0, Math.PI * 2);
     }
-    ctx.fill();
+    if (!hybrid) ctx.fill();
     ctx.strokeStyle = 'rgba(0,0,0,0.4)';
     ctx.lineWidth = Math.max(1, cell * 0.045);
     ctx.stroke();
@@ -699,11 +759,14 @@ export function drawVirusTally(canvas, counts, now, era = ERAS[3]) {
   ctx.save();
   ctx.scale(dpr, dpr);
   ctx.clearRect(0, 0, rect.width, rect.height);
-  const slot = rect.width / 3;
+  // Hybrids only take a slot once one exists, so the panel does not sit with
+  // three empty columns in it for a rule the player has not met yet.
+  const shown = counts.length > 3 && counts.slice(3).some((n) => n > 0) ? counts : counts.slice(0, 3);
+  const slot = rect.width / shown.length;
   const cell = Math.min(slot * 0.72, rect.height * 0.72);
   const palette = paletteFor(era);
   const renderer = { ctx, era, palette };
-  counts.forEach((count, color) => {
+  shown.forEach((count, color) => {
     const x = slot * color + (slot - cell) / 2;
     const y = 2;
     ctx.globalAlpha = count === 0 ? 0.25 : 1;

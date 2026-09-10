@@ -366,6 +366,66 @@ try {
     assert.ok(gone.score > 0, 'and a collateral kill pays');
   });
 
+  await check('a hybrid strain renders, and a cascade of both parents cures it', async () => {
+    // A hybrid's colour is outside the three a capsule is dealt in, so a
+    // palette or tally that only knows about three would throw here rather than
+    // anywhere a unit test looks. The page's error log is asserted empty at the
+    // end of the run, which is the real guard.
+    const staged = await eraPage.evaluate(() => {
+      const g = window.rxdrop.game;
+      const { hybridOf, isHybrid } = window.rxdrop;
+      g.board.forEachCell((c, x, y) => g.board.set(x, y, null));
+      const floor = g.board.height - 1;
+      const green = hybridOf(1, 2);
+      g.board.set(3, floor, {
+        color: green, type: 'virus', link: null, resistance: 0, cured: [], decay: 0,
+      });
+      // Yellow along the floor beside it, and four blue halves stacked on four
+      // different rows - no run of their own until the yellow clears out from
+      // under them and they all land together.
+      for (const x of [4, 5, 6, 7]) g.board.set(x, floor, { color: 1, type: 'pill', link: null });
+      [[4, 1], [5, 2], [6, 3], [7, 4]].forEach(([x, up]) => {
+        g.board.set(x, floor - up, { color: 2, type: 'pill', link: null });
+      });
+      // A bystander well clear of the antibody's ring, so finishing this does
+      // not end the level and park the page for the checks that follow.
+      g.board.set(0, floor - 8, { color: 0, type: 'virus', link: null });
+      g.startingViruses = 2;
+      g.virusesClearedThisLevel = 0;
+      g.score = 0;
+      window.__antibodies = 0;
+      g.beginResolution();
+      return { hybrid: isHybrid(g.board.get(3, floor)), cured: g.cured.length };
+    });
+    assert.equal(staged.hybrid, true, 'the strain should still be a hybrid after one parent');
+    assert.equal(staged.cured, 0, 'one parent alone is not a cure');
+
+    // Watch the cascade out through the real loop, counting the event the page
+    // reacts to rather than reading the board's private state.
+    await eraPage.evaluate(() => new Promise((done) => {
+      const g = window.rxdrop.game;
+      const emit = g.emit.bind(g);
+      g.emit = (type, detail = {}) => {
+        if (type === 'antibody') window.__antibodies += detail.count ?? 0;
+        emit(type, detail);
+      };
+      setTimeout(() => { g.emit = emit; done(); }, 1500);
+    }));
+    const after = await eraPage.evaluate(() => {
+      const g = window.rxdrop.game;
+      return {
+        strain: g.board.get(3, g.board.height - 1),
+        antibodies: window.__antibodies,
+        cured: g.virusesClearedThisLevel,
+        score: g.score,
+      };
+    });
+    assert.equal(after.strain, null, 'both parents in one cascade should cure it');
+    assert.equal(after.antibodies, 1, 'and synthesise an antibody');
+    assert.equal(after.cured, 1, 'the strain counts toward the level');
+    assert.ok(after.score > 0, 'and the hardest play in the game pays');
+  });
+
   await check('a new era announces itself with a physician\'s note', async () => {
     const note = await eraPage.evaluate(() => {
       const g = window.rxdrop.game;

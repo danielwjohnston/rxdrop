@@ -1,6 +1,14 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { ERAS, HUES, entersEra, eraFor, paletteFor, paletteForLevel } from '../src/eras.js';
+import {
+  ERAS,
+  HUES,
+  HYBRID_HUES,
+  entersEra,
+  eraFor,
+  paletteFor,
+  paletteForLevel,
+} from '../src/eras.js';
 import { DOCTOR_IDS } from '../src/doctors.js';
 import { MAX_LEVEL } from '../src/constants.js';
 
@@ -57,12 +65,19 @@ describe('the eras', () => {
 describe('era palettes', () => {
   it('keep every medicine on its own hue, in every era', () => {
     for (const era of ERAS) {
-      paletteFor(era).forEach((toneSet, color) => {
-        assert.equal(
-          parseHsl(toneSet.base).h,
-          HUES[color],
-          `${era.id} moved colour ${color} off its hue`,
-        );
+      const palette = paletteFor(era);
+      HUES.forEach((hue, color) => {
+        assert.equal(parseHsl(palette[color].base).h, hue, `${era.id} moved colour ${color}`);
+      });
+    }
+  });
+
+  it('carry a tone for every hybrid too, or a combined virus cannot be drawn', () => {
+    for (const era of ERAS) {
+      const palette = paletteFor(era);
+      assert.equal(palette.length, HUES.length + HYBRID_HUES.length);
+      HYBRID_HUES.forEach((hue, i) => {
+        assert.equal(parseHsl(palette[HUES.length + i].base).h, hue);
       });
     }
   });
@@ -80,7 +95,7 @@ describe('era palettes', () => {
 
   it('stay inside the legible band of saturation and lightness', () => {
     for (const era of ERAS) {
-      for (const toneSet of paletteFor(era)) {
+      for (const toneSet of paletteFor(era).slice(0, HUES.length)) {
         const { s, l } = parseHsl(toneSet.base);
         assert.ok(s >= 60, `${era.id} is too washed out to read at ${s}% saturation`);
         assert.ok(l >= 50 && l <= 74, `${era.id} sits at ${l}% lightness, outside the band`);

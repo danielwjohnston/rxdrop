@@ -122,6 +122,39 @@ export const COLLATERAL = Object.freeze([COLORS.BLUE, COLORS.RED, COLORS.YELLOW]
 /** A collateral kill pays its virus payout twice. */
 export const COLLATERAL_BONUS = 2;
 
+/**
+ * Hybrid strains. A virus capped by the wrong medicine right to the end does
+ * not merely mutate, it COMBINES with what has been sitting on it: blue under
+ * yellow long enough becomes green.
+ *
+ * Hybrids are simply colours 3, 4 and 5 - colours no capsule is ever dealt in.
+ * That single decision does all the work: the matching engine is untouched, and
+ * a hybrid can never be part of a run, so no line of one colour clears it. What
+ * kills it is delivering BOTH its parent colours in clears beside it.
+ */
+export const HYBRID_BASE = COLOR_COUNT;
+export const HYBRIDS = Object.freeze([
+  { color: 3, parents: Object.freeze([COLORS.RED, COLORS.YELLOW]), name: 'orange' },
+  { color: 4, parents: Object.freeze([COLORS.YELLOW, COLORS.BLUE]), name: 'green' },
+  { color: 5, parents: Object.freeze([COLORS.RED, COLORS.BLUE]), name: 'purple' },
+]);
+
+/**
+ * Both parents in the SAME cascade synthesises an antibody: the hybrid dies and
+ * takes the ring around it with it. Delivered across separate turns it still
+ * dies - which is what keeps a hybrid answerable - but without the bonus.
+ */
+/**
+ * The safety valve, mirroring the one tolerance has. Delivering the SAME parent
+ * to a hybrid that has already had it wears the strain down; enough of that and
+ * it decays back to an ordinary virus of that colour, which an ordinary line
+ * clears. So a hybrid is answerable even when the other parent is unreachable.
+ */
+export const HYBRID_DECAY = 2;
+
+export const ANTIBODY_RADIUS = 1;
+export const HYBRID_BONUS = 4;
+
 /** Milliseconds a mutation flashes before the new colour takes over. */
 export const MUTATION_ANIMATION = 420;
 

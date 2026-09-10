@@ -55,11 +55,12 @@ Run them all with `node tools/gauntlet.mjs`, or a few with
 | 4 | `boundaries` | The interesting cases are in the middle. Checks all 21 levels for virus quota and ceiling, every speed, both walls, a blocked spawn and garbage aimed at a full column. |
 | 5 | `fuzz` | Play is orderly. Runs long random games across four setups and asserts after every single frame that nothing floats, no match survives resolution, and viruses are conserved. |
 | 6 | `resistance` | The new mechanic obeys the old rules. 200 seeded boards mutated repeatedly, checking a mutation never creates a free clear, never changes the virus count, and always hands play back. |
-| 7 | `versus` | Two games in one page stay separate. Asserts every attack sent is an attack received, that a match always resolves to exactly one winner, and that one player's input cannot touch the other's board. |
-| 8 | `performance` | The rules are cheap. Measures worst-case and average `update()` cost at level 20 with resistance on against the 16.7 ms frame budget. |
-| 9 | `collateral` | No virus may become unanswerable. Sweeps every colour at every resistance level to prove something still kills it, checks that a collateral kill only ever takes tolerant viruses, and that resolution terminates on a board where everything shrugs. |
-| 10 | `playtest` | The game is playable, not merely legal. Asserts a hurried capsule never falls faster than a hand can place a lateral into it, and that a capsule always lands with time to be steered. `npm run playtest` runs the full version: a bot plays whole games and reports reaction budgets, juggling room and how far it gets. |
-| 11 | `browser` | It works in a browser, not just in Node. Runs the Playwright checks: menus, gamepad, touch gestures, versus, the daily, offline play, and a page with neither Web Audio nor localStorage. Skips cleanly if Playwright is not installed. |
+| 7 | `collateral` | No virus may become unanswerable. Sweeps every colour at every resistance level to prove something still kills it, checks that a collateral kill only ever takes tolerant viruses, and that resolution terminates on a board where everything shrugs. |
+| 8 | `hybrid` | A combined strain must still come apart. Proves no capsule is ever dealt in a hybrid colour and no hybrid ever appears in a match; that both parents cure every strain in either order; that both in one cascade always synthesise an antibody; that one parent alone always breaks it in the end; and that a hybrid never forms anywhere it cannot be treated from. |
+| 9 | `versus` | Two games in one page stay separate. Asserts every attack sent is an attack received, that a match always resolves to exactly one winner, and that one player's input cannot touch the other's board. |
+| 10 | `playtest` | The game is playable, not merely legal. Asserts a hurried capsule never falls faster than a hand can place a lateral into it, and that a capsule always lands with time to be steered. `npm run playtest` runs the full version: a bot plays whole games and reports reaction budgets, juggling room, hybrid cures and how far it gets. |
+| 11 | `performance` | The rules are cheap. Measures worst-case and average `update()` cost at level 20 with resistance on against the 16.7 ms frame budget. |
+| 12 | `browser` | It works in a browser, not just in Node. Runs the Playwright checks: menus, gamepad, touch gestures, versus, the daily, offline play, and a page with neither Web Audio nor localStorage. Skips cleanly if Playwright is not installed. |
 
 ## What it has caught
 
@@ -81,6 +82,12 @@ The stages are not ceremony. Building this set surfaced real defects:
   mattered: removing the stack a shrugged clear sheds makes a tolerant virus
   unkillable on a board with no room for a collateral run. The stage goes red on
   exactly that.
+- **`hybrid`** caught `applyMatch` booking a cure against a strain and then
+  never removing it, because the game happened to delete the cell separately.
+  Every unit test passed; the stage went red with "strain 3 survived both
+  parents". It also caught the antibody window being one clear wide rather than
+  one cascade, which made the single most rewarding play in the game - clear a
+  run, let the other parent fall into the gap - pay nothing extra.
 - **`boundaries`** codifies the virus-ceiling rule after viruses were found
   spawning two rows below the neck by level 6.
 - **`browser`** caught three checks that had hard-coded row 15 as the floor of

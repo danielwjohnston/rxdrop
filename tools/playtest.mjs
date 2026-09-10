@@ -18,6 +18,7 @@ import { performance } from 'node:perf_hooks';
 import { Game, PHASE } from '../src/game.js';
 import { createRng } from '../src/rng.js';
 import { fits, pillCells, tryMove, tryRotate } from '../src/pill.js';
+import { isHybrid, parentsOf } from '../src/board.js';
 import { BOARD_HEIGHT, LOCK_RESETS, VIRUS } from '../src/constants.js';
 
 const args = process.argv.slice(2);
@@ -61,22 +62,45 @@ function scorePlacement(board, cells) {
       const near = board.get(x + dx, y + dy);
       if (!near) continue;
       if (near.color === color) score += near.type === VIRUS ? 22 : 6;
+      // A hybrid answers to no run of its own, so building a parent colour
+      // alongside one is the only approach that leads anywhere.
+      else if (isHybrid(near) && parentsOf(near.color).includes(color)) score += 16;
     }
     score += (y / board.height) * 14;
   }
   return score;
 }
 
-/** Viruses this placement would actually kill, which is the whole game. */
-function killsFrom(board) {
+/**
+ * Viruses this placement would actually kill, which is the whole game - plus
+ * the parent colours it would deliver to a hybrid alongside.
+ *
+ * A hybrid belongs to no run, so a bot that only counts matched viruses never
+ * treats one and the report would say hybrids are unanswerable when what is
+ * really unanswerable is the bot. Delivering a parent is worth about half a
+ * kill; landing both at once synthesises an antibody and is worth more than
+ * either.
+ */
+function killsFrom(board, tolerance) {
   const matched = board.findMatches();
   if (matched.size === 0) return 0;
   let viruses = 0;
+  const cleared = [];
   for (const key of matched) {
     const [x, y] = key.split(',').map(Number);
-    if (board.get(x, y)?.type === VIRUS) viruses += 1;
+    const c = board.get(x, y);
+    if (c?.type === VIRUS) viruses += 1;
+    if (c) cleared.push({ x, y, color: c.color });
   }
-  return viruses * 200 + matched.size * 12;
+  let delivered = 0;
+  if (tolerance) {
+    for (const { x, y, colors } of board.hybridDeliveries(cleared)) {
+      const had = new Set(board.get(x, y)?.cured ?? []);
+      const both = parentsOf(board.get(x, y).color).every((p) => had.has(p) || colors.has(p));
+      delivered += both ? 260 : 90;
+    }
+  }
+  return viruses * 200 + matched.size * 12 + delivered;
 }
 
 /** Picks a landing for the capsule in play. */
@@ -108,7 +132,7 @@ function plan(game) {
       const cells = pillCells(candidate);
       const stamped = cells.map(({ x: cx, y: cy }) => `${cx},${cy}`);
       for (const { x: cx, y: cy, color } of cells) board.set(cx, cy, { color, type: 'pill', link: null });
-      const kills = killsFrom(board);
+      const kills = killsFrom(board, game.resistance);
       const after = survey(board);
       for (const key of stamped) {
         const [cx, cy] = key.split(',').map(Number);
@@ -184,6 +208,9 @@ function playOne({ level, speed, resistance, seed }) {
     cascades: 0,
     collateral: 0,
     shrugs: 0,
+    hybrids: 0,
+    cured: 0,
+    antibodies: 0,
     levelsCleared: 0,
     budgets: [],
     laterals: [],
@@ -225,8 +252,12 @@ function playOne({ level, speed, resistance, seed }) {
         stats.clears += 1;
         if (event.combo > 1) stats.cascades += 1;
         stats.collateral += event.collateral ?? 0;
+        stats.cured += event.cured ?? 0;
+        stats.antibodies += event.antibodies ?? 0;
       } else if (event.type === 'resist') {
         stats.shrugs += event.count;
+      } else if (event.type === 'mutate') {
+        stats.hybrids += event.hybrids ?? 0;
       } else if (event.type === 'levelComplete') {
         stats.levelsCleared += 1;
         if (game.level >= 20) return stats;
@@ -333,6 +364,7 @@ for (const speed of ['LOW', 'MEDIUM', 'HIGH']) {
 console.log('\nPlay: a bot steering with real inputs');
 const allBudgets = [];
 const allLaterals = [];
+const hybridRows = [];
 for (const setup of setups) {
   const runs = [];
   for (let i = 0; i < GAMES; i += 1) runs.push(playOne({ ...setup, seed: 1000 + i * 17 }));
@@ -352,9 +384,40 @@ for (const setup of setups) {
         + ` | collateral ${String(Math.round(mean(runs.map((r) => r.collateral)))).padStart(3)}`
       : ''),
   );
+  if (setup.resistance) {
+    hybridRows.push({
+      label,
+      formed: runs.reduce((n, r) => n + r.hybrids, 0),
+      cured: runs.reduce((n, r) => n + r.cured, 0),
+      antibodies: runs.reduce((n, r) => n + r.antibodies, 0),
+    });
+  }
   if (VERBOSE) {
     console.log(`      reaction budget mean ${mean(budgets).toFixed(0)}ms, worst ${min(budgets).toFixed(0)}ms`);
   }
+}
+
+// A hybrid that forms and is never treated is the contraindication the whole
+// formulary is written against: an interaction the player cannot answer. The
+// bot understands the mechanic well enough to deliver a parent colour, so if it
+// never cures one across every run, the mechanic is unanswerable in practice
+// however clean the unit tests are.
+console.log('\nHybrids: strains that combined, and what came apart again');
+const formed = hybridRows.reduce((n, r) => n + r.formed, 0);
+const treated = hybridRows.reduce((n, r) => n + r.cured, 0);
+for (const row of hybridRows) {
+  const verdict = row.formed === 0 ? 'none formed' : row.cured > 0 ? 'answered' : 'UNANSWERED';
+  console.log(
+    `  ${row.label.padEnd(16)}`
+    + ` formed ${String(row.formed).padStart(3)}`
+    + ` | cured ${String(row.cured).padStart(3)}`
+    + ` | antibodies ${String(row.antibodies).padStart(3)}`
+    + `  ${verdict}`,
+  );
+}
+if (formed > 0 && treated === 0) {
+  failures += 1;
+  console.log('  a hybrid formed in every run and none was ever treated');
 }
 
 console.log('\nThreading: steering a capsule down a one-wide zigzag corridor');

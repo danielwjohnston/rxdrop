@@ -642,6 +642,25 @@ kbd {
   max-width: 420px;
 }
 
+.touchpad__wide {
+  grid-column: 1 / -1;
+}
+
+.touchpad button[hidden] {
+  display: none;
+}
+
+#light-button.is-pressed,
+#light-button.is-lit {
+  color: #1b1405;
+  background: linear-gradient(180deg, #ffe27a, #f0c33c);
+  border-color: #ffd666;
+}
+
+#light-button.is-spent {
+  opacity: 0.45;
+}
+
 .touchpad button {
   touch-action: manipulation;
   padding: 16px 0;
@@ -825,8 +844,44 @@ body.is-versus .apothecary {
 
   .fields {
     grid-area: board;
-    /* The floor that stops a tall panel from squeezing the bottle to nothing. */
-    min-height: 50vh;
+    /* A floor, but one the grid can win against. `50vh` flat was a lower bound
+       with no matching upper bound: switch enough modifiers on and the panels
+       grew past what was left, and because .app is `overflow: hidden` the
+       excess did not scroll - the bottle was drawn straight over the touchpad.
+       Same shape of bug as the landscape clipping before it. The panels are
+       kept small enough below that this floor is affordable. */
+    min-height: 0;
+    flex: 1 1 auto;
+  }
+
+  /* The panels may not eat the screen. Between them they get at most this
+     much, and the bottle gets the rest - which is the invariant the browser
+     suite checks by asserting the bottle never reaches the touchpad. */
+  .panel--left,
+  .panel--right {
+    max-height: 26vh;
+    overflow-y: auto;
+  }
+
+  /* In the HUD the icon is enough: you chose these on the title screen a
+     moment ago, and the name is still on the chip's title for anyone who
+     wants it. Five named chips wrap to three rows and cost the bottle more
+     than they are worth. */
+  .mods--hud .mods__name {
+    display: none;
+  }
+
+  .mods--hud .mods__chip {
+    padding: 0.2rem 0.3rem;
+  }
+
+  .mods--hud .mods__icon {
+    width: 1.15em;
+    height: 1.15em;
+  }
+
+  .meter__hint {
+    display: none;
   }
 
   /* On a phone the app already fills the viewport, so versus should use all
@@ -1090,8 +1145,9 @@ body.is-versus .apothecary {
 }
 
 .mods__icon {
-  font-size: 1rem;
-  line-height: 1;
+  width: 1.05em;
+  height: 1.05em;
+  flex: none;
 }
 
 .mods__note {

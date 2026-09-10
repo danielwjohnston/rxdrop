@@ -55,6 +55,7 @@ const dom = {
   openFormulary: el('open-formulary'),
   lightMeter: el('light-meter'),
   lightFill: el('light-fill'),
+  lightButton: el('light-button'),
   instantDropToggle: el('instant-drop'),
   dropButton: el('drop-button'),
   musicToggle: el('music'),
@@ -547,8 +548,7 @@ function syncHud(force = false) {
       const chip = document.createElement('span');
       chip.className = 'mods__chip is-on';
       chip.title = mod.blurb;
-      chip.innerHTML = `<span class="mods__icon" aria-hidden="true">${mod.icon}</span>`;
-      chip.append(Object.assign(document.createElement('span'), {
+      chip.append(modifierIcon(mod), Object.assign(document.createElement('span'), {
         className: 'mods__name',
         textContent: mod.name,
       }));
@@ -557,10 +557,16 @@ function syncHud(force = false) {
   }
   const blackout = Boolean(shown?.has?.('blackout'));
   dom.lightMeter.hidden = !blackout;
+  // The touch control only exists while a run is actually playing with
+  // blackout. A dead button on the pad the rest of the time would be worse than
+  // no button at all.
+  dom.lightButton.hidden = !(blackout && game);
   if (blackout) {
     dom.lightFill.style.width = `${Math.round((shown.lightCharge ?? 0) * 100)}%`;
     dom.lightMeter.classList.toggle('is-spent', Boolean(shown.lightSpent));
     dom.lightMeter.classList.toggle('is-lit', Boolean(shown.spendingLight));
+    dom.lightButton.classList.toggle('is-lit', Boolean(shown.spendingLight));
+    dom.lightButton.classList.toggle('is-spent', Boolean(shown.lightSpent));
   }
   if (force || game) drawPillPreview(dom.next, game ? game.nextColors : null, era);
 }
@@ -1057,6 +1063,29 @@ dom.instantDropToggle.addEventListener('change', () => {
  * with no shape to it; "a virus replicates once and never again" is a rule you
  * can plan against, which is the difference between a mechanic and a mood.
  */
+/**
+ * The modifier's icon, drawn rather than typed.
+ *
+ * A glyph is a bet on the reader's font having it, and that bet loses: the
+ * first version of this picker showed quarantine as a tofu box on a phone.
+ */
+function modifierIcon(mod) {
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('class', 'mods__icon');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+  const path = document.createElementNS(NS, 'path');
+  path.setAttribute('d', mod.icon);
+  path.setAttribute('fill', 'none');
+  path.setAttribute('stroke', 'currentColor');
+  path.setAttribute('stroke-width', '1.8');
+  path.setAttribute('stroke-linecap', 'round');
+  path.setAttribute('stroke-linejoin', 'round');
+  svg.append(path);
+  return svg;
+}
+
 function buildModifierPicker() {
   dom.modifiers.innerHTML = '';
   for (const mod of MODIFIERS) {
@@ -1065,9 +1094,10 @@ function buildModifierPicker() {
     button.className = 'mods__chip';
     button.dataset.mod = mod.id;
     button.title = `${mod.detail}\n\n${mod.bound}`;
-    button.innerHTML = `<span class="mods__icon" aria-hidden="true">${mod.icon}</span>`
-      + `<span class="mods__name"></span>`;
-    button.querySelector('.mods__name').textContent = mod.name;
+    button.append(modifierIcon(mod), Object.assign(document.createElement('span'), {
+      className: 'mods__name',
+      textContent: mod.name,
+    }));
     button.addEventListener('click', () => {
       const on = new Set(settings.modifiers);
       if (on.has(mod.id)) on.delete(mod.id);

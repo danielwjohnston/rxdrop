@@ -226,7 +226,7 @@
           <div class="meter" id="light-meter" hidden>
             <span class="readout__label">Light therapy</span>
             <div class="meter__track"><div class="meter__fill meter__fill--light" id="light-fill"></div></div>
-            <small class="meter__hint">Hold Shift or L</small>
+            <small class="meter__hint">Hold Shift, L, or the pad button</small>
           </div>
           <div class="mods mods--hud" id="hud-mods" hidden aria-label="Run modifiers"></div>
           <canvas id="virus-tally" class="tally" height="70" aria-hidden="true"></canvas>
@@ -268,6 +268,18 @@
         <button type="button" data-action="rotateCCW" aria-label="Rotate counter-clockwise">&#8630;</button>
         <button type="button" data-action="hardDrop" id="drop-button" aria-label="Hurry the capsule down">HURRY</button>
         <button type="button" data-action="rotateCW" aria-label="Rotate clockwise">&#8631;</button>
+        <!-- Light therapy is a held control, so on a touch device it needs a
+             button of its own: without one, blackout is a modifier a phone
+             player can turn on and then has no way to answer. Shown only when
+             the run is actually playing with it. -->
+        <button
+          type="button"
+          data-action="light"
+          id="light-button"
+          class="touchpad__wide"
+          aria-label="Hold for light therapy"
+          hidden
+        >HOLD FOR LIGHT</button>
       </nav>
 
       <footer class="colophon">

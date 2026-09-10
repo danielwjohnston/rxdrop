@@ -963,6 +963,12 @@ body.is-versus .apothecary {
     gap: 8px;
   }
 
+  /* The desktop floor is taller than a landscape phone, so without this the
+     bottle is forced past the viewport and the app clips its bottom off. */
+  .playfield {
+    min-height: 0;
+  }
+
   .panel {
     padding: 4px 7px;
     gap: 3px 10px;

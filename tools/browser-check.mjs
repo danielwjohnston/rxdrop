@@ -353,6 +353,10 @@ try {
       `the bottle got ${(share.board * 100).toFixed(0)}% of the screen, wanted 50% or more`,
     );
     assert.ok(
+      share.board <= 1,
+      `the bottle is taller than the screen (${(share.board * 100).toFixed(0)}%) and is being clipped`,
+    );
+    assert.ok(
       share.panels <= 0.25,
       `the panels took ${(share.panels * 100).toFixed(0)}% of the screen, wanted 25% or less`,
     );
@@ -509,6 +513,13 @@ try {
     assert.equal(state.scrollsY, false, 'landscape should not scroll vertically');
     assert.equal(state.scrollsX, false, 'landscape should not scroll sideways');
     assert.equal(state.touchpad, 'grid', 'the touch pad is the only way to play here');
+    // Both bounds matter. Too small is unplayable; taller than the viewport is
+    // worse, because the app hides its overflow and the bottom of the bottle is
+    // simply cut off with nothing to scroll to.
+    assert.ok(
+      state.board <= state.view,
+      `the bottle is ${state.board}px in a ${state.view}px screen - it is being clipped`,
+    );
     assert.ok(
       state.board / state.view >= 0.6,
       `the bottle got ${((state.board / state.view) * 100).toFixed(0)}% of a landscape screen`,

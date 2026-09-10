@@ -204,7 +204,7 @@ it?".
   | --- | --- | --- |
   | Outbreak | Viruses replicate into empty cells; gravity halves to pay for it | A virus spreads once and never again, never above the virus ceiling, never past 1.6x the starting population |
   | Blackout | The lights go out for five seconds every fourteen; hold Shift or L for light therapy | A blackout always ends on its own timer, and the bottle never fades to fully black |
-  | Rationing | Only two of the three medicines are in stock at a time | The withheld colour rotates on a fixed timer, so nothing is ever out of stock for long |
+  | Rationing | Only two medicines in stock; viruses of the missing colour build tolerance every capsule while it is gone | The withheld colour rotates on a fixed timer, and tolerance always answers to the older medicine cleared beside it |
   | Contaminated batch | Some capsule halves are inert and belong to no run | An inert half washes out with any clear it is touching |
   | Quarantine | A column is sealed and refuses capsules | Clearing beside it breaks the seal, and it lifts on its own regardless; spawn columns are never sealed |
 
@@ -224,7 +224,7 @@ it?".
 ## Development
 
 ```sh
-npm test           # 248 unit tests, no dependencies, well under a second
+npm test           # 250 unit tests, no dependencies, well under a second
 npm run test:watch # re-run on change
 
 # End-to-end checks in a real browser (Playwright is not a dependency):

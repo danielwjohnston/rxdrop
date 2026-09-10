@@ -205,6 +205,46 @@ describe('rationing', () => {
     }
   });
 
+  it('brings tolerance with it, because a stock-out is how tolerance arises', () => {
+    // Without this rationing has no cost at all: two colours make runs EASIER
+    // to build, and the playtest measured the modifier improving every number
+    // it took - longer runs, more clears, faster virus kills and the only setup
+    // that finished levels.
+    const rationed = new Game({ level: 2, speed: 'LOW', seed: 23, modifiers: ['rationing'] });
+    assert.equal(rationed.resistance, false, 'the resistance toggle is still off');
+    assert.equal(rationed.tolerance, true, 'but tolerance is in play');
+    const plain = new Game({ level: 2, speed: 'LOW', seed: 23 });
+    assert.equal(plain.tolerance, false, 'and a plain run is untouched');
+  });
+
+  it('ages only the colour that is out of stock, and ages it every capsule', () => {
+    const game = new Game({ level: 4, speed: 'LOW', seed: 24, modifiers: ['rationing'] });
+    const out = rationedOut(1);
+    // A level generates its viruses with a starting resistance already, so this
+    // has to compare each cell against itself rather than against zero.
+    const before = new Map();
+    game.board.forEachCell((c, x, y) => {
+      if (c.type === VIRUS) before.set(`${x},${y}`, { color: c.color, r: c.resistance ?? 0 });
+    });
+    game.pillsPlaced = 1;
+    assert.equal(game.tickResistance(), true, 'a stock-out should age something');
+
+    let agedRationed = 0;
+    for (const [key, was] of before) {
+      const [x, y] = key.split(',').map(Number);
+      const now = game.board.get(x, y);
+      // A virus that reached the limit mutated, so its colour or its
+      // resistance changed; either way it is a cell that aged.
+      const changed = now.color !== was.color || (now.resistance ?? 0) !== was.r;
+      if (was.color === out) {
+        if (changed) agedRationed += 1;
+      } else {
+        assert.equal(changed, false, `colour ${was.color} aged while it was in stock`);
+      }
+    }
+    assert.ok(agedRationed > 0, 'the colour out of stock should have aged');
+  });
+
   it('brings every colour back inside one spell', () => {
     // The bound: a virus of the missing colour is never unanswerable for
     // longer than a spell, because the rotation is fixed.

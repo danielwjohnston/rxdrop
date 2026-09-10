@@ -528,7 +528,10 @@ function syncHud(force = false) {
   dom.virusBar.style.width = `${Math.round(ratio * 100)}%`;
   dom.chooseLevel.textContent = settings.level;
 
-  const resistant = Boolean(shown && shown.resistance);
+  // The meter follows tolerance, not the resistance toggle: rationing brings
+  // tolerance with it, and a virus that has stopped answering to its own colour
+  // with no meter to explain why is the worst version of this mechanic.
+  const resistant = Boolean(shown && (shown.tolerance ?? shown.resistance));
   dom.resistanceMeter.hidden = !resistant;
   if (resistant) {
     dom.resistanceFill.style.width = `${Math.round(shown.resistanceLevel * 100)}%`;

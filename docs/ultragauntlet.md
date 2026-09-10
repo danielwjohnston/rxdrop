@@ -58,7 +58,8 @@ Run them all with `node tools/gauntlet.mjs`, or a few with
 | 7 | `versus` | Two games in one page stay separate. Asserts every attack sent is an attack received, that a match always resolves to exactly one winner, and that one player's input cannot touch the other's board. |
 | 8 | `performance` | The rules are cheap. Measures worst-case and average `update()` cost at level 20 with resistance on against the 16.7 ms frame budget. |
 | 9 | `collateral` | No virus may become unanswerable. Sweeps every colour at every resistance level to prove something still kills it, checks that a collateral kill only ever takes tolerant viruses, and that resolution terminates on a board where everything shrugs. |
-| 10 | `browser` | It works in a browser, not just in Node. Runs the Playwright checks: menus, gamepad, touch gestures, versus, the daily, offline play, and a page with neither Web Audio nor localStorage. Skips cleanly if Playwright is not installed. |
+| 10 | `playtest` | The game is playable, not merely legal. Asserts a hurried capsule never falls faster than a hand can place a lateral into it, and that a capsule always lands with time to be steered. `npm run playtest` runs the full version: a bot plays whole games and reports reaction budgets, juggling room and how far it gets. |
+| 11 | `browser` | It works in a browser, not just in Node. Runs the Playwright checks: menus, gamepad, touch gestures, versus, the daily, offline play, and a page with neither Web Audio nor localStorage. Skips cleanly if Playwright is not installed. |
 
 ## What it has caught
 
@@ -72,6 +73,10 @@ The stages are not ceremony. Building this set surfaced real defects:
   hidden behind a blank overlay with no way to resume.
 - **`browser`** caught that both versus canvases sized themselves independently,
   giving player one a bottle three times the size of player two's.
+- **`playtest`** caught two things the same day it was written: hurrying at the
+  top speeds fell faster than a hand can place a lateral into, and the bot only
+  ever considered horizontal placements because a vertical capsule does not fit
+  on the spawn row - which had been quietly halving every measurement it made.
 - **`collateral`** was written before the mechanic and caught the thing that
   mattered: removing the stack a shrugged clear sheds makes a tolerant virus
   unkillable on a board with no room for a collateral run. The stage goes red on

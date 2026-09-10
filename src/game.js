@@ -7,6 +7,8 @@ import {
   CLEAR_ANIMATION,
   COLLATERAL_BONUS,
   DEAL_DELAY,
+  SOFT_DROP_FACTOR,
+  SOFT_DROP_MIN,
   COLOR_COUNT,
   LOCK_DELAY,
   LOCK_RESETS,
@@ -43,7 +45,6 @@ export const PHASE = Object.freeze({
   LOST: 'lost',
 });
 
-const SOFT_DROP_INTERVAL = 45;
 
 /**
  * The playable game: board, current pill, timing, scoring and the little state
@@ -118,16 +119,22 @@ export class Game {
   }
 
   /**
+   * How fast the capsule is falling right now: the level's gravity, or the
+   * hurried version of it while soft drop is held.
+   */
+  get fallInterval() {
+    if (!this.softDropping) return this.dropInterval;
+    return Math.max(SOFT_DROP_MIN, Math.min(this.dropInterval, this.dropInterval / SOFT_DROP_FACTOR));
+  }
+
+  /**
    * How far the falling pill has travelled toward the next row (0..1), so the
    * renderer can slide it smoothly instead of snapping a whole cell at a time.
    */
   get dropProgress() {
     if (this.phase !== PHASE.FALLING || !this.pill) return 0;
     if (!tryMove(this.board, this.pill, 0, 1)) return 0;
-    const interval = this.softDropping
-      ? Math.min(SOFT_DROP_INTERVAL, this.dropInterval)
-      : this.dropInterval;
-    return Math.max(0, Math.min(1, this.dropTimer / interval));
+    return Math.max(0, Math.min(1, this.dropTimer / this.fallInterval));
   }
 
   get isOver() {
@@ -300,9 +307,7 @@ export class Game {
       this.dealTimer = 0;
     }
     if (!this.pill) return;
-    const interval = this.softDropping
-      ? Math.min(SOFT_DROP_INTERVAL, this.dropInterval)
-      : this.dropInterval;
+    const interval = this.fallInterval;
 
     this.dropTimer += dt;
     while (this.dropTimer >= interval) {

@@ -5,6 +5,8 @@ import {
   BOARD_BODY_HEIGHT,
   BOARD_HEIGHT,
   DEAL_DELAY,
+  SOFT_DROP_FACTOR,
+  SOFT_DROP_MIN,
   LOCK_DELAY,
   LOCK_RESETS,
   NECK_ROWS,
@@ -507,5 +509,57 @@ describe('the beat between capsules', () => {
     const start = game.pill.y;
     game.update(DEAL_DELAY + game.dropInterval * 3);
     assert.ok(game.pill.y > start, 'a long frame spends its remainder on the capsule');
+  });
+});
+
+describe('hurrying a capsule down', () => {
+  it('is a multiple of the level\'s own gravity, not a fixed sprint', () => {
+    // "A little faster" has to mean the same thing at every speed. A fixed
+    // interval is a fifteenfold jump at level 0 and barely a change at the top.
+    for (const speed of ['LOW', 'MEDIUM', 'HIGH']) {
+      const game = newGame({ speed });
+      const gravity = game.dropInterval;
+      game.setSoftDrop(true);
+      const hurried = game.fallInterval;
+      assert.ok(hurried < gravity, `${speed} should hurry at all`);
+      assert.equal(hurried, Math.max(SOFT_DROP_MIN, gravity / SOFT_DROP_FACTOR));
+    }
+  });
+
+  it('never outruns a hand, however quick the level already is', () => {
+    // The floor is the whole point: a hurry a player cannot place a lateral
+    // into is a snap to the bottom by another name.
+    for (const speed of ['LOW', 'MEDIUM', 'HIGH']) {
+      for (const level of [0, 10, 20]) {
+        const game = newGame({ speed, level });
+        game.pillsPlaced = 60;
+        game.setSoftDrop(true);
+        assert.ok(
+          game.fallInterval >= SOFT_DROP_MIN,
+          `${speed} level ${level} hurries at ${game.fallInterval}ms a row`,
+        );
+      }
+    }
+  });
+
+  it('leaves the full lock window when the capsule lands', () => {
+    const game = newGame({ speed: 'HIGH' });
+    game.setSoftDrop(true);
+    // Hurry it all the way down and check it still has its fuse.
+    tick(game, 6000);
+    if (game.phase === PHASE.FALLING && !game.pill) return;
+    const landed = newGame({ speed: 'HIGH' });
+    for (let x = 0; x < landed.board.width; x += 1) {
+      for (let y = 2; y < landed.board.height; y += 1) {
+        landed.board.set(x, y, cell(PILL, (x + y) % 3, null));
+      }
+    }
+    landed.spawnPill();
+    landed.setSoftDrop(true);
+    tick(landed, DEAL_DELAY + 32);
+    assert.ok(
+      landed.lockBudget - landed.lockTimer > 200,
+      'a hurried capsule should still have time to be steered when it lands',
+    );
   });
 });

@@ -40,6 +40,8 @@ const dom = {
   resistanceMeter: el('resistance-meter'),
   resistanceFill: el('resistance-fill'),
   resistanceToggle: el('resistance'),
+  instantDropToggle: el('instant-drop'),
+  dropButton: el('drop-button'),
   musicToggle: el('music'),
   seed: el('seed'),
   overlay: el('overlay'),
@@ -123,6 +125,7 @@ function loadSettings() {
     muted: false,
     topScore: 0,
     resistance: false,
+    instantDrop: false,
     mode: 'solo',
     music: true,
   };
@@ -143,6 +146,7 @@ function loadSettings() {
   }
   if (params.has('seed')) merged.seed = Number(params.get('seed')) >>> 0;
   if (params.has('resistance')) merged.resistance = params.get('resistance') !== '0';
+  if (params.has('instantDrop')) merged.instantDrop = params.get('instantDrop') !== '0';
   if (params.has('music')) merged.music = params.get('music') !== '0';
   if (params.has('daily')) {
     merged.mode = 'daily';
@@ -165,6 +169,7 @@ function saveSettings() {
         muted: settings.muted,
         topScore: settings.topScore,
         resistance: settings.resistance,
+        instantDrop: settings.instantDrop,
         music: settings.music,
         mode,
       }),
@@ -642,6 +647,7 @@ function handlePress(action, meta = {}) {
 
   if (match) {
     if (action === 'softDrop') match.command(player, 'softDropOn');
+    else if (action === 'hardDrop' && !settings.instantDrop) match.command(player, 'softDropOn');
     else match.command(player, action);
     handleMatchEvents();
     syncHud();
@@ -666,7 +672,11 @@ function handlePress(action, meta = {}) {
       game.setSoftDrop(true);
       break;
     case 'hardDrop':
-      game.hardDrop();
+      // With instant drop off, the drop control hurries the capsule rather than
+      // snapping it. Snapping costs a run every time you only wanted to hurry
+      // and no longer have the moment for a last lateral.
+      if (settings.instantDrop) game.hardDrop();
+      else game.setSoftDrop(true);
       break;
     case 'restart':
       startGame({ level: game.level, speed: game.speedName });
@@ -679,7 +689,8 @@ function handlePress(action, meta = {}) {
 }
 
 function handleRelease(action, meta = {}) {
-  if (action !== 'softDrop') return;
+  const hurrying = action === 'softDrop' || (action === 'hardDrop' && !settings.instantDrop);
+  if (!hurrying) return;
   if (match) match.command(meta.player ?? 0, 'softDropOff');
   else if (game) game.setSoftDrop(false);
 }
@@ -708,6 +719,17 @@ function resumeGame() {
   audio.startMusic(match ? 'fever' : dangerMusic ? 'fever' : 'chill');
   showScreen('playing');
   lastFrame = performance.now();
+}
+
+function syncDropStyle() {
+  const instant = Boolean(settings.instantDrop);
+  dom.instantDropToggle.checked = instant;
+  dom.dropButton.textContent = instant ? 'DROP' : 'HURRY';
+  dom.dropButton.setAttribute(
+    'aria-label',
+    instant ? 'Drop the capsule to the bottom' : 'Hurry the capsule down',
+  );
+  document.body.classList.toggle('is-instant-drop', instant);
 }
 
 function setMuted(muted) {
@@ -814,6 +836,12 @@ dom.musicToggle.addEventListener('change', () => {
   audio.setMusicEnabled(settings.music, { resume: screen === 'playing' });
 });
 
+dom.instantDropToggle.addEventListener('change', () => {
+  settings.instantDrop = dom.instantDropToggle.checked;
+  saveSettings();
+  syncDropStyle();
+});
+
 dom.resistanceToggle.addEventListener('change', () => {
   settings.resistance = dom.resistanceToggle.checked;
   saveSettings();
@@ -827,7 +855,10 @@ document.addEventListener('visibilitychange', () => {
 
 input.attach(window);
 input.attachTouch(dom.touchpad);
-input.attachSwipe(dom.board, { cellSize: () => renderers[0].layout?.cell });
+input.attachSwipe(dom.board, {
+  cellSize: () => renderers[0].layout?.cell,
+  instantDrop: () => Boolean(settings.instantDrop),
+});
 
 window.addEventListener('resize', () => {
   for (const renderer of renderers) renderer.resize();
@@ -930,6 +961,7 @@ window.rxdrop = {
   settings,
   pillCells,
   collateralOf,
+  syncDropStyle,
   constants: { NECK_ROWS, RESISTANCE_MAX, TOLERANCE_AT },
 };
 
@@ -938,6 +970,7 @@ syncSpeedButtons();
 dom.musicToggle.checked = settings.music;
 audio.setMusicEnabled(settings.music, { resume: false });
 dom.resistanceToggle.checked = settings.resistance;
+syncDropStyle();
 setMode(settings.mode);
 showScreen('title');
 syncHud(true);

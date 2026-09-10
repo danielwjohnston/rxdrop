@@ -1,0 +1,53 @@
+name: Suggest a mechanic
+description: A new rule, interaction or compound for the bottle.
+title: "[mechanic] "
+labels: ["idea", "mechanic"]
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        RxDrop is aiming for rules that are *recurring but novel*: a small set of
+        rules whose combinations you keep discovering. Ideas that combine with
+        what already exists beat ideas that sit beside it.
+        `docs/ideas.md` has the current matrix.
+  - type: textarea
+    id: rule
+    attributes:
+      label: The rule, in one or two sentences
+      description: What happens, and when. Write it as a rule, not as a feeling.
+      placeholder: >-
+        A virus capped by the wrong colour for four capsule drops becomes a
+        hybrid of the two colours, and no single colour clears it any more.
+    validations:
+      required: true
+  - type: textarea
+    id: interaction
+    attributes:
+      label: What does it combine with?
+      description: >-
+        Which existing rule does this change the meaning of - resistance,
+        cascades, garbage, the neck row, an era? An idea that touches nothing
+        else is usually a smaller idea than it looks.
+    validations:
+      required: true
+  - type: textarea
+    id: counterplay
+    attributes:
+      label: How does the player answer it?
+      description: >-
+        The most important box. If there is no answer, it is a death sentence
+        rather than a mechanic.
+    validations:
+      required: true
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Where should it apply?
+      options:
+        - Everywhere, as a core rule
+        - Later levels only
+        - A run modifier you can turn on
+        - The daily challenge only
+        - Versus only
+    validations:
+      required: true

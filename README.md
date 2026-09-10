@@ -144,6 +144,21 @@ sepia palette that made level 2 harder to read than level 20 would be a worse
 game however good the screenshot looked, and `test/eras.test.js` fails the build
 if an era drifts a hue or washes out below the legible band.
 
+## Suggesting mechanics, challenges and themes
+
+The design workshop lives in [`docs/ideas.md`](docs/ideas.md): the mechanics
+under consideration, what they combine with, and the one thing they all have to
+survive - no interaction may leave a virus unanswerable.
+
+Ideas go through GitHub, so anyone with an account can add one:
+[a mechanic](https://github.com/danielwjohnston/rxdrop/issues/new?template=mechanic.yml),
+[a challenge](https://github.com/danielwjohnston/rxdrop/issues/new?template=challenge.yml),
+[a theme](https://github.com/danielwjohnston/rxdrop/issues/new?template=theme.yml),
+or [Discussions](https://github.com/danielwjohnston/rxdrop/discussions) for the
+half-formed ones. The forms ask the questions that decide whether an idea is
+buildable - chiefly "what does it combine with?" and "how does the player answer
+it?".
+
 ## Rules
 
 - The bottle is 8 columns by 16 rows, with one more row above it for the neck.

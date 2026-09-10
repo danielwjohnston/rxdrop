@@ -154,8 +154,11 @@ Ideas go through GitHub, so anyone with an account can add one:
 [a mechanic](https://github.com/danielwjohnston/rxdrop/issues/new?template=mechanic.yml),
 [a challenge](https://github.com/danielwjohnston/rxdrop/issues/new?template=challenge.yml),
 [a theme](https://github.com/danielwjohnston/rxdrop/issues/new?template=theme.yml),
-or [Discussions](https://github.com/danielwjohnston/rxdrop/discussions) for the
-half-formed ones. The forms ask the questions that decide whether an idea is
+or a
+[blank issue](https://github.com/danielwjohnston/rxdrop/issues/new) for the
+half-formed ones. (Discussions would suit the half-formed ones better, but it is
+off for this repository - Settings, General, Features. Nothing here links to it
+until it is on, because a link that 404s is worse than no link.) The forms ask the questions that decide whether an idea is
 buildable - chiefly "what does it combine with?" and "how does the player answer
 it?".
 

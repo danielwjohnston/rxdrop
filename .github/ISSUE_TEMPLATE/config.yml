@@ -1,10 +1,12 @@
+# Blank issues stay on: a half-formed "what if" is welcome and does not need a
+# form. The forms are for ideas concrete enough to argue about.
 blank_issues_enabled: true
 contact_links:
-  - name: Talk it through first
-    url: https://github.com/danielwjohnston/rxdrop/discussions
+  - name: Read the formulary first
+    url: https://github.com/danielwjohnston/rxdrop/blob/main/docs/ideas.md
     about: >-
-      Half-formed ideas, questions and "what if" are welcome in Discussions.
-      Use the forms here when an idea is concrete enough to build.
+      What is already proposed, what each idea combines with, and the one rule
+      every proposal has to survive. Worth two minutes before you write one.
   - name: Play RxDrop
     url: https://danielwjohnston.github.io/rxdrop/
     about: The game itself, in the browser. It installs and plays offline.

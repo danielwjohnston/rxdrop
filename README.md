@@ -196,6 +196,20 @@ it?".
   around it with it, for four times the score. And a parent delivered twice
   wears the strain back down to an ordinary virus, so a hybrid whose other
   parent is walled off is never a dead end.
+- **Run modifiers** are opt-in on the title screen and stack with each other and
+  with everything above. Each one bends a rule rather than sitting beside it,
+  and each states the bound that keeps it from making a virus unanswerable:
+
+  | Modifier | What it does | Why it is survivable |
+  | --- | --- | --- |
+  | Outbreak | Viruses replicate into empty cells; gravity halves to pay for it | A virus spreads once and never again, never above the virus ceiling, never past 1.6x the starting population |
+  | Blackout | The lights go out for five seconds every fourteen; hold Shift or L for light therapy | A blackout always ends on its own timer, and the bottle never fades to fully black |
+  | Rationing | Only two of the three medicines are in stock at a time | The withheld colour rotates on a fixed timer, so nothing is ever out of stock for long |
+  | Contaminated batch | Some capsule halves are inert and belong to no run | An inert half washes out with any clear it is touching |
+  | Quarantine | A column is sealed and refuses capsules | Clearing beside it breaks the seal, and it lifts on its own regardless; spawn columns are never sealed |
+
+  The daily challenge draws a seeded pair, which is what stops the daily being
+  the same game at a different level.
 - Clear every virus to finish the level. Filling the bottle to the brim is not
   a loss on its own: capsules are dealt into the neck above it, and you get a
   long fuse to steer one clear. The run ends only once the neck is blocked too,
@@ -204,22 +218,23 @@ it?".
 ## Development
 
 ```sh
-npm test           # 204 unit tests, no dependencies, well under a second
+npm test           # 235 unit tests, no dependencies, well under a second
 npm run test:watch # re-run on change
 
 # End-to-end checks in a real browser (Playwright is not a dependency):
 npm i --no-save playwright && npx playwright install chromium
-npm run test:browser  # 34 checks: menus, controls, versus, daily, offline, mobile
+npm run test:browser  # 37 checks: menus, controls, versus, daily, offline, mobile
 
 npm run gauntlet   # the full protocol below: every stage, one gate
 ```
 
 ### The UltraGauntlet
 
-`npm run gauntlet` runs twelve adversarial stages in series - determinism,
+`npm run gauntlet` runs thirteen adversarial stages in series - determinism,
 hostile clocks, boundaries, fuzzing, resistance, collateral sensitivity, the
-hybrid strains, versus garbage conservation, a bot playtest, a frame-budget
-check, and the browser suite - and fails the run if any stage fails. [docs/ultragauntlet.md](docs/ultragauntlet.md) explains where
+hybrid strains, the run modifiers, versus garbage conservation, a bot playtest,
+a frame-budget check, and the browser suite - and fails the run if any stage
+fails. [docs/ultragauntlet.md](docs/ultragauntlet.md) explains where
 it comes from, what each stage attacks, and the defects it has already caught.
 
 ### Layout

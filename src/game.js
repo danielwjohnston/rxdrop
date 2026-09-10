@@ -25,8 +25,29 @@ import {
   SPAWN_Y,
   SPEEDS,
   VIRUS,
+  BLACKOUT_EVERY,
+  BLACKOUT_FADE,
+  BLACKOUT_FLOOR,
+  BLACKOUT_LASTS,
+  CONTAMINATION_EVERY,
+  DARK_AT,
+  LIGHT_ARM,
+  LIGHT_CAPACITY,
+  LIGHT_REFILL,
+  LIGHT_RESTORE,
+  OUTBREAK_INTERVAL,
+  OUTBREAK_MAX,
+  QUARANTINE_INTERVAL,
+  QUARANTINE_MAX,
 } from './constants.js';
-import { Board, cell, generateLevel } from './board.js';
+import { Board, cell, generateLevel, virusTopRow } from './board.js';
+import {
+  normaliseModifiers,
+  outbreakCeiling,
+  outbreakTargets,
+  quarantineColumn,
+  rationedOut,
+} from './modifiers.js';
 import {
   createPill,
   fits,
@@ -42,6 +63,7 @@ export const PHASE = Object.freeze({
   CLEARING: 'clearing',
   SETTLING: 'settling',
   MUTATING: 'mutating',
+  SPREADING: 'spreading',
   WON: 'won',
   LOST: 'lost',
 });
@@ -60,9 +82,12 @@ export class Game {
     width = BOARD_WIDTH,
     height = BOARD_HEIGHT,
     resistance = false,
+    modifiers = [],
   } = {}) {
     /** Antibiotic resistance: surviving viruses mutate. Off in classic play. */
     this.resistance = Boolean(resistance);
+    /** Run modifiers, in declaration order. See src/modifiers.js. */
+    this.modifiers = normaliseModifiers(modifiers);
     this.level = Math.max(0, Math.min(level, MAX_LEVEL));
     this.speedName = SPEEDS[speed] ? speed : 'LOW';
     this.speed = SPEEDS[this.speedName];
@@ -108,9 +133,46 @@ export class Game {
     /** Garbage this player has earned and not yet handed to the opponent. */
     this.pendingAttack = [];
     this.mutations = [];
+    // ---- modifier state. All of it lives here so a seed still reproduces a
+    // game exactly, which is the first thing the gauntlet checks.
+    /** Outbreak: viruses spread on a tick, capped by this population. */
+    this.outbreakCap = outbreakCeiling(this.startingViruses);
+    this.outbreakTickedAt = -1;
+    this.spreading = [];
+    /** Blackout: what the bottle can be seen by, and what is left to spend. */
+    this.light = 1;
+    this.lightCharge = 1;
+    this.lighting = false;
+    /** True once the reservoir has run dry, until it re-arms. See LIGHT_ARM. */
+    this.lightSpent = false;
+    /** Counts up to the next blackout, then counts one down. */
+    this.blackoutTimer = 0;
+    this.blackoutFor = 0;
+    this.darkClears = 0;
+    /** Quarantine: the sealed column and when it was sealed. */
+    this.board.sealed = undefined;
+    this.sealedAt = -1;
+    this.lastSealed = -1;
+    this.quarantineTickedAt = -1;
     this.phase = PHASE.FALLING;
     this.pill = null;
     this.spawnPill();
+  }
+
+  /** True if this run is playing with the named modifier. */
+  has(id) {
+    return this.modifiers.includes(id);
+  }
+
+  /** True when the bottle is dark enough for a clear to be worth a badge. */
+  get isDark() {
+    return this.has('blackout') && this.light <= DARK_AT;
+  }
+
+  /** True while the light is actually drawing on the reservoir. */
+  get spendingLight() {
+    return this.has('blackout') && this.blackoutFor > 0 && this.lighting
+      && !this.lightSpent && this.lightCharge > 0;
   }
 
   get virusesLeft() {
@@ -148,7 +210,12 @@ export class Game {
   get dropInterval() {
     const tier = Math.floor(this.pillsPlaced / PILLS_PER_SPEED_UP);
     const { baseInterval, minInterval, step } = this.speed;
-    return Math.max(minInterval, baseInterval - tier * step);
+    const interval = Math.max(minInterval, baseInterval - tier * step);
+    // Outbreak's half of the trade: more disease, but the medicine arrives
+    // twice as fast. Floored at the same speed a held hurry is floored at, so
+    // the capsule can never outrun a hand however deep the run goes.
+    if (!this.has('outbreak')) return interval;
+    return Math.max(SOFT_DROP_MIN, interval / 2);
   }
 
   emit(type, detail = {}) {
@@ -179,13 +246,40 @@ export class Game {
       }
       this.bag = combinations;
     }
-    return this.bag.pop();
+    if (!this.has('rationing')) return this.bag.pop();
+    // Rationing draws from the same bag and simply passes over the colour that
+    // is out of stock, so the other two still come in the bag's even spread
+    // rather than degenerating into a coin flip. The bag is refilled rather
+    // than searched, so this always terminates.
+    const out = rationedOut(this.pillsPlaced);
+    for (let i = this.bag.length - 1; i >= 0; i -= 1) {
+      if (this.bag[i].includes(out)) continue;
+      return this.bag.splice(i, 1)[0];
+    }
+    const stocked = [];
+    for (let a = 0; a < COLOR_COUNT; a += 1) {
+      for (let b = 0; b < COLOR_COUNT; b += 1) if (a !== out && b !== out) stocked.push([a, b]);
+    }
+    this.bag = [];
+    return stocked[this.rng.int(stocked.length)];
+  }
+
+  /**
+   * Which half of the next capsule, if any, comes out of a contaminated batch.
+   * Returns 0, 1 or -1 for a clean capsule. Keyed off the capsule count so it
+   * is as reproducible as everything else.
+   */
+  contaminatedHalf(index) {
+    if (!this.has('contaminated')) return -1;
+    if (index % CONTAMINATION_EVERY !== CONTAMINATION_EVERY - 1) return -1;
+    return Math.floor(index / CONTAMINATION_EVERY) % 2;
   }
 
   spawnPill() {
     const colors = this.queue.shift();
     this.queue.push(this.drawColors());
-    const pill = createPill(colors, SPAWN_X, SPAWN_Y, 0);
+    const inert = this.contaminatedHalf(this.pillsPlaced);
+    const pill = createPill(colors, SPAWN_X, SPAWN_Y, 0, inert);
     if (!fits(this.board, pill)) {
       this.pill = null;
       this.phase = PHASE.LOST;
@@ -201,7 +295,7 @@ export class Game {
     // capsule gets a longer fuse, see SPAWN_GRACE.
     this.spawnedBlocked = !tryMove(this.board, pill, 0, 1);
     this.phase = PHASE.FALLING;
-    this.emit('spawn', { colors, blocked: this.spawnedBlocked });
+    this.emit('spawn', { colors, blocked: this.spawnedBlocked, inert });
   }
 
   togglePause() {
@@ -279,6 +373,7 @@ export class Game {
   /** Advances the game by `dt` milliseconds. */
   update(dt) {
     if (this.paused || this.isOver) return;
+    this.updateLight(dt);
     switch (this.phase) {
       case PHASE.FALLING:
         this.updateFalling(dt);
@@ -292,9 +387,68 @@ export class Game {
       case PHASE.MUTATING:
         this.updateMutating(dt);
         break;
+      case PHASE.SPREADING:
+        this.updateSpreading(dt);
+        break;
       default:
         break;
     }
+  }
+
+  /**
+   * Light therapy. The bottle fades on its own; holding the light brings it
+   * back and spends a reservoir that refills whenever the light is off.
+   *
+   * The refill is the guardrail: however badly the light is spent, waiting
+   * always gets it back, so the bottle can never be left permanently dark. And
+   * the floor means dark is dim, not blind - a run cleared down there is a hard
+   * thing done, not a guess.
+   */
+  updateLight(dt) {
+    if (!this.has('blackout')) return;
+    const wasDark = this.isDark;
+
+    // The blackout clock. A blackout always ends on this timer, whatever the
+    // reservoir is doing - that bound is what keeps the bottle answerable.
+    if (this.blackoutFor > 0) {
+      this.blackoutFor = Math.max(0, this.blackoutFor - dt);
+      if (this.blackoutFor === 0) this.emit('lightsUp');
+    } else {
+      this.blackoutTimer += dt;
+      if (this.blackoutTimer >= BLACKOUT_EVERY) {
+        this.blackoutTimer = 0;
+        this.blackoutFor = BLACKOUT_LASTS;
+        this.emit('blackout', { ms: BLACKOUT_LASTS });
+      }
+    }
+
+    if (this.lightSpent && this.lightCharge >= LIGHT_ARM) this.lightSpent = false;
+    const spending = this.spendingLight;
+    if (spending) {
+      this.lightCharge = Math.max(0, this.lightCharge - dt / LIGHT_CAPACITY);
+      if (this.lightCharge === 0) {
+        this.lightSpent = true;
+        this.emit('lightOut');
+      }
+    } else if (this.blackoutFor === 0) {
+      // The reservoir only refills while the lights are on, so the gap between
+      // blackouts is what pays for the next one.
+      this.lightCharge = Math.min(1, this.lightCharge + dt / LIGHT_REFILL);
+    }
+
+    const target = this.blackoutFor > 0 && !spending ? BLACKOUT_FLOOR : 1;
+    if (this.light < target) this.light = Math.min(target, this.light + dt / LIGHT_RESTORE);
+    else if (this.light > target) this.light = Math.max(target, this.light - dt / BLACKOUT_FADE);
+
+    if (this.isDark !== wasDark) this.emit(this.isDark ? 'dark' : 'lit');
+  }
+
+  /** The light-therapy control. Held, never toggled - see docs/ideas.md. */
+  setLight(on) {
+    const next = Boolean(on) && this.has('blackout');
+    if (next === this.lighting) return;
+    this.lighting = next;
+    this.emit('light', { on: next });
   }
 
   updateFalling(dt) {
@@ -362,6 +516,7 @@ export class Game {
       ...this.outcome.cleared,
       ...this.outcome.collateral,
       ...this.outcome.antibody,
+      ...this.outcome.washed,
     ];
     this.resistedCells = this.outcome.resisted;
     this.phase = PHASE.CLEARING;
@@ -397,6 +552,16 @@ export class Game {
 
     const attack = this.attackFor(this.clearingCells, this.combo);
     this.pendingAttack.push(...attack);
+    // A clear in either column beside a seal breaks it. That is the whole
+    // interaction: quarantine narrows the bottle, and clearing next to the seal
+    // is how you get the column back.
+    const sealed = this.board.sealed;
+    if (sealed !== undefined
+      && this.outcome.cleared.some(({ x }) => Math.abs(x - sealed) === 1)) {
+      this.breakSeal('cleared');
+    }
+    const inTheDark = this.isDark && killed > 0;
+    if (inTheDark) this.darkClears += 1;
     this.emit('clear', {
       viruses: killed,
       collateral,
@@ -406,8 +571,11 @@ export class Game {
       attack: attack.length,
       cured: this.cured.length,
       antibodies,
+      washed: this.outcome.washed?.length ?? 0,
+      inTheDark,
     });
     if (antibodies > 0) this.emit('antibody', { count: antibodies });
+    if (inTheDark) this.emit('darkClear', { viruses: killed, total: this.darkClears });
   }
 
   /**
@@ -519,6 +687,8 @@ export class Game {
       return;
     }
     if (this.tickResistance()) return;
+    if (this.tickOutbreak()) return;
+    this.tickQuarantine();
     if (this.incoming.length > 0) {
       this.dropGarbage();
       this.phase = PHASE.SETTLING;
@@ -556,6 +726,90 @@ export class Game {
     this.mutations = [];
     // A mutation never completes a run, so the board is still settled here.
     this.finishResolution();
+  }
+
+  /**
+   * Outbreak: a virus spreads into an empty cell beside it.
+   *
+   * Three caps, because replication compounds and an uncapped one eats the
+   * bottle: a virus may spread once in its life, never above the level's own
+   * virus ceiling, and never past the population ceiling set when the level
+   * was built.
+   */
+  tickOutbreak() {
+    if (!this.has('outbreak')) return false;
+    if (this.pillsPlaced === 0) return false;
+    if (this.pillsPlaced % OUTBREAK_INTERVAL !== 0) return false;
+    if (this.outbreakTickedAt === this.pillsPlaced) return false;
+    this.outbreakTickedAt = this.pillsPlaced;
+    const room = this.outbreakCap - this.virusesLeft;
+    if (room <= 0) return false;
+    const targets = outbreakTargets(
+      this.board,
+      this.rng,
+      Math.min(OUTBREAK_MAX, room),
+      virusTopRow(this.board, this.level),
+    );
+    if (targets.length === 0) return false;
+    for (const { from, x, y, color } of targets) {
+      const parent = this.board.get(from.x, from.y);
+      if (parent) parent.spread = true;
+      const child = cell(color, VIRUS, null);
+      // A replicated virus is newborn: no tolerance, and it may not go on to
+      // replicate itself. One generation is the cap that keeps this bounded.
+      child.spread = true;
+      this.board.set(x, y, child);
+    }
+    this.spreading = targets;
+    this.phase = PHASE.SPREADING;
+    this.phaseTimer = 0;
+    this.emit('spread', { count: targets.length });
+    return true;
+  }
+
+  updateSpreading(dt) {
+    this.phaseTimer += dt;
+    if (this.phaseTimer < MUTATION_ANIMATION) return;
+    this.spreading = [];
+    // A new virus never lands where it completes a run, because it only ever
+    // goes into an empty cell beside its parent - and a run through that cell
+    // would have cleared the parent already. The board is still settled.
+    this.finishResolution();
+  }
+
+  /**
+   * Quarantine: seal a column, or lift a seal that has outstayed its bound.
+   *
+   * A seal breaks when a clear lands in either neighbouring column, and lifts
+   * on its own after QUARANTINE_MAX capsules regardless, so it can never become
+   * permanent. Spawn columns are never sealed.
+   */
+  tickQuarantine() {
+    if (!this.has('quarantine')) return;
+    if (this.board.sealed !== undefined) {
+      if (this.pillsPlaced - this.sealedAt < QUARANTINE_MAX) return;
+      this.breakSeal('expired');
+      return;
+    }
+    if (this.pillsPlaced === 0) return;
+    if (this.pillsPlaced % QUARANTINE_INTERVAL !== 0) return;
+    if (this.quarantineTickedAt === this.pillsPlaced) return;
+    this.quarantineTickedAt = this.pillsPlaced;
+    const column = quarantineColumn(this.board, this.rng, this.lastSealed);
+    if (column === null) return;
+    this.board.sealed = column;
+    this.lastSealed = column;
+    this.sealedAt = this.pillsPlaced;
+    this.emit('sealed', { column });
+  }
+
+  /** Lifts the seal, if there is one. */
+  breakSeal(reason = 'cleared') {
+    if (this.board.sealed === undefined) return;
+    const column = this.board.sealed;
+    this.board.sealed = undefined;
+    this.sealedAt = -1;
+    this.emit('unsealed', { column, reason });
   }
 
   /** How close the board is to its next mutation, as 0..1, for the HUD. */

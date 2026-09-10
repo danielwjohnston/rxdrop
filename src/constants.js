@@ -162,3 +162,108 @@ export const MUTATION_ANIMATION = 420;
 export const ATTACK_PER_EXTRA_CELL = 1;
 export const ATTACK_PER_COMBO = 2;
 export const ATTACK_CAP = 6;
+
+/**
+ * Run modifiers.
+ *
+ * Each one bends a rule the game already has rather than sitting beside it, and
+ * each pays for the pressure it adds. They stack with everything above and with
+ * each other, which is where the depth comes from: three virus states times
+ * three hybrid strains times a pair of modifiers is a large space built out of
+ * a small rulebook.
+ *
+ * The constraint they all answer to is the same one the formulary is written
+ * against - nothing here may leave a virus unanswerable - so every modifier
+ * below has a bound on it, and the bound is what the gauntlet checks.
+ */
+
+/**
+ * Outbreak: viruses replicate into empty cells every OUTBREAK_INTERVAL capsules,
+ * at most OUTBREAK_MAX at a time. In exchange gravity halves, so you place
+ * roughly twice as many capsules in the same minute - more disease, more
+ * medicine.
+ *
+ * Replication compounds, so it is capped three ways: only a virus that has
+ * never replicated may do so, only into a cell below the virus ceiling, and
+ * never past OUTBREAK_CEILING times the viruses the level started with.
+ */
+export const OUTBREAK_INTERVAL = 6;
+export const OUTBREAK_MAX = 2;
+export const OUTBREAK_CEILING = 1.6;
+
+/**
+ * Blackout, and light therapy.
+ *
+ * The bottle is lit normally. Every BLACKOUT_EVERY milliseconds the lights go
+ * out for BLACKOUT_LASTS, fading over BLACKOUT_FADE to BLACKOUT_FLOOR - dim
+ * enough to be hard, never fully black. Holding the light-therapy control
+ * brings the bottle back over LIGHT_RESTORE and spends a reservoir good for
+ * LIGHT_CAPACITY milliseconds of holding, which refills over LIGHT_REFILL while
+ * the lights are on.
+ *
+ * The numbers are chosen so the reservoir refills to roughly full in the gap
+ * between blackouts and covers about two thirds of one - so every blackout is a
+ * decision about WHEN to spend the light, and some of it is always played in
+ * the dark. That is where the badge comes from.
+ *
+ * Two bounds, and they are the reason this is a mechanic rather than a
+ * punishment: a blackout always ends on its own timer whatever the reservoir is
+ * doing, and the bottle never fades past BLACKOUT_FLOOR. Nothing a player can
+ * spend takes either of those away.
+ *
+ * This is the second design. The first faded the light continuously and refilled
+ * it continuously, which cannot produce "mostly lit, briefly dark" at all: a
+ * linear system like that drifts to one end or the other, and the playtest
+ * showed it sitting at whichever end the tuning favoured - either free light or
+ * half the run unreadable.
+ */
+export const BLACKOUT_EVERY = 14000;
+export const BLACKOUT_LASTS = 5000;
+export const BLACKOUT_FADE = 900;
+export const BLACKOUT_FLOOR = 0.06;
+export const LIGHT_RESTORE = 500;
+export const LIGHT_CAPACITY = 3400;
+export const LIGHT_REFILL = 9000;
+/**
+ * Once the reservoir is empty the light will not come on again until it has
+ * climbed back to this much of a charge.
+ *
+ * Without that latch the reservoir oscillates on its own floor - it empties,
+ * refills by one frame's worth, powers one more frame of light, empties again -
+ * and the light is effectively free. That is not a hypothetical: it is how the
+ * first version behaved, and holding the light forever kept the bottle at full
+ * brightness the whole run.
+ */
+export const LIGHT_ARM = 0.35;
+/** Below this the bottle counts as dark, which is what a badge is worth. */
+export const DARK_AT = 0.35;
+
+/**
+ * Rationing: only two of the three medicines are dealt at a time. Every
+ * RATION_SPELL capsules the withheld colour moves on, so no colour is ever
+ * withheld for longer than that - which is the bound that keeps a virus of
+ * the missing colour answerable.
+ */
+export const RATION_SPELL = 12;
+
+/**
+ * Contaminated batch: one capsule in CONTAMINATION_EVERY carries an inert half.
+ * It stacks and falls like any other but belongs to no run, so dumping it
+ * somewhere harmless is a skill of its own.
+ *
+ * Inert cells would otherwise pile up until the bottle filled, so they wash out
+ * with any clear they are touching. That makes "somewhere harmless" and
+ * "somewhere you will clear later" the same judgement, which is the good
+ * version of the decision.
+ */
+export const CONTAMINATION_EVERY = 10;
+
+/**
+ * Quarantine: one column is sealed and refuses capsules. Clearing a cell in
+ * either neighbouring column breaks the seal; failing that it lifts on its own
+ * after QUARANTINE_MAX capsules, so a seal can never be permanent. The spawn
+ * columns are never sealed, because a bottle you cannot deal into is not a
+ * puzzle.
+ */
+export const QUARANTINE_INTERVAL = 16;
+export const QUARANTINE_MAX = 6;

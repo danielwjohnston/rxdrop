@@ -212,6 +212,62 @@ export class AudioEngine {
         this.noise({ start: 0.02, duration: 0.3, gain: 0.14, frequency: 3200 });
         break;
       }
+      case 'spread': {
+        // A wet, descending burble - replication as something spilling rather
+        // than something arriving.
+        this.tone(noteToFreq('F3'), {
+          duration: 0.22,
+          gain: 0.18,
+          type: 'sawtooth',
+          slide: noteToFreq('C3'),
+        });
+        this.noise({ start: 0.04, duration: 0.2, gain: 0.1, frequency: 700 });
+        break;
+      }
+      case 'blackout': {
+        // The lights going: a long fall with nothing at the bottom of it.
+        this.tone(noteToFreq('A3'), {
+          duration: 0.5,
+          gain: 0.2,
+          type: 'triangle',
+          slide: noteToFreq('D2'),
+        });
+        break;
+      }
+      case 'lightsUp': {
+        this.tone(noteToFreq('D4'), {
+          duration: 0.3,
+          gain: 0.16,
+          type: 'triangle',
+          slide: noteToFreq('A4'),
+        });
+        break;
+      }
+      case 'lightOut': {
+        // The reservoir running dry mid-blackout. Short, dry, and bad news.
+        this.noise({ duration: 0.07, gain: 0.14, frequency: 500 });
+        this.tone(noteToFreq('E3'), { duration: 0.1, gain: 0.14, type: 'square' });
+        break;
+      }
+      case 'sealed': {
+        // A shutter coming down.
+        this.noise({ duration: 0.12, gain: 0.16, frequency: 1200 });
+        this.tone(noteToFreq('G2'), { duration: 0.18, gain: 0.2, type: 'square' });
+        break;
+      }
+      case 'unsealed': {
+        this.tone(noteToFreq('G3'), { duration: 0.12, gain: 0.16, type: 'square' });
+        this.tone(noteToFreq('D4'), { start: 0.07, duration: 0.16, gain: 0.16, type: 'square' });
+        break;
+      }
+      case 'darkClear': {
+        // The badge: a clear made blind. Brighter than the ordinary chime
+        // because it is a harder thing done.
+        this.tone(noteToFreq('A4'), { duration: 0.14, gain: 0.2, type: 'triangle' });
+        this.tone(noteToFreq('E5'), { start: 0.08, duration: 0.16, gain: 0.2, type: 'triangle' });
+        this.tone(noteToFreq('A5'), { start: 0.16, duration: 0.28, gain: 0.18, type: 'sine' });
+        break;
+      }
       case 'resist': {
         // A dull thud that goes nowhere: the medicine landing and doing
         // nothing. Deliberately unsatisfying next to the clear chime, so the

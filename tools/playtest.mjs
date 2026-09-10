@@ -17,9 +17,10 @@ import { performance } from 'node:perf_hooks';
 
 import { Game, PHASE } from '../src/game.js';
 import { createRng } from '../src/rng.js';
-import { fits, pillCells, tryMove, tryRotate } from '../src/pill.js';
-import { isHybrid, parentsOf } from '../src/board.js';
-import { BOARD_HEIGHT, LOCK_RESETS, VIRUS } from '../src/constants.js';
+import { tryMove } from '../src/pill.js';
+import { FRAME, plan, steer } from './bot.mjs';
+import { MODIFIER_IDS, describeModifiers } from '../src/modifiers.js';
+import { BOARD_HEIGHT, LOCK_RESETS } from '../src/constants.js';
 
 const args = process.argv.slice(2);
 const flag = (name, fallback) => {
@@ -28,153 +29,6 @@ const flag = (name, fallback) => {
 };
 const VERBOSE = args.includes('--verbose');
 const GAMES = flag('games', 6);
-const FRAME = 16;
-
-// ---- the bot --------------------------------------------------------------
-
-/** Column heights, and the count of covered gaps under them. */
-function survey(board) {
-  const heights = [];
-  let holes = 0;
-  for (let x = 0; x < board.width; x += 1) {
-    let top = board.height;
-    for (let y = 0; y < board.height; y += 1) {
-      if (board.get(x, y)) {
-        top = y;
-        break;
-      }
-    }
-    heights.push(board.height - top);
-    for (let y = top + 1; y < board.height; y += 1) if (!board.get(x, y)) holes += 1;
-  }
-  return { heights, holes };
-}
-
-/**
- * Scores a candidate landing. Deliberately simple: sit next to viruses of your
- * own colour, keep the stack low and un-pocketed. A great player it is not; a
- * consistent one it is, which is what a measurement needs.
- */
-function scorePlacement(board, cells) {
-  let score = 0;
-  for (const { x, y, color } of cells) {
-    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      const near = board.get(x + dx, y + dy);
-      if (!near) continue;
-      if (near.color === color) score += near.type === VIRUS ? 22 : 6;
-      // A hybrid answers to no run of its own, so building a parent colour
-      // alongside one is the only approach that leads anywhere.
-      else if (isHybrid(near) && parentsOf(near.color).includes(color)) score += 16;
-    }
-    score += (y / board.height) * 14;
-  }
-  return score;
-}
-
-/**
- * Viruses this placement would actually kill, which is the whole game - plus
- * the parent colours it would deliver to a hybrid alongside.
- *
- * A hybrid belongs to no run, so a bot that only counts matched viruses never
- * treats one and the report would say hybrids are unanswerable when what is
- * really unanswerable is the bot. Delivering a parent is worth about half a
- * kill; landing both at once synthesises an antibody and is worth more than
- * either.
- */
-function killsFrom(board, tolerance) {
-  const matched = board.findMatches();
-  if (matched.size === 0) return 0;
-  let viruses = 0;
-  const cleared = [];
-  for (const key of matched) {
-    const [x, y] = key.split(',').map(Number);
-    const c = board.get(x, y);
-    if (c?.type === VIRUS) viruses += 1;
-    if (c) cleared.push({ x, y, color: c.color });
-  }
-  let delivered = 0;
-  if (tolerance) {
-    for (const { x, y, colors } of board.hybridDeliveries(cleared)) {
-      const had = new Set(board.get(x, y)?.cured ?? []);
-      const both = parentsOf(board.get(x, y).color).every((p) => had.has(p) || colors.has(p));
-      delivered += both ? 260 : 90;
-    }
-  }
-  return viruses * 200 + matched.size * 12 + delivered;
-}
-
-/** Picks a landing for the capsule in play. */
-function plan(game) {
-  const board = game.board;
-  const before = survey(board);
-  let best = null;
-  for (let orientation = 0; orientation < 4; orientation += 1) {
-    for (let x = -1; x <= board.width; x += 1) {
-      // Start from the first row this shape actually fits in. A vertical
-      // capsule on the spawn row has its partner at y = -1, so anchoring the
-      // search at the capsule's own row silently drops every vertical
-      // placement - which is half the game.
-      let candidate = null;
-      for (let y = 0; y < board.height; y += 1) {
-        const probe = { ...game.pill, x, y, orientation, kick: null };
-        if (fits(board, probe)) {
-          candidate = probe;
-          break;
-        }
-      }
-      if (!candidate) continue;
-      // Drop it and see where it settles.
-      for (;;) {
-        const next = tryMove(board, candidate, 0, 1);
-        if (!next) break;
-        candidate = next;
-      }
-      const cells = pillCells(candidate);
-      const stamped = cells.map(({ x: cx, y: cy }) => `${cx},${cy}`);
-      for (const { x: cx, y: cy, color } of cells) board.set(cx, cy, { color, type: 'pill', link: null });
-      const kills = killsFrom(board, game.resistance);
-      const after = survey(board);
-      for (const key of stamped) {
-        const [cx, cy] = key.split(',').map(Number);
-        board.set(cx, cy, null);
-      }
-      const peak = Math.max(...after.heights);
-      const value =
-        kills
-        + scorePlacement(board, cells)
-        - (after.holes - before.holes) * 40
-        - peak * 3;
-      if (!best || value > best.value) best = { value, x, orientation };
-    }
-  }
-  return best;
-}
-
-/**
- * Drives the capsule toward a plan with real inputs, one frame at a time.
- * Returns true while it still has work to do. Rotation comes first because a
- * turn can kick the capsule sideways, so steering afterwards is what makes the
- * column stick; and it only reports "settled" when it is genuinely in place,
- * not when a rotation happened to be refused.
- */
-function steer(game, target) {
-  if (!target || !game.pill) return false;
-  if (game.pill.orientation !== target.orientation) {
-    if (game.rotate(1)) return true;
-    // Rotation refused where it stands: shuffle out and try again next frame.
-    game.move(game.pill.x > 0 ? -1 : 1);
-    return true;
-  }
-  if (game.pill.x < target.x) {
-    game.move(1);
-    return true;
-  }
-  if (game.pill.x > target.x) {
-    game.move(-1);
-    return true;
-  }
-  return false;
-}
 
 // ---- measurement ----------------------------------------------------------
 
@@ -199,8 +53,8 @@ function reactionBudget(game) {
   return { ms: game.lockBudget - game.lockTimer, lateral };
 }
 
-function playOne({ level, speed, resistance, seed }) {
-  const game = new Game({ level, speed, resistance, seed });
+function playOne({ level, speed, resistance, seed, modifiers = [] }) {
+  const game = new Game({ level, speed, resistance, seed, modifiers });
   const rng = createRng(seed * 7 + 3);
   const stats = {
     capsules: 0,
@@ -211,6 +65,13 @@ function playOne({ level, speed, resistance, seed }) {
     hybrids: 0,
     cured: 0,
     antibodies: 0,
+    spread: 0,
+    seals: 0,
+    sealsCleared: 0,
+    darkFrames: 0,
+    darkClears: 0,
+    inert: 0,
+    washed: 0,
     levelsCleared: 0,
     budgets: [],
     laterals: [],
@@ -222,6 +83,14 @@ function playOne({ level, speed, resistance, seed }) {
 
   for (let frame = 0; frame < 90000; frame += 1) {
     stats.frames += 1;
+    // Light therapy the way a player works it: spend the light once the bottle
+    // has gone dim, hold until it is bright again, then let it refill. That is
+    // the "when do I spend it" decision the mechanic is supposed to be about.
+    if (game.has('blackout')) {
+      if (game.light <= 0.45 && game.lightCharge > 0.2) game.setLight(true);
+      else if (game.light >= 0.9 || game.lightCharge <= 0.02) game.setLight(false);
+      if (game.isDark) stats.darkFrames += 1;
+    }
     if (game.phase === PHASE.FALLING) {
       const settled = !steer(game, target);
       // Once it is where it wants to be, hold the hurry - which is exactly the
@@ -244,6 +113,7 @@ function playOne({ level, speed, resistance, seed }) {
     for (const event of game.drainEvents()) {
       if (event.type === 'spawn') {
         stats.capsules += 1;
+        if (event.inert >= 0) stats.inert += 1;
         target = plan(game);
         hurrying = false;
         grounded = false;
@@ -254,6 +124,14 @@ function playOne({ level, speed, resistance, seed }) {
         stats.collateral += event.collateral ?? 0;
         stats.cured += event.cured ?? 0;
         stats.antibodies += event.antibodies ?? 0;
+        stats.washed += event.washed ?? 0;
+        if (event.inTheDark) stats.darkClears += 1;
+      } else if (event.type === 'spread') {
+        stats.spread += event.count;
+      } else if (event.type === 'sealed') {
+        stats.seals += 1;
+      } else if (event.type === 'unsealed') {
+        if (event.reason === 'cleared') stats.sealsCleared += 1;
       } else if (event.type === 'resist') {
         stats.shrugs += event.count;
       } else if (event.type === 'mutate') {
@@ -269,6 +147,60 @@ function playOne({ level, speed, resistance, seed }) {
     if (game.phase === PHASE.LOST) break;
   }
   return stats;
+}
+
+/**
+ * The light economy under blackout: how much of the time a given policy keeps
+ * the bottle out of the dark, and whether the light always comes back.
+ *
+ * A bot cannot be made to suffer for a dark bottle - it reads the board, not
+ * the pixels - so the play numbers for blackout are identical to a plain run by
+ * construction. What CAN be measured is the thing the mechanic actually rests
+ * on: that the light is scarce enough to be a decision, and that it can never
+ * be spent into a corner you cannot get out of.
+ */
+function lightEconomy(policy) {
+  const game = new Game({ level: 4, speed: 'LOW', seed: 3, modifiers: ['blackout'] });
+  let lit = 0;
+  let dark = 0;
+  let held = 0;
+  let run = 0;
+  let worst = 0;
+  const frames = 3600;
+  // Driving the light clock directly rather than through update(): a game left
+  // to itself for a minute loses, and update() stops once it is over, so the
+  // whole measurement would silently be of a parked page.
+  for (let f = 0; f < frames; f += 1) {
+    game.setLight(policy(game));
+    if (game.spendingLight) held += 1;
+    game.updateLight(FRAME);
+    if (game.isDark) { dark += 1; run += 1; worst = Math.max(worst, run); } else {
+      run = 0;
+      if (game.light > 0.7) lit += 1;
+    }
+  }
+  // The bound: a blackout ends on its own timer whatever the reservoir is
+  // doing. Drop the bottle into a fresh blackout with the reservoir spent and
+  // hands off the light entirely - the worst case a player can arrange - and it
+  // still has to come back on its own.
+  game.blackoutFor = 5000;
+  game.lightCharge = 0;
+  game.lightSpent = true;
+  game.light = 0.06;
+  let recovery = 0;
+  for (; recovery < 4000; recovery += 1) {
+    game.setLight(false);
+    game.updateLight(FRAME);
+    if (game.light >= 0.9) break;
+  }
+  return {
+    held: held / frames,
+    lit: lit / frames,
+    dark: dark / frames,
+    worstDarkMs: worst * FRAME,
+    recovered: game.light >= 0.9,
+    recoveryMs: recovery * FRAME,
+  };
 }
 
 /** How long a held hurry takes to cross an empty bottle, in seconds. */
@@ -345,6 +277,20 @@ const setups = [
   { level: 16, speed: 'HIGH', resistance: true },
 ];
 
+// One run per modifier against the same baseline, plus the whole formulary at
+// once. The point is not that the bot wins - it is that each modifier changes
+// the shape of the run without making it unplayable, and that the bound each
+// one claims actually holds when something is playing against it.
+const modified = [
+  { level: 4, speed: 'LOW', resistance: true, modifiers: [] },
+  { level: 4, speed: 'LOW', resistance: true, modifiers: ['outbreak'] },
+  { level: 4, speed: 'LOW', resistance: true, modifiers: ['blackout'] },
+  { level: 4, speed: 'LOW', resistance: true, modifiers: ['rationing'] },
+  { level: 4, speed: 'LOW', resistance: true, modifiers: ['contaminated'] },
+  { level: 4, speed: 'LOW', resistance: true, modifiers: ['quarantine'] },
+  { level: 4, speed: 'LOW', resistance: true, modifiers: MODIFIER_IDS },
+];
+
 console.log('RxDrop playtest\n');
 const started = performance.now();
 let failures = 0;
@@ -418,6 +364,76 @@ for (const row of hybridRows) {
 if (formed > 0 && treated === 0) {
   failures += 1;
   console.log('  a hybrid formed in every run and none was ever treated');
+}
+
+console.log('\nModifiers: what each one does to the same bottle');
+for (const setup of modified) {
+  const runs = [];
+  for (let i = 0; i < GAMES; i += 1) runs.push(playOne({ ...setup, seed: 4000 + i * 31 }));
+  const label = describeModifiers(setup.modifiers);
+  const total = (key) => runs.reduce((n, r) => n + r[key], 0);
+  const notes = [];
+  if (total('spread') > 0) notes.push(`spread ${total('spread')}`);
+  if (total('seals') > 0) notes.push(`seals ${total('seals')}/${total('sealsCleared')} cleared`);
+  if (total('inert') > 0) notes.push(`inert ${total('inert')}/${total('washed')} washed`);
+  if (total('darkFrames') > 0) {
+    const share = total('darkFrames') / Math.max(1, runs.reduce((n, r) => n + r.frames, 0));
+    notes.push(`dark ${(share * 100).toFixed(0)}% of the time, ${total('darkClears')} clears in it`);
+  }
+  console.log(
+    `  ${label.padEnd(34)}`
+    + ` capsules ${String(Math.round(mean(runs.map((r) => r.capsules)))).padStart(4)}`
+    + ` | clears ${String(Math.round(mean(runs.map((r) => r.clears)))).padStart(3)}`
+    + (notes.length ? `\n      ${notes.join(' · ')}` : ''),
+  );
+  // The bound every modifier claims: it changes the run, it does not end it.
+  if (mean(runs.map((r) => r.capsules)) < 20) {
+    failures += 1;
+    console.log(`      ${label} leaves the bottle unplayable`);
+  }
+}
+
+console.log('\nLight therapy: what the blackout light actually costs');
+{
+  const policies = [
+    ['never touch it', () => false],
+    ['hold it always', () => true],
+    ['spend it early', (g) => g.blackoutFor > 1600],
+  ];
+  for (const [name, policy] of policies) {
+    const e = lightEconomy(policy);
+    console.log(
+      `  ${name.padEnd(18)}`
+      + ` held ${(e.held * 100).toFixed(0).padStart(3)}%`
+      + ` | bright ${(e.lit * 100).toFixed(0).padStart(3)}%`
+      + ` | dark ${(e.dark * 100).toFixed(0).padStart(3)}%`
+      + ` | longest dark ${String(e.worstDarkMs).padStart(5)}ms`
+      + `  ${e.recovered ? `hands off, back up in ${e.recoveryMs}ms` : 'NEVER RECOVERS'}`,
+    );
+    if (!e.recovered) {
+      failures += 1;
+      console.log(`      "${name}" can spend the light into a corner`);
+    }
+    // A blackout lasts five seconds. Anything much past that, hands off or not,
+    // means a dark stretch has run into the next one.
+    if (e.worstDarkMs > 7000) {
+      failures += 1;
+      console.log(`      "${name}" leaves the bottle dark for ${e.worstDarkMs}ms at a stretch`);
+    }
+  }
+  // Holding it always is the most light anyone can have. If that keeps the
+  // bottle bright the whole time, the reservoir is not a constraint and the
+  // modifier is a nuisance rather than a decision - which is exactly how the
+  // first tuning of this shipped.
+  // Holding the light for every second of every blackout is the most anyone can
+  // have. If that never leaves the bottle dark, the reservoir is not a
+  // constraint and the modifier is a nuisance rather than a decision - which is
+  // exactly how the first tuning of this behaved.
+  const flat = lightEconomy(() => true);
+  if (flat.dark < 0.04) {
+    failures += 1;
+    console.log('      the light is free: holding it always never goes dark');
+  }
 }
 
 console.log('\nThreading: steering a capsule down a one-wide zigzag corridor');

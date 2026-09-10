@@ -12,6 +12,7 @@ import { dailyKey, dailySetup, isToday, shareText } from './daily.js';
 import { Renderer, drawPillPreview, drawVirusTally } from './renderer.js';
 import { eraFor, entersEra } from './eras.js';
 import { collateralOf, hybridOf, isHybrid } from './board.js';
+import { MODIFIERS, describeModifiers, normaliseModifiers } from './modifiers.js';
 import { drawDoctor, POSE_HOLD } from './doctors.js';
 import { pillCells } from './pill.js';
 import { AudioEngine } from './audio.js';
@@ -40,6 +41,11 @@ const dom = {
   resistanceMeter: el('resistance-meter'),
   resistanceFill: el('resistance-fill'),
   resistanceToggle: el('resistance'),
+  modifiers: el('modifiers'),
+  modifiersNote: el('modifiers-note'),
+  hudMods: el('hud-mods'),
+  lightMeter: el('light-meter'),
+  lightFill: el('light-fill'),
   instantDropToggle: el('instant-drop'),
   dropButton: el('drop-button'),
   musicToggle: el('music'),
@@ -126,6 +132,7 @@ function loadSettings() {
     topScore: 0,
     resistance: false,
     instantDrop: false,
+    modifiers: [],
     mode: 'solo',
     music: true,
   };
@@ -146,6 +153,8 @@ function loadSettings() {
   }
   if (params.has('seed')) merged.seed = Number(params.get('seed')) >>> 0;
   if (params.has('resistance')) merged.resistance = params.get('resistance') !== '0';
+  if (params.has('mods')) merged.modifiers = params.get('mods').split(',');
+  merged.modifiers = normaliseModifiers(merged.modifiers);
   if (params.has('instantDrop')) merged.instantDrop = params.get('instantDrop') !== '0';
   if (params.has('music')) merged.music = params.get('music') !== '0';
   if (params.has('daily')) {
@@ -170,6 +179,7 @@ function saveSettings() {
         topScore: settings.topScore,
         resistance: settings.resistance,
         instantDrop: settings.instantDrop,
+        modifiers: settings.modifiers,
         music: settings.music,
         mode,
       }),
@@ -265,6 +275,7 @@ function startGame(options = {}) {
       level: options.level ?? settings.level,
       speed: options.speed ?? settings.speed,
       resistance: options.resistance ?? settings.resistance,
+      modifiers: options.modifiers ?? settings.modifiers,
       seed,
     };
     settings.activeDaily = null;
@@ -405,6 +416,32 @@ function syncHud(force = false) {
   if (resistant) {
     dom.resistanceFill.style.width = `${Math.round(shown.resistanceLevel * 100)}%`;
   }
+
+  const mods = shown?.modifiers ?? [];
+  if (force || mods.join() !== dom.hudMods.dataset.shown) {
+    dom.hudMods.dataset.shown = mods.join();
+    dom.hudMods.hidden = mods.length === 0;
+    dom.hudMods.innerHTML = '';
+    for (const id of mods) {
+      const mod = MODIFIERS.find((m) => m.id === id);
+      const chip = document.createElement('span');
+      chip.className = 'mods__chip is-on';
+      chip.title = mod.blurb;
+      chip.innerHTML = `<span class="mods__icon" aria-hidden="true">${mod.icon}</span>`;
+      chip.append(Object.assign(document.createElement('span'), {
+        className: 'mods__name',
+        textContent: mod.name,
+      }));
+      dom.hudMods.append(chip);
+    }
+  }
+  const blackout = Boolean(shown?.has?.('blackout'));
+  dom.lightMeter.hidden = !blackout;
+  if (blackout) {
+    dom.lightFill.style.width = `${Math.round((shown.lightCharge ?? 0) * 100)}%`;
+    dom.lightMeter.classList.toggle('is-spent', Boolean(shown.lightSpent));
+    dom.lightMeter.classList.toggle('is-lit', Boolean(shown.spendingLight));
+  }
   if (force || game) drawPillPreview(dom.next, game ? game.nextColors : null, era);
 }
 
@@ -469,6 +506,33 @@ function handleGameEvents() {
       case 'mutate':
         audio.play('mutate', event);
         renderers[0].addShake(3);
+        break;
+      case 'spread':
+        audio.play('spread', event);
+        renderers[0].addShake(3);
+        react('worry');
+        break;
+      case 'blackout':
+        audio.play('blackout', event);
+        react('worry');
+        break;
+      case 'lightsUp':
+        audio.play('lightsUp', event);
+        break;
+      case 'lightOut':
+        audio.play('lightOut', event);
+        break;
+      case 'sealed':
+        audio.play('sealed', event);
+        renderers[0].addShake(3);
+        break;
+      case 'unsealed':
+        audio.play('unsealed', event);
+        break;
+      case 'darkClear':
+        audio.play('darkClear', event);
+        renderers[0].addShake(6);
+        react('cheer');
         break;
       case 'levelComplete':
         finishLevel(event);
@@ -548,6 +612,7 @@ function recordDaily(won) {
     total: game.startingViruses,
     won,
     resistance: Boolean(game.resistance),
+    modifiers: [...game.modifiers],
   };
   const previous = loadDailyResult();
   // Keep the best attempt of the day rather than the most recent.
@@ -659,6 +724,7 @@ function handlePress(action, meta = {}) {
   if (match) {
     if (action === 'softDrop') match.command(player, 'softDropOn');
     else if (action === 'hardDrop' && !settings.instantDrop) match.command(player, 'softDropOn');
+    else if (action === 'light') match.command(player, 'lightOn');
     else match.command(player, action);
     handleMatchEvents();
     syncHud();
@@ -689,6 +755,9 @@ function handlePress(action, meta = {}) {
       if (settings.instantDrop) game.hardDrop();
       else game.setSoftDrop(true);
       break;
+    case 'light':
+      game.setLight(true);
+      break;
     case 'restart':
       startGame({ level: game.level, speed: game.speedName });
       break;
@@ -700,6 +769,11 @@ function handlePress(action, meta = {}) {
 }
 
 function handleRelease(action, meta = {}) {
+  if (action === 'light') {
+    if (match) match.command(meta.player ?? 0, 'lightOff');
+    else if (game) game.setLight(false);
+    return;
+  }
   const hurrying = action === 'softDrop' || (action === 'hardDrop' && !settings.instantDrop);
   if (!hurrying) return;
   if (match) match.command(meta.player ?? 0, 'softDropOff');
@@ -853,6 +927,52 @@ dom.instantDropToggle.addEventListener('change', () => {
   syncDropStyle();
 });
 
+/**
+ * The modifier picker: one toggle per modifier, with its bound spelled out.
+ *
+ * The bound is on the card deliberately. "Viruses replicate" reads as a threat
+ * with no shape to it; "a virus replicates once and never again" is a rule you
+ * can plan against, which is the difference between a mechanic and a mood.
+ */
+function buildModifierPicker() {
+  dom.modifiers.innerHTML = '';
+  for (const mod of MODIFIERS) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'mods__chip';
+    button.dataset.mod = mod.id;
+    button.title = `${mod.detail}\n\n${mod.bound}`;
+    button.innerHTML = `<span class="mods__icon" aria-hidden="true">${mod.icon}</span>`
+      + `<span class="mods__name"></span>`;
+    button.querySelector('.mods__name').textContent = mod.name;
+    button.addEventListener('click', () => {
+      const on = new Set(settings.modifiers);
+      if (on.has(mod.id)) on.delete(mod.id);
+      else on.add(mod.id);
+      settings.modifiers = normaliseModifiers([...on]);
+      saveSettings();
+      demo = null;
+      syncModifiers();
+      syncHud(true);
+    });
+    dom.modifiers.append(button);
+  }
+  syncModifiers();
+}
+
+function syncModifiers() {
+  const on = new Set(settings.modifiers);
+  for (const button of dom.modifiers.querySelectorAll('[data-mod]')) {
+    const active = on.has(button.dataset.mod);
+    button.classList.toggle('is-on', active);
+    button.setAttribute('aria-pressed', String(active));
+  }
+  const chosen = MODIFIERS.filter((m) => on.has(m.id));
+  dom.modifiersNote.textContent = chosen.length === 0
+    ? 'None. One bottle, the plain rules.'
+    : chosen.map((m) => `${m.name}: ${m.blurb}`).join(' ');
+}
+
 dom.resistanceToggle.addEventListener('change', () => {
   settings.resistance = dom.resistanceToggle.checked;
   saveSettings();
@@ -975,6 +1095,12 @@ window.rxdrop = {
   hybridOf,
   isHybrid,
   syncDropStyle,
+  setModifiers: (ids) => {
+    settings.modifiers = normaliseModifiers(ids);
+    saveSettings();
+    syncModifiers();
+    syncHud(true);
+  },
   constants: { NECK_ROWS, RESISTANCE_MAX, TOLERANCE_AT },
 };
 
@@ -984,6 +1110,7 @@ dom.musicToggle.checked = settings.music;
 audio.setMusicEnabled(settings.music, { resume: false });
 dom.resistanceToggle.checked = settings.resistance;
 syncDropStyle();
+buildModifierPicker();
 setMode(settings.mode);
 showScreen('title');
 syncHud(true);

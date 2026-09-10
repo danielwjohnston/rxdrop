@@ -35,6 +35,8 @@ export class Board {
     this.width = width;
     this.height = height;
     this.grid = new Array(width * height).fill(null);
+    /** Column quarantine has sealed, or undefined. See `open`. */
+    this.sealed = undefined;
   }
 
   static from(rows, legend = { r: 0, y: 1, b: 2 }) {
@@ -73,9 +75,22 @@ export class Board {
     return this.inBounds(x, y) && this.grid[this.index(x, y)] === null;
   }
 
+  /**
+   * True if a capsule may come to rest here: empty, and not behind a seal.
+   *
+   * Quarantine blocks PLACEMENT only. Gravity, matching and clearing all still
+   * read `isEmpty`, so whatever was in the column before the seal keeps falling
+   * and keeps counting - a sealed column is a narrower bottle, not a frozen
+   * one.
+   */
+  open(x, y) {
+    return this.isEmpty(x, y) && x !== this.sealed;
+  }
+
   clone() {
     const copy = new Board(this.width, this.height);
     copy.grid = this.grid.map((c) => (c ? { ...c } : null));
+    copy.sealed = this.sealed;
     return copy;
   }
 
@@ -123,7 +138,10 @@ export class Board {
       let runColor = -1;
       for (let i = 0; i <= length; i += 1) {
         const c = i < length ? at(i) : null;
-        const color = c ? c.color : -1;
+        // An inert half from a contaminated batch stacks and falls like any
+        // other cell but belongs to no run, so it breaks one rather than
+        // extending it. Treating it as "no colour" is the whole rule.
+        const color = c && !c.inert ? c.color : -1;
         if (color !== runColor || color === -1) {
           const runLength = i - runStart;
           if (runColor !== -1 && runLength >= minRun) {
@@ -175,11 +193,35 @@ export class Board {
 
     const collateral = tolerance ? this.collateralKills(cleared) : [];
     const deliveries = tolerance ? this.hybridDeliveries(cleared) : [];
+    const washed = this.washedOut(cleared);
     // A virus killed by its collateral colour dies even if it was also in the
     // match shrugging off its own colour: the older drug wins the argument.
     const killed = new Set(collateral.map(({ x, y }) => `${x},${y}`));
     const resisted = shrugged.filter(({ x, y }) => !killed.has(`${x},${y}`));
-    return { cleared, resisted, collateral, deliveries };
+    return { cleared, resisted, collateral, deliveries, washed };
+  }
+
+  /**
+   * Inert halves touching this clear. They belong to no run, so without this
+   * they would accumulate until the bottle filled - which would make a
+   * contaminated batch a slow death sentence rather than a problem to solve.
+   * Washing them out with an adjacent clear makes "somewhere harmless" and
+   * "somewhere you plan to clear" the same judgement, which is the version of
+   * the decision worth having.
+   */
+  washedOut(cleared) {
+    const gone = new Map();
+    const dying = new Set(cleared.map(({ x, y }) => `${x},${y}`));
+    for (const { x, y } of cleared) {
+      for (const [dx, dy] of NEIGHBOURS) {
+        const nx = x + dx;
+        const ny = y + dy;
+        const c = this.get(nx, ny);
+        if (!c?.inert || dying.has(`${nx},${ny}`)) continue;
+        gone.set(`${nx},${ny}`, { x: nx, y: ny, color: c.color, type: c.type });
+      }
+    }
+    return [...gone.values()];
   }
 
   /**
@@ -242,7 +284,7 @@ export class Board {
     const cured = outcome.cured ?? this.cureHybrids(outcome.deliveries ?? [], chain);
     const burst = outcome.antibody ?? this.burstFor(cured);
 
-    const dead = [...outcome.cleared, ...outcome.collateral, ...burst];
+    const dead = [...outcome.cleared, ...outcome.collateral, ...burst, ...(outcome.washed ?? [])];
     const result = this.clearCells(dead.map(({ x, y }) => `${x},${y}`));
     for (const { x, y } of outcome.resisted) {
       const c = this.get(x, y);
@@ -252,6 +294,7 @@ export class Board {
     result.collateral = outcome.collateral.length;
     result.cured = cured.length;
     result.antibodies = cured.filter((h) => h.antibody).length;
+    result.washed = (outcome.washed ?? []).length;
     return result;
   }
 

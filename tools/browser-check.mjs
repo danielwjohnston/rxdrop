@@ -522,6 +522,101 @@ try {
 
   await dropPage.close();
 
+  // Modifiers get their own page too: they change the deal and the light, and
+  // a run left half dark is not a fair starting point for anything after it.
+  const modPage = await browser.newPage({ viewport: { width: 1024, height: 820 } });
+  modPage.on('pageerror', (error) => errors.push(`modifier pageerror: ${error.message}`));
+  await modPage.bringToFront();
+  await modPage.goto(`${BASE}/?level=2&speed=LOW&seed=11&mods=blackout,quarantine`, {
+    waitUntil: 'networkidle',
+  });
+
+  await check('modifiers can be chosen on the title screen and show in the run', async () => {
+    const picker = await modPage.evaluate(() => {
+      const chips = [...document.querySelectorAll('#modifiers [data-mod]')];
+      return {
+        count: chips.length,
+        on: chips.filter((c) => c.classList.contains('is-on')).map((c) => c.dataset.mod),
+        note: document.getElementById('modifiers-note').textContent,
+      };
+    });
+    assert.equal(picker.count, 5, 'every modifier should have a chip');
+    // The link carried two, so the picker has to have read them.
+    assert.deepEqual(picker.on, ['blackout', 'quarantine']);
+    assert.ok(picker.note.length > 30, 'the note should say what they do');
+
+    await modPage.click('[data-start]');
+    await modPage.waitForTimeout(300);
+    const running = await modPage.evaluate(() => ({
+      modifiers: [...window.rxdrop.game.modifiers],
+      hud: [...document.querySelectorAll('#hud-mods .mods__chip')].length,
+      lightMeter: !document.getElementById('light-meter').hidden,
+    }));
+    assert.deepEqual(running.modifiers, ['blackout', 'quarantine']);
+    assert.equal(running.hud, 2, 'the HUD should name what is running');
+    assert.equal(running.lightMeter, true, 'blackout should show the light reservoir');
+  });
+
+  await check('the light-therapy key lifts a blackout and spends the reservoir', async () => {
+    // Fast-forward to a blackout rather than waiting fourteen seconds for one.
+    await modPage.evaluate(() => {
+      const g = window.rxdrop.game;
+      g.blackoutFor = 5000;
+      g.light = 0.1;
+      g.lightCharge = 1;
+      g.lightSpent = false;
+    });
+    const dark = await modPage.evaluate(() => window.rxdrop.game.light);
+    assert.ok(dark < 0.35, 'the bottle should be dark to start with');
+    await modPage.keyboard.down('Shift');
+    await modPage.waitForTimeout(450);
+    const lit = await modPage.evaluate(() => ({
+      light: window.rxdrop.game.light,
+      charge: window.rxdrop.game.lightCharge,
+      lighting: window.rxdrop.game.lighting,
+    }));
+    await modPage.keyboard.up('Shift');
+    assert.equal(lit.lighting, true, 'holding Shift should arm the light');
+    assert.ok(lit.light > dark, `the bottle should brighten, went ${dark} to ${lit.light}`);
+    assert.ok(lit.charge < 1, 'and it should cost the reservoir');
+
+    // Released, it fades again - the control is held, never toggled.
+    await modPage.waitForTimeout(450);
+    const after = await modPage.evaluate(() => ({
+      light: window.rxdrop.game.light,
+      lighting: window.rxdrop.game.lighting,
+    }));
+    assert.equal(after.lighting, false, 'releasing Shift should drop the light');
+    assert.ok(after.light < lit.light, 'and the bottle should start fading again');
+  });
+
+  await check('a sealed column refuses capsules and breaks when you clear beside it', async () => {
+    const sealed = await modPage.evaluate(() => {
+      const g = window.rxdrop.game;
+      g.blackoutFor = 0;
+      g.light = 1;
+      g.board.forEachCell((c, x, y) => g.board.set(x, y, null));
+      const floor = g.board.height - 1;
+      g.board.set(0, floor, { color: 0, type: 'virus', link: null });
+      // A red run in column 2, one column over from the seal.
+      for (const y of [floor - 1, floor - 2, floor - 3, floor - 4]) {
+        g.board.set(2, y, { color: 0, type: 'pill', link: null });
+      }
+      g.startingViruses = 1;
+      g.board.sealed = 1;
+      g.sealedAt = 0;
+      const { pillCells } = window.rxdrop;
+      const blocked = !g.board.open(1, floor);
+      g.beginResolution();
+      void pillCells;
+      return { blocked, sealedAfter: g.board.sealed };
+    });
+    assert.equal(sealed.blocked, true, 'no capsule may rest in a sealed column');
+    assert.equal(sealed.sealedAfter, undefined, 'a clear next door should break the seal');
+  });
+
+  await modPage.close();
+
 
 
   const mobile = await browser.newPage({

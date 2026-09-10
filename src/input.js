@@ -16,6 +16,11 @@ const KEY_MAP = {
   KeyZ: 'rotateCCW',
   KeyQ: 'rotateCCW',
   Space: 'hardDrop',
+  // Light therapy is HELD, never toggled - the decision the blackout modifier
+  // is about is when to spend the light, not whether you remembered a button.
+  ShiftLeft: 'light',
+  ShiftRight: 'light',
+  KeyL: 'light',
   KeyP: 'pause',
   Escape: 'pause',
   Enter: 'confirm',
@@ -41,6 +46,9 @@ export const VERSUS_KEY_MAP = {
   Comma: { player: 1, action: 'rotateCCW' },
   Period: { player: 1, action: 'rotateCW' },
   Slash: { player: 1, action: 'hardDrop' },
+
+  ShiftLeft: { player: 0, action: 'light' },
+  ShiftRight: { player: 1, action: 'light' },
 
   KeyP: { player: 0, action: 'pause' },
   Escape: { player: 0, action: 'pause' },

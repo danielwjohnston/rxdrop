@@ -20,6 +20,15 @@
  */
 export const HUES = Object.freeze([4, 46, 202]);
 
+/**
+ * Hybrid hues, in the order of HYBRIDS: orange, green, purple. They sit between
+ * their parents on the wheel, which is what a combination should look like -
+ * but the renderer does not lean on hue alone. A hybrid is drawn split down the
+ * middle in BOTH parent colours, so it reads as two medicines fused rather than
+ * as a fourth one, and stays legible for players who cannot separate the hues.
+ */
+export const HYBRID_HUES = Object.freeze([24, 128, 286]);
+
 const hsl = (h, s, l) => `hsl(${h}, ${Math.round(s)}%, ${Math.round(l)}%)`;
 
 /** Builds the four tones the renderer needs for one medicine in one era. */
@@ -153,7 +162,8 @@ export function paletteFor(era) {
   const key = era?.id ?? 'pharmaceutical';
   if (!paletteCache.has(key)) {
     const resolved = ERAS.find((e) => e.id === key) ?? ERAS[3];
-    paletteCache.set(key, Object.freeze(HUES.map((hue) => tone(hue, resolved.tint))));
+    const all = [...HUES, ...HYBRID_HUES];
+    paletteCache.set(key, Object.freeze(all.map((hue) => tone(hue, resolved.tint))));
   }
   return paletteCache.get(key);
 }

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { Board, generateLevel, virus } from '../src/board.js';
+import { Board, generateLevel, hybridOf, virus } from '../src/board.js';
 import { RESISTANCE_INTERVAL, RESISTANCE_MAX, VIRUS } from '../src/constants.js';
 import { Game, PHASE } from '../src/game.js';
 import { createRng } from '../src/rng.js';
@@ -27,9 +27,10 @@ describe('mutation', () => {
     assert.equal(board.findMatches().size, 0);
   });
 
-  it('holds a virus at the limit when every colour would clear', () => {
-    // A yellow virus boxed in: turning red completes the row, turning blue
-    // completes the column, so it has nowhere to go.
+  it('combines rather than mutating when the wrong medicine has been capping it', () => {
+    // A yellow virus under blue. Turning red would complete the row and turning
+    // blue the column, so it has nowhere to mutate - but it does have somewhere
+    // to go: blue has been sitting on it, so it becomes green.
     const board = Board.from([
       '...b....',
       '...b....',
@@ -37,6 +38,26 @@ describe('mutation', () => {
       'rrrY....',
     ]);
     board.get(3, 3).resistance = RESISTANCE_MAX - 1;
+    const mutated = board.mutateViruses(createRng(3), RESISTANCE_MAX);
+    assert.equal(mutated.length, 1);
+    assert.equal(mutated[0].hybrid, true);
+    assert.equal(board.get(3, 3).color, hybridOf(1, 2), 'yellow under blue is green');
+    assert.equal(board.findMatches().size, 0, 'and a hybrid completes no run, ever');
+  });
+
+  it('holds a virus at the limit when it can neither mutate nor combine', () => {
+    // The same box, but nothing foreign has been capping it, so there is no
+    // strain to combine with and every mutation would hand over a free clear.
+    // Red completes the run on its left, blue the run on its right, and the
+    // cell above is empty so nothing has been capping it to combine with.
+    const board = Board.from([
+      '........',
+      '........',
+      '........',
+      'rrrYbbb.',
+    ]);
+    const virusCell = board.get(3, 3);
+    virusCell.resistance = RESISTANCE_MAX - 1;
     const mutated = board.mutateViruses(createRng(3), RESISTANCE_MAX);
     assert.equal(mutated.length, 0);
     assert.equal(board.get(3, 3).color, 1, 'colour is unchanged');

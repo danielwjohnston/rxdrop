@@ -197,6 +197,21 @@ export class AudioEngine {
         }
         break;
       }
+      case 'antibody': {
+        // A rising two-note chime over a bright sweep: the one sound in the
+        // game that says you did the hardest thing available.
+        this.tone(noteToFreq('D5'), { duration: 0.18, gain: 0.24, type: 'square' });
+        this.tone(noteToFreq('A5'), { start: 0.09, duration: 0.22, gain: 0.24, type: 'square' });
+        this.tone(noteToFreq('D6'), {
+          start: 0.18,
+          duration: 0.34,
+          gain: 0.2,
+          type: 'triangle',
+          slide: noteToFreq('A6'),
+        });
+        this.noise({ start: 0.02, duration: 0.3, gain: 0.14, frequency: 3200 });
+        break;
+      }
       case 'resist': {
         // A dull thud that goes nowhere: the medicine landing and doing
         // nothing. Deliberately unsatisfying next to the clear chime, so the

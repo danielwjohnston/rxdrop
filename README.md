@@ -186,6 +186,16 @@ it?".
   yellow to red, blue to yellow - cleared in a line *beside* it, for double
   score. A tolerant virus draws its aura in the colour that kills it, so the
   rule never has to be memorised.
+- Leave a virus capped by the wrong colour long enough and it does not just
+  mutate, it **combines**: blue under yellow becomes green. A **hybrid** belongs
+  to no run - no capsule is ever dealt in its colour - so four of anything
+  passes straight through it. It answers only to its two parent colours, cleared
+  *beside* it, and it remembers each one, so you never have to land both at
+  once. Land both in the same cascade and the compound synthesises an
+  **antibody**: it takes the strain where it stands and the ring of viruses
+  around it with it, for four times the score. And a parent delivered twice
+  wears the strain back down to an ordinary virus, so a hybrid whose other
+  parent is walled off is never a dead end.
 - Clear every virus to finish the level. Filling the bottle to the brim is not
   a loss on its own: capsules are dealt into the neck above it, and you get a
   long fuse to steer one clear. The run ends only once the neck is blocked too,
@@ -194,22 +204,22 @@ it?".
 ## Development
 
 ```sh
-npm test           # 187 unit tests, no dependencies, well under a second
+npm test           # 204 unit tests, no dependencies, well under a second
 npm run test:watch # re-run on change
 
 # End-to-end checks in a real browser (Playwright is not a dependency):
 npm i --no-save playwright && npx playwright install chromium
-npm run test:browser  # 33 checks: menus, controls, versus, daily, offline, mobile
+npm run test:browser  # 34 checks: menus, controls, versus, daily, offline, mobile
 
 npm run gauntlet   # the full protocol below: every stage, one gate
 ```
 
 ### The UltraGauntlet
 
-`npm run gauntlet` runs nine adversarial stages in series - determinism, hostile
-clocks, boundaries, fuzzing, the resistance mechanic, versus garbage
-conservation, a frame-budget check, and the browser suite - and fails the run if
-any stage fails. [docs/ultragauntlet.md](docs/ultragauntlet.md) explains where
+`npm run gauntlet` runs twelve adversarial stages in series - determinism,
+hostile clocks, boundaries, fuzzing, resistance, collateral sensitivity, the
+hybrid strains, versus garbage conservation, a bot playtest, a frame-budget
+check, and the browser suite - and fails the run if any stage fails. [docs/ultragauntlet.md](docs/ultragauntlet.md) explains where
 it comes from, what each stage attacks, and the defects it has already caught.
 
 ### Layout

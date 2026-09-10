@@ -20,12 +20,19 @@ import {
   cell,
   collateralOf,
   generateLevel,
+  hybridOf,
+  isHybrid,
   isTolerant,
+  parentsOf,
+  treatableFrom,
   virus,
   virusTopRow,
 } from '../src/board.js';
 import {
   COLOR_COUNT,
+  HYBRIDS,
+  HYBRID_BASE,
+  HYBRID_DECAY,
   MATCH_LENGTH,
   MAX_LEVEL,
   PILL,
@@ -457,6 +464,144 @@ stage('collateral', 'A virus must never become unanswerable', (check) => {
   });
 
   return 'the older medicine always works, and hammering always wears it down';
+});
+
+stage('hybrid', 'A combined strain must still come apart', (check) => {
+  const strain = (color) => {
+    const c = cell(color, VIRUS, null);
+    c.cured = [];
+    c.decay = 0;
+    return c;
+  };
+
+  /** Lays a run of four in `color` touching (3, floor). */
+  const deliver = (board, color) => {
+    const floor = board.height - 1;
+    for (const x of [4, 5, 6, 7]) board.set(x, floor, cell(color, PILL, null));
+  };
+
+  check('no capsule is ever dealt in a hybrid colour', () => {
+    // The whole design rests on this: a hybrid belongs to no run because no run
+    // can contain its colour. A capsule in one would break the rule silently.
+    for (const seed of [1, 7, 19, 44]) {
+      const game = new Game({ level: 5, seed });
+      for (let i = 0; i < 400; i += 1) {
+        for (const color of game.drawColors()) {
+          assert.ok(color < HYBRID_BASE, `seed ${seed} dealt hybrid colour ${color}`);
+        }
+      }
+    }
+  });
+
+  check('a hybrid never appears in a match', () => {
+    for (let seed = 0; seed < 80; seed += 1) {
+      const board = new Board();
+      generateLevel(board, 14, createRng(seed));
+      // Combine a scattering of them, then look for any match containing one.
+      board.forEachCell((c, x, y) => {
+        if (c.type !== VIRUS) return;
+        if ((x + y + seed) % 3 !== 0) return;
+        const other = (c.color + 1) % COLOR_COUNT;
+        c.color = hybridOf(c.color, other);
+        c.cured = [];
+      });
+      for (const key of board.findMatches()) {
+        const [x, y] = key.split(',').map(Number);
+        assert.ok(!isHybrid(board.get(x, y)), `seed ${seed} matched a hybrid at ${key}`);
+      }
+    }
+  });
+
+  check('both parents always cure it, in either order', () => {
+    for (const { color } of HYBRIDS) {
+      for (const order of [0, 1]) {
+        const board = new Board();
+        const floor = board.height - 1;
+        board.set(3, floor, strain(color));
+        const parents = [...parentsOf(color)];
+        if (order) parents.reverse();
+        for (const parent of parents) {
+          deliver(board, parent);
+          const outcome = board.matchOutcome(board.findMatches(), true);
+          board.applyMatch(outcome);
+          board.settle();
+        }
+        assert.equal(board.get(3, floor), null, `strain ${color} survived both parents`);
+      }
+    }
+  });
+
+  check('both parents in one cascade always synthesise an antibody', () => {
+    // The top of the skill ladder has to be reachable for every strain, and it
+    // has to survive being spread across a cascade - the first parent clears,
+    // the second falls into the gap it left. Narrow that window back to a
+    // single clear and this check goes red for all three strains.
+    for (const { color } of HYBRIDS) {
+      for (const order of [0, 1]) {
+        const board = new Board();
+        const floor = board.height - 1;
+        board.set(3, floor, strain(color));
+        const parents = [...parentsOf(color)];
+        if (order) parents.reverse();
+        deliver(board, parents[0]);
+        // Four halves of the other parent on four different rows: no run of
+        // their own until the first parent clears out from under them.
+        for (const [x, up] of [[4, 1], [5, 2], [6, 3], [7, 4]]) {
+          board.set(x, floor - up, cell(parents[1], PILL, null));
+        }
+        const stages = board.resolve({ tolerance: true });
+        const antibodies = stages.reduce((n, st) => n + (st.antibodies ?? 0), 0);
+        assert.equal(board.get(3, floor), null, `strain ${color} survived the compound`);
+        assert.equal(antibodies, 1, `strain ${color} cured without an antibody`);
+        assert.ok(stages.length >= 2, `strain ${color} did not actually cascade`);
+      }
+    }
+  });
+
+  check('one parent alone always breaks it in the end', () => {
+    // The safety valve that makes a hybrid answerable even when the other
+    // parent can never be delivered.
+    for (const { color } of HYBRIDS) {
+      for (const parent of parentsOf(color)) {
+        const board = new Board();
+        const floor = board.height - 1;
+        board.set(3, floor, strain(color));
+        let rounds = 0;
+        while (isHybrid(board.get(3, floor)) && rounds < HYBRID_DECAY + 3) {
+          deliver(board, parent);
+          const outcome = board.matchOutcome(board.findMatches(), true);
+          board.applyMatch(outcome);
+          board.settle();
+          rounds += 1;
+        }
+        const left = board.get(3, floor);
+        assert.ok(!left || !isHybrid(left), `strain ${color} never broke under ${parent}`);
+        assert.ok(rounds <= HYBRID_DECAY + 1, `strain ${color} took ${rounds} rounds`);
+      }
+    }
+  });
+
+  check('a hybrid only ever forms where it can be treated from', () => {
+    for (let seed = 0; seed < 120; seed += 1) {
+      const board = new Board();
+      generateLevel(board, 16, createRng(seed));
+      board.forEachCell((c) => {
+        if (c.type !== VIRUS) return;
+        c.resistance = RESISTANCE_MAX - 1;
+        c.cappedBy = (c.color + 1) % COLOR_COUNT;
+      });
+      board.mutateViruses(createRng(seed + 500), RESISTANCE_MAX);
+      board.forEachCell((c, x, y) => {
+        if (!isHybrid(c)) return;
+        assert.ok(
+          treatableFrom(board, x, y) >= 1,
+          `seed ${seed} combined a strain at ${x},${y} with nowhere to treat it from`,
+        );
+      });
+    }
+  });
+
+  return 'both parents cure it, and one alone still wins in the end';
 });
 
 stage('versus', 'Two bottles, one exchange of garbage', (check) => {

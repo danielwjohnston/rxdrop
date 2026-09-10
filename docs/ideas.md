@@ -67,7 +67,7 @@ bounces off, a dull thud replaces the clear chime, the physician winces, and the
 ring flashes the colour that would have worked. The failure teaches the answer
 instead of just denying you.
 
-### Hybrid viruses - `proposed`
+### Hybrid viruses - `shipped`
 
 Leave a virus capped by the wrong colour too long and it does not just mutate,
 it **combines**: blue under yellow long enough becomes green. Three colours give
@@ -81,14 +81,26 @@ cascade. Yellow matches, a blue half falls into the gap and completes a blue run
 
 This is the single best idea on this page and also the most dangerous one. A
 virus you cannot clear by ordinary means, buried under a stack, ends the run
-through no fault the player can see. Two guardrails:
+through no fault the player can see. Three guardrails, all of them enforced by
+the gauntlet rather than by good intentions:
 
-- A hybrid never forms where it cannot be reached - if capping it would bury it,
-  it mutates the old way instead.
-- The compound below is always obtainable, because any two-colour cascade makes
-  one.
+- A hybrid never forms where it cannot be reached. Combining requires two open
+  sides to treat from; with fewer, the virus mutates the old way instead.
+- **Deliveries persist.** Each parent cleared beside the strain is remembered,
+  so the two never have to arrive together. Landing both at once is the skilled
+  version, not the only version.
+- **One parent alone still wins.** Deliver the same parent twice and the strain
+  wears back down to an ordinary virus of that colour, which an ordinary line
+  clears. So a hybrid whose other parent is walled off behind a stack is slow,
+  never fatal.
 
-### Antibodies - `proposed`
+*What shipped differently:* the antibody window is a whole **cascade**, not a
+single clear. A yellow run goes, blue halves fall into the gap and complete a
+blue run, and those two stages count as one compound - which is exactly the play
+the paragraph above describes, and would not have been rewarded if the window
+had stayed one clear wide.
+
+### Antibodies - `shipped`
 
 The reward for a combination clear: an **antibody** with the hybrid's colour.
 It does not need a line. It crosses the bottle and takes the hybrid out where it
@@ -97,7 +109,14 @@ sit too long.
 
 This is the top of the skill ladder. Dr. Mario already rewards cascade
 engineering with score; this rewards it with the only answer to the hardest
-thing on the board.
+thing on the board - and pays four times a plain cure for it.
+
+*What the playtest says:* a bot that understands the mechanic well enough to
+aim a parent colour at a strain cures roughly a third of the hybrids that form,
+and almost never synthesises an antibody, because it almost never cascades on
+purpose. That gap between "answerable" and "mastered" is the point of the
+mechanic; if the bot started earning antibodies by accident, the reward would be
+mistuned.
 
 ## Axis 2 - what makes one run different from the next
 
@@ -162,6 +181,8 @@ interactions", and it costs almost nothing: a set of flags, a line of copy each.
 | --- | --- |
 | Antibiotic resistance | Viruses that survive build resistance and mutate to another colour. The arms race the whole theme rests on. |
 | Collateral sensitivity | A tolerant virus stops answering to its own colour and starts answering to an older one, cleared beside it. |
+| Hybrid strains | Capped by the wrong colour too long, a virus combines into a colour no capsule is dealt in. Both parents cure it; either one alone wears it down. |
+| Antibodies | Both parents in one cascade synthesise a compound that takes the strain and the ring around it. |
 | The neck row | A row above the bottle. Filling the bottle is not a loss until capsules back up into the neck. |
 | Apothecary Through Time | Five eras, five vessels, five physicians, five notes. |
 | Daily challenge | One seeded bottle a day, the same for everyone. |

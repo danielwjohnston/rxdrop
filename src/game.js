@@ -5,6 +5,8 @@ import {
   BOARD_HEIGHT,
   BOARD_WIDTH,
   CLEAR_ANIMATION,
+  COLLATERAL_BONUS,
+  DEAL_DELAY,
   COLOR_COUNT,
   LOCK_DELAY,
   LOCK_RESETS,
@@ -91,6 +93,9 @@ export class Game {
     this.phaseTimer = 0;
     this.combo = 0;
     this.clearingCells = [];
+    this.resistedCells = [];
+    this.outcome = null;
+    this.dealTimer = 0;
     this.tossing = null;
     this.bag = [];
     this.queue = [this.drawColors(), this.drawColors()];
@@ -181,6 +186,7 @@ export class Game {
     this.dropTimer = 0;
     this.lockTimer = 0;
     this.lockResets = 0;
+    this.dealTimer = DEAL_DELAY;
     // Spawning with nowhere to fall means the stack is at the neck; that
     // capsule gets a longer fuse, see SPAWN_GRACE.
     this.spawnedBlocked = !tryMove(this.board, pill, 0, 1);
@@ -282,6 +288,17 @@ export class Game {
   }
 
   updateFalling(dt) {
+    // The capsule is steerable the instant it is dealt, but it does not fall or
+    // start its lock clock until the beat has passed. That is the reaction time
+    // every capsule is owed.
+    if (this.dealTimer > 0) {
+      this.dealTimer -= dt;
+      if (this.dealTimer > 0) return;
+      // Spend whatever is left of a long frame on the capsule rather than
+      // dropping it, so one giant step still resolves.
+      dt = -this.dealTimer;
+      this.dealTimer = 0;
+    }
     if (!this.pill) return;
     const interval = this.softDropping
       ? Math.min(SOFT_DROP_INTERVAL, this.dropInterval)
@@ -322,22 +339,42 @@ export class Game {
       this.finishResolution();
       return;
     }
-    this.combo += 1;
-    this.clearingCells = [...matches].map((key) => {
-      const [x, y] = key.split(',').map(Number);
-      const c = this.board.get(x, y);
-      return { x, y, color: c.color, type: c.type };
-    });
-    const viruses = this.clearingCells.filter((c) => c.type === VIRUS).length;
-    this.score += this.scoreFor(viruses, this.combo);
-    this.totalVirusesCleared += viruses;
-    this.virusesClearedThisLevel += viruses;
-    const attack = this.attackFor(this.clearingCells, this.combo);
-    this.pendingAttack.push(...attack);
+    // Tolerance rides on the resistance rule: with resistance off, a match
+    // means exactly what it always did.
+    this.outcome = this.board.matchOutcome(matches, this.resistance);
+    this.clearingCells = [...this.outcome.cleared, ...this.outcome.collateral];
+    this.resistedCells = this.outcome.resisted;
     this.phase = PHASE.CLEARING;
     this.phaseTimer = 0;
+
+    if (this.resistedCells.length > 0) {
+      this.emit('resist', { count: this.resistedCells.length });
+    }
+    // A match where every cell shrugged the clear off is not a clear: it scores
+    // nothing, sends nothing and does not advance the cascade. It still plays
+    // out on screen, because the player needs to SEE that the medicine bounced
+    // rather than wonder whether the game dropped their move.
+    if (this.clearingCells.length === 0) return;
+
+    this.combo += 1;
+    const viruses = this.outcome.cleared.filter((c) => c.type === VIRUS).length;
+    const collateral = this.outcome.collateral.length;
+    const killed = viruses + collateral;
+    this.score += this.scoreFor(killed, this.combo);
+    // A collateral kill pays its payout again. Going back to the older
+    // medicine is the play this whole mechanic exists to reward.
+    if (collateral > 0) {
+      this.score += this.scoreFor(collateral, this.combo) * (COLLATERAL_BONUS - 1);
+    }
+    this.totalVirusesCleared += killed;
+    this.virusesClearedThisLevel += killed;
+
+    const attack = this.attackFor(this.clearingCells, this.combo);
+    this.pendingAttack.push(...attack);
     this.emit('clear', {
-      viruses,
+      viruses: killed,
+      collateral,
+      resisted: this.resistedCells.length,
       cells: this.clearingCells.length,
       combo: this.combo,
       attack: attack.length,
@@ -408,8 +445,19 @@ export class Game {
   updateClearing(dt) {
     this.phaseTimer += dt;
     if (this.phaseTimer < CLEAR_ANIMATION) return;
-    this.board.clearCells(this.clearingCells.map(({ x, y }) => `${x},${y}`));
+    // Applying the whole outcome at once keeps the shed tolerance in step with
+    // the clear the player just watched.
+    if (this.outcome) this.board.applyMatch(this.outcome);
+    const stalled = this.clearingCells.length === 0;
     this.clearingCells = [];
+    this.resistedCells = [];
+    this.outcome = null;
+    if (stalled) {
+      // Every matched cell shrugged it off, so nothing moved and nothing will
+      // cascade. Their tolerance is one lower; hand the turn back.
+      this.finishResolution();
+      return;
+    }
     if (this.virusesLeft === 0) {
       this.phase = PHASE.WON;
       this.emit('levelComplete', { level: this.level });

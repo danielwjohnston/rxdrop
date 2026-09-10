@@ -264,3 +264,76 @@ describe('rotation kicks out of tight spots', () => {
     }
   });
 });
+
+describe('rotation is reversible', () => {
+  const block = (board, x, y) => board.set(x, y, cell(PILL, 0, null));
+
+  it('turning back returns the capsule to exactly where it started', () => {
+    // The regression this pins: a kick that is never repaid walks the capsule
+    // a column every time you turn it, which is the worst thing rotation can do.
+    const board = new Board();
+    block(board, 3, 7);
+    const start = createPill([0, 1], 3, 8, 0);
+    const there = tryRotate(board, start, 1);
+    const back = tryRotate(board, there, -1);
+    assert.ok(there && back);
+    assert.deepEqual(coords(back), coords(start));
+  });
+
+  it('holds its columns however many times you turn it in a tight spot', () => {
+    const board = new Board();
+    block(board, 3, 7);
+    let pill = createPill([0, 1], 3, 8, 0);
+    const home = new Set([3, 4]);
+    for (let i = 0; i < 12; i += 1) {
+      pill = tryRotate(board, pill) ?? pill;
+      for (const [x] of coords(pill)) {
+        assert.ok(home.has(x), `turn ${i + 1} walked the capsule to column ${x}`);
+      }
+    }
+  });
+
+  it('repays the kick across a ragged stack, in both directions', () => {
+    const board = new Board();
+    for (let x = 0; x < board.width; x += 1) {
+      for (let y = board.height - (x % 5) - 1; y < board.height; y += 1) block(board, x, y);
+    }
+    for (let x = 0; x < board.width; x += 1) {
+      for (let y = 1; y < board.height; y += 1) {
+        for (const orientation of [0, 1]) {
+          const pill = createPill([0, 1], x, y, orientation);
+          if (!fits(board, pill)) continue;
+          for (const direction of [1, -1]) {
+            const turned = tryRotate(board, pill, direction);
+            if (!turned) continue;
+            const back = tryRotate(board, turned, -direction);
+            if (!back) continue;
+            assert.deepEqual(
+              coords(back),
+              coords(pill),
+              `turning back from ${x},${y} did not come home`,
+            );
+          }
+        }
+      }
+    }
+  });
+
+  it('forgets the debt once the player steers, which re-homes the capsule', () => {
+    const board = new Board();
+    block(board, 3, 7);
+    const kicked = tryRotate(board, createPill([0, 1], 3, 8, 0));
+    assert.ok(kicked.kick, 'the turn needed a nudge');
+    const steered = tryMove(board, kicked, 1, 0);
+    assert.equal(steered.kick, null, 'steering sets a new home');
+  });
+
+  it('keeps the debt while the capsule is only falling', () => {
+    const board = new Board();
+    block(board, 3, 5);
+    const kicked = tryRotate(board, createPill([0, 1], 3, 6, 0));
+    assert.ok(kicked.kick);
+    const fallen = tryMove(board, kicked, 0, 1);
+    assert.deepEqual(fallen.kick, kicked.kick, 'falling does not re-home a capsule');
+  });
+});

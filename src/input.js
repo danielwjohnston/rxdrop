@@ -237,6 +237,24 @@ export class InputController {
     return this.held.has(`${player}:${action}`);
   }
 
+  /**
+   * Puts every held direction back at the start of its auto-shift delay.
+   *
+   * Called when a new capsule is dealt. Without it, a player still holding left
+   * to wedge the last capsule into a slot hands the new one a repeat that is
+   * already at full speed: it slams into the wall before they can react. Now a
+   * held key has to serve its delay again, so every capsule starts with the
+   * same beat to think in.
+   */
+  rearmRepeat(player = null) {
+    for (const state of this.held.values()) {
+      if (!REPEATING.has(state.action)) continue;
+      if (player !== null && state.player !== player) continue;
+      state.timer = 0;
+      state.repeating = false;
+    }
+  }
+
   /** Drives auto-repeat for the horizontal moves and polls any gamepad. */
   update(dt) {
     for (const state of this.held.values()) {

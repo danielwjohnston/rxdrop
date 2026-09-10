@@ -1,12 +1,14 @@
 import {
   BOARD_HEIGHT,
   BOARD_WIDTH,
+  COLLATERAL,
   COLOR_COUNT,
   LINK,
   MATCH_LENGTH,
   OPPOSITE_LINK,
   PILL,
   RESISTANCE_MAX,
+  TOLERANCE_AT,
   VIRUS,
 } from './constants.js';
 
@@ -146,6 +148,74 @@ export class Board {
    * Removes the given "x,y" keys, unlinking any surviving partners.
    * Returns a tally of what was destroyed.
    */
+  /**
+   * What a match actually does once tolerance is in play, worked out without
+   * touching the board.
+   *
+   * A tolerant virus does not answer to its own colour any more: the run still
+   * clears the medicine around it, but the virus shrugs it off. What kills it
+   * is its collateral colour cleared in a line beside it - the older drug it
+   * never built a defence against.
+   */
+  matchOutcome(keys, tolerance = false) {
+    const coords = [...keys].map((key) => key.split(',').map(Number));
+    const cleared = [];
+    const shrugged = [];
+    for (const [x, y] of coords) {
+      const c = this.get(x, y);
+      if (!c) continue;
+      const entry = { x, y, color: c.color, type: c.type };
+      if (tolerance && isTolerant(c)) shrugged.push(entry);
+      else cleared.push(entry);
+    }
+
+    const collateral = tolerance ? this.collateralKills(cleared) : [];
+    // A virus killed by its collateral colour dies even if it was also in the
+    // match shrugging off its own colour: the older drug wins the argument.
+    const killed = new Set(collateral.map(({ x, y }) => `${x},${y}`));
+    const resisted = shrugged.filter(({ x, y }) => !killed.has(`${x},${y}`));
+    return { cleared, resisted, collateral };
+  }
+
+  /**
+   * Tolerant viruses standing next to medicine of the colour they are now
+   * vulnerable to. This is the answer to a tolerant virus - not more of the
+   * same drug, a different one - and it is why you clear BESIDE such a virus
+   * rather than through it.
+   */
+  collateralKills(cleared) {
+    const kills = new Map();
+    for (const { x, y, color } of cleared) {
+      for (const [dx, dy] of NEIGHBOURS) {
+        const nx = x + dx;
+        const ny = y + dy;
+        const c = this.get(nx, ny);
+        if (!c || !isTolerant(c)) continue;
+        if (collateralOf(c.color) !== color) continue;
+        kills.set(`${nx},${ny}`, { x: nx, y: ny, color: c.color, type: c.type });
+      }
+    }
+    return [...kills.values()];
+  }
+
+  /**
+   * Applies a `matchOutcome`: the dead go, and everything that shrugged the
+   * clear off sheds a stack of tolerance. Hammering a tolerant virus with the
+   * wrong medicine is slow, but it is never useless - which is what keeps such
+   * a virus answerable even with no collateral clear available.
+   */
+  applyMatch(outcome) {
+    const dead = [...outcome.cleared, ...outcome.collateral];
+    const result = this.clearCells(dead.map(({ x, y }) => `${x},${y}`));
+    for (const { x, y } of outcome.resisted) {
+      const c = this.get(x, y);
+      if (c) c.resistance = Math.max(0, (c.resistance ?? 0) - 1);
+    }
+    result.resisted = outcome.resisted.length;
+    result.collateral = outcome.collateral.length;
+    return result;
+  }
+
   clearCells(keys) {
     const result = { viruses: 0, halves: 0, colors: new Set() };
     const coords = [...keys].map((key) => key.split(',').map(Number));
@@ -211,13 +281,18 @@ export class Board {
    * Repeatedly clears matches and settles the stack, as happens after a pill
    * locks. Returns one entry per cascade stage.
    */
-  resolve() {
+  resolve({ tolerance = false } = {}) {
     const stages = [];
     for (;;) {
       const matches = this.findMatches();
       if (matches.size === 0) break;
-      const cleared = this.clearCells(matches);
+      const outcome = this.matchOutcome(matches, tolerance);
+      const cleared = this.applyMatch(outcome);
       stages.push({ ...cleared, cells: [...matches] });
+      // Every matched cell shrugged it off, so the board is otherwise
+      // unchanged. Stop rather than rescan the same match: their tolerance has
+      // been worn down by one, and the next clear will land.
+      if (outcome.cleared.length === 0 && outcome.collateral.length === 0) break;
       this.settle();
     }
     return stages;
@@ -323,6 +398,19 @@ export function generateLevel(board, level, rng) {
 export function virusTopRow(board, level) {
   const rows = Math.min(MAX_VIRUS_ROWS, MIN_VIRUS_ROWS + Math.floor(level / 4));
   return Math.max(MIN_VIRUS_ROW, board.height - rows);
+}
+
+/** Orthogonal neighbours - a collateral clear has to actually touch the virus. */
+const NEIGHBOURS = Object.freeze([[1, 0], [-1, 0], [0, 1], [0, -1]]);
+
+/** The colour a virus answers to once it has stopped answering to its own. */
+export function collateralOf(color) {
+  return COLLATERAL[color];
+}
+
+/** True once a virus has built enough resistance to shrug off its own colour. */
+export function isTolerant(c, threshold = TOLERANCE_AT) {
+  return Boolean(c) && c.type === VIRUS && (c.resistance ?? 0) >= threshold;
 }
 
 const MIN_VIRUS_ROW = 4;

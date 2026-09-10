@@ -9,6 +9,7 @@ import {
 import { pillCells } from './pill.js';
 import { PHASE } from './game.js';
 import { ERAS, eraFor, paletteFor } from './eras.js';
+import { collateralOf, isTolerant } from './board.js';
 
 /**
  * The default medicine tones - the pharmaceutical era's, which is the look the
@@ -121,6 +122,7 @@ export class Renderer {
     this.drawStack(game, layout, now);
     this.drawFallingPill(game, layout);
     this.drawClearing(game, layout);
+    this.drawResisted(game, layout);
     this.drawMutations(game, layout, now);
     ctx.restore();
   }
@@ -314,13 +316,18 @@ export class Renderer {
 
   drawStack(game, layout, now) {
     const clearing = new Set(game.clearingCells.map(({ x, y }) => `${x},${y}`));
+    // Tolerance rides on the resistance rule, so the aura that announces it has
+    // to as well - drawing "this needs a different colour" on a board where
+    // that is not true would be a lie the player cannot check.
+    const tolerance = Boolean(game.resistance);
     game.board.forEachCell((c, x, y) => {
       if (clearing.has(`${x},${y}`)) return;
       const px = layout.originX + x * layout.cell;
       const py = layout.originY + y * layout.cell;
       if (c.type === VIRUS) {
         const resistance = (c.resistance ?? 0) / RESISTANCE_MAX;
-        this.drawVirus(px, py, layout.cell, c.color, now, x, y, resistance);
+        const tolerant = tolerance && isTolerant(c);
+        this.drawVirus(px, py, layout.cell, c.color, now, x, y, resistance, tolerant);
       }
       else this.drawHalf(px, py, layout.cell, c.color, c.link);
     });
@@ -349,6 +356,47 @@ export class Renderer {
         color,
         link,
       );
+    }
+  }
+
+  /**
+   * The medicine bouncing off a tolerant virus. This animation is the whole
+   * reason the mechanic is playable: a run that clears without killing the
+   * virus reads as a bug unless the game visibly shows it being shrugged off.
+   */
+  drawResisted(game, layout) {
+    if (game.phase !== PHASE.CLEARING || !game.resistedCells?.length) return;
+    const { ctx } = this;
+    const t = Math.min(1, game.phaseTimer / CLEAR_ANIMATION);
+    for (const { x, y, color } of game.resistedCells) {
+      const cx = layout.originX + (x + 0.5) * layout.cell;
+      const cy = layout.originY + (y + 0.5) * layout.cell;
+      const cure = this.palette[collateralOf(color)];
+      ctx.save();
+      // A hard shake that settles: the virus takes the hit and stays put.
+      ctx.translate(cx + Math.sin(t * 34) * layout.cell * 0.14 * (1 - t), cy);
+
+      // A ring thrown out by the impact that collapses back in - the medicine
+      // arriving and failing, rather than the burst of a real clear.
+      const bounce = Math.sin(t * Math.PI);
+      ctx.globalAlpha = (1 - t) * 0.85;
+      ctx.strokeStyle = this.palette[color].light;
+      ctx.lineWidth = Math.max(1.5, layout.cell * 0.09 * (1 - t));
+      ctx.beginPath();
+      ctx.arc(0, 0, layout.cell * (0.34 + bounce * 0.26), 0, Math.PI * 2);
+      ctx.stroke();
+
+      // And a flash of the colour that WOULD have worked, so the failure
+      // teaches the answer instead of just denying the player.
+      ctx.globalAlpha = (1 - t) * 0.7;
+      ctx.strokeStyle = cure.base;
+      ctx.lineWidth = Math.max(1, layout.cell * 0.05);
+      ctx.setLineDash([layout.cell * 0.1, layout.cell * 0.1]);
+      ctx.lineDashOffset = -t * layout.cell;
+      ctx.beginPath();
+      ctx.arc(0, 0, layout.cell * 0.5, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
     }
   }
 
@@ -483,10 +531,31 @@ export class Renderer {
    * A wobbling, blinking virus. `resistance` (0..1) fades in a warning aura and
    * speeds up the wobble, so a virus about to mutate looks agitated.
    */
-  drawVirus(px, py, cell, color, now, gx, gy, resistance = 0) {
+  drawVirus(px, py, cell, color, now, gx, gy, resistance = 0, tolerant = false) {
     const { ctx } = this;
     const tone = this.palette[color];
-    if (resistance > 0) {
+    if (tolerant) {
+      // A tolerant virus no longer answers to its own colour, so the aura stops
+      // being a warning and becomes an instruction: it is drawn in the colour
+      // that DOES kill it. The rule is learnable from one look at the bottle.
+      const cure = this.palette[collateralOf(color)];
+      const pulse = 0.5 + 0.5 * Math.sin(now / 260 + gx + gy);
+      ctx.save();
+      ctx.strokeStyle = cure.base;
+      ctx.globalAlpha = 0.55 + 0.4 * pulse;
+      ctx.lineWidth = Math.max(1.5, cell * 0.08);
+      ctx.shadowColor = cure.glow;
+      ctx.shadowBlur = cell * 0.35;
+      ctx.beginPath();
+      ctx.arc(px + cell / 2, py + cell / 2, cell * 0.46, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 0.28 + 0.2 * pulse;
+      ctx.lineWidth = Math.max(1, cell * 0.04);
+      ctx.beginPath();
+      ctx.arc(px + cell / 2, py + cell / 2, cell * 0.38, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    } else if (resistance > 0) {
       const pulse = 0.5 + 0.5 * Math.sin(now / (240 - resistance * 140) + gx + gy);
       ctx.save();
       ctx.globalAlpha = 0.15 + resistance * 0.5 * pulse;

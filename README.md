@@ -208,8 +208,9 @@ it?".
   | Contaminated batch | Some capsule halves are inert and belong to no run | An inert half washes out with any clear it is touching |
   | Quarantine | A column is sealed and refuses capsules | Clearing beside it breaks the seal, and it lifts on its own regardless; spawn columns are never sealed |
 
-  The daily challenge draws a seeded pair, which is what stops the daily being
-  the same game at a different level.
+  The daily challenge draws a seeded pair - none, one or two, with roughly a
+  third of days plain - and says on the card which ones it drew. That is what
+  stops the daily being the same game at a different level.
 - **The formulary** is a notebook that starts blank and fills in as you
   *trigger* interactions, never as you read about them. Ten discoveries, one for
   every mechanic, and each collects a note per era: find a chain reaction in the
@@ -224,7 +225,7 @@ it?".
 ## Development
 
 ```sh
-npm test           # 250 unit tests, no dependencies, well under a second
+npm test           # 255 unit tests, no dependencies, well under a second
 npm run test:watch # re-run on change
 
 # End-to-end checks in a real browser (Playwright is not a dependency):

@@ -12,6 +12,7 @@ import {
 } from '../src/modifiers.js';
 import { Board, cell } from '../src/board.js';
 import { Game, PHASE } from '../src/game.js';
+import { dailyModifiers, dailySeed, dailySetup } from '../src/daily.js';
 import { createRng } from '../src/rng.js';
 import { fits, createPill, pillCells } from '../src/pill.js';
 import {
@@ -417,5 +418,54 @@ describe('modifiers and the rest of the game', () => {
     step(plain, 4000);
     assert.equal(plain.has('outbreak'), false);
     assert.ok(plain.phase !== PHASE.SPREADING);
+  });
+});
+
+describe('the daily draws its own modifiers', () => {
+  it('is decided by the date alone, like everything else about a day', () => {
+    for (const key of ['2026-09-11', '2026-01-01', '2027-06-30']) {
+      assert.deepEqual(dailySetup(key).modifiers, dailySetup(key).modifiers);
+      assert.deepEqual(dailyModifiers(dailySeed(key)), dailySetup(key).modifiers);
+    }
+  });
+
+  it('draws none, one or a pair, and never the same one twice', () => {
+    for (let day = 1; day <= 400; day += 1) {
+      const key = new Date(Date.UTC(2026, 0, day)).toISOString().slice(0, 10);
+      const mods = dailySetup(key).modifiers;
+      assert.ok(mods.length <= 2, `${key} drew ${mods.length} modifiers`);
+      assert.equal(new Set(mods).size, mods.length, `${key} drew a duplicate`);
+      for (const id of mods) assert.ok(MODIFIER_IDS.includes(id), `${key} drew "${id}"`);
+    }
+  });
+
+  it('describes itself in the order the game will report', () => {
+    // Otherwise the card and the run disagree about a pair for no reason a
+    // player could ever see.
+    for (let day = 1; day <= 200; day += 1) {
+      const key = new Date(Date.UTC(2026, 0, day)).toISOString().slice(0, 10);
+      const mods = dailySetup(key).modifiers;
+      assert.deepEqual([...mods], [...normaliseModifiers(mods)], `${key} is out of order`);
+    }
+  });
+
+  it('leaves roughly a third of days plain, so the daily still teaches the base game', () => {
+    let plain = 0;
+    const days = 365;
+    for (let day = 1; day <= days; day += 1) {
+      const key = new Date(Date.UTC(2026, 0, day)).toISOString().slice(0, 10);
+      if (dailySetup(key).modifiers.length === 0) plain += 1;
+    }
+    const share = plain / days;
+    assert.ok(share > 0.15 && share < 0.55, `${(share * 100).toFixed(0)}% of days are plain`);
+  });
+
+  it('reaches every modifier across a year', () => {
+    const seen = new Set();
+    for (let day = 1; day <= 365; day += 1) {
+      const key = new Date(Date.UTC(2026, 0, day)).toISOString().slice(0, 10);
+      for (const id of dailySetup(key).modifiers) seen.add(id);
+    }
+    assert.deepEqual([...seen].sort(), [...MODIFIER_IDS].sort(), 'a modifier never comes up');
   });
 });

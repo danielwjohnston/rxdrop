@@ -1207,6 +1207,33 @@ try {
     await day.waitForTimeout(200);
     assert.equal(await day.evaluate(() => window.rxdrop.mode), 'daily');
     assert.equal(await day.isVisible('#daily-note'), true);
+    // The day's modifiers have to be on the card. Walking into a blackout you
+    // were never told about is a surprise, not a challenge.
+    //
+    // 2026-09-11 is pinned because it is a day the date happens to draw a PAIR
+    // of modifiers. Checking a plain day would pass over an empty list and
+    // prove nothing, which is what the first version of this did.
+    await day.goto(`${BASE}/?daily=2026-09-11`, { waitUntil: 'networkidle' });
+    await day.waitForTimeout(200);
+    const announced = await day.evaluate(() => ({
+      modifiers: window.rxdrop.dailySetup('2026-09-11').modifiers,
+      note: document.getElementById('daily-note').textContent,
+    }));
+    assert.ok(announced.modifiers.length >= 2, 'the pinned day should draw a pair');
+    for (const id of announced.modifiers) {
+      const name = await day.evaluate((i) => window.rxdrop.modifierFor(i).name, id);
+      assert.ok(announced.note.includes(name), `the daily does not say it is playing ${name}`);
+    }
+    const running = await day.evaluate(async () => {
+      document.querySelector('[data-start]').click();
+      await new Promise((done) => setTimeout(done, 300));
+      return [...window.rxdrop.game.modifiers];
+    });
+    assert.deepEqual(running, announced.modifiers, 'the run must match what the card promised');
+
+    // Back to the plain day for the rest of this check.
+    await day.goto(`${BASE}/?daily=2026-09-09`, { waitUntil: 'networkidle' });
+    await day.waitForTimeout(200);
     assert.equal(
       await day.evaluate(() => document.getElementById('tunables').hidden),
       true,

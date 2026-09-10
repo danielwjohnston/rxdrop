@@ -212,6 +212,15 @@ export class AudioEngine {
         this.noise({ start: 0.02, duration: 0.3, gain: 0.14, frequency: 3200 });
         break;
       }
+      case 'discovery': {
+        // A pen scratch and a small, dry chime: something written down rather
+        // than something won. Quieter than a clear on purpose - the notebook
+        // should never be louder than the game.
+        this.noise({ duration: 0.06, gain: 0.08, frequency: 5200 });
+        this.tone(noteToFreq('E5'), { start: 0.05, duration: 0.1, gain: 0.13, type: 'sine' });
+        this.tone(noteToFreq('B5'), { start: 0.12, duration: 0.2, gain: 0.11, type: 'sine' });
+        break;
+      }
       case 'spread': {
         // A wet, descending burble - replication as something spilling rather
         // than something arriving.

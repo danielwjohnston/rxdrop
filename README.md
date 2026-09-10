@@ -210,6 +210,12 @@ it?".
 
   The daily challenge draws a seeded pair, which is what stops the daily being
   the same game at a different level.
+- **The formulary** is a notebook that starts blank and fills in as you
+  *trigger* interactions, never as you read about them. Ten discoveries, one for
+  every mechanic, and each collects a note per era: find a chain reaction in the
+  cave and the shaman writes it up, find one again in the clean room and the
+  technician writes it up beside them. A page you have not filled in says
+  nothing about itself.
 - Clear every virus to finish the level. Filling the bottle to the brim is not
   a loss on its own: capsules are dealt into the neck above it, and you get a
   long fuse to steer one clear. The run ends only once the neck is blocked too,
@@ -218,12 +224,12 @@ it?".
 ## Development
 
 ```sh
-npm test           # 235 unit tests, no dependencies, well under a second
+npm test           # 248 unit tests, no dependencies, well under a second
 npm run test:watch # re-run on change
 
 # End-to-end checks in a real browser (Playwright is not a dependency):
 npm i --no-save playwright && npx playwright install chromium
-npm run test:browser  # 37 checks: menus, controls, versus, daily, offline, mobile
+npm run test:browser  # 38 checks: menus, controls, versus, daily, offline, mobile
 
 npm run gauntlet   # the full protocol below: every stage, one gate
 ```

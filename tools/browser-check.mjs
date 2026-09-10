@@ -615,6 +615,73 @@ try {
     assert.equal(sealed.sealedAfter, undefined, 'a clear next door should break the seal');
   });
 
+  await check('the formulary fills in as you trigger things, not as you read them', async () => {
+    const blank = await modPage.evaluate(() => {
+      localStorage.removeItem('rxdrop.formulary.v1');
+      window.rxdrop.quit();
+      document.getElementById('open-formulary').click();
+      const entries = [...document.querySelectorAll('.notebook__entry')];
+      return {
+        screen: document.getElementById('screen-formulary').hidden,
+        entries: entries.length,
+        blanks: entries.filter((e) => e.classList.contains('is-blank')).length,
+        // A blank page must give nothing away: a notebook that lists what you
+        // have not done yet is a checklist, which is the opposite of finding
+        // something.
+        text: entries.map((e) => e.textContent.trim()).join(' '),
+      };
+    });
+    assert.equal(blank.screen, false, 'the formulary should open');
+    assert.equal(blank.entries, 10, 'every discovery should have a page');
+    assert.equal(blank.blanks, 10, 'and all of them blank to start with');
+    assert.ok(!/antibody|hybrid|quarantine/i.test(blank.text), 'a blank page gave the answer away');
+
+    // Trigger one for real, through the events the game actually emits.
+    const written = await modPage.evaluate(async () => {
+      document.querySelector('[data-close-formulary]').click();
+      window.rxdrop.start({ level: 0, speed: 'LOW', seed: 3 });
+      const g = window.rxdrop.game;
+      g.board.forEachCell((c, x, y) => g.board.set(x, y, null));
+      const floor = g.board.height - 1;
+      g.board.set(3, floor, { color: 0, type: 'virus', link: null, resistance: 2 });
+      for (const x of [4, 5, 6, 7]) g.board.set(x, floor, { color: 0, type: 'pill', link: null });
+      g.board.set(0, floor - 8, { color: 1, type: 'virus', link: null });
+      g.startingViruses = 2;
+      g.resistance = true;
+      g.beginResolution();
+      await new Promise((done) => setTimeout(done, 900));
+      return {
+        count: document.getElementById('formulary-count').textContent,
+        toast: document.getElementById('toast').hidden,
+        toastText: document.getElementById('toast-text').textContent,
+      };
+    });
+    assert.match(written.count, /^[1-9]\d*\/10$/, `nothing was written up: ${written.count}`);
+    assert.equal(written.toast, false, 'a first discovery should announce itself');
+    assert.ok(written.toastText.length > 3, 'and say what it was');
+
+    const page = await modPage.evaluate(() => {
+      window.rxdrop.quit();
+      document.getElementById('open-formulary').click();
+      const found = [...document.querySelectorAll('.notebook__entry:not(.is-blank)')];
+      return {
+        found: found.length,
+        hasNote: found.every((e) => e.querySelector('.notebook__note')),
+        whose: found[0]?.querySelector('.notebook__who')?.textContent ?? '',
+        more: found[0]?.querySelector('.notebook__more')?.textContent ?? '',
+      };
+    });
+    assert.ok(page.found >= 1, 'the entry should have filled in');
+    assert.equal(page.hasNote, true, 'and carry a note from the era it happened in');
+    assert.match(page.whose, /Protomedicine/, 'attributed to the physician who saw it');
+    assert.match(page.more, /eras? still/, 'and say the other eras have nothing yet');
+
+    // It has to survive a reload, or it is not a notebook.
+    await modPage.reload({ waitUntil: 'networkidle' });
+    const kept = await modPage.evaluate(() => document.getElementById('formulary-count').textContent);
+    assert.match(kept, /^[1-9]\d*\/10$/, `the notebook forgot: ${kept}`);
+  });
+
   await modPage.close();
 
 

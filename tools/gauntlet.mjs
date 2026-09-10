@@ -52,6 +52,7 @@ import {
 } from '../src/constants.js';
 import { Game, PHASE } from '../src/game.js';
 import { MODIFIERS, MODIFIER_IDS, normaliseModifiers } from '../src/modifiers.js';
+import { DISCOVERY_IDS, Formulary, discoveriesIn } from '../src/formulary.js';
 import { createPill, fits, tryMove } from '../src/pill.js';
 import { FRAME, plan, steer } from './bot.mjs';
 import { VersusMatch } from '../src/versus.js';
@@ -865,6 +866,43 @@ stage('modifiers', 'A modifier may change a run, never end it', (check) => {
         assert.ok(game.isOver || game.phase === PHASE.FALLING, `${name} seed ${seed} wedged`);
       }
     }
+  });
+
+  check('the formulary can actually be filled in by playing', () => {
+    // The notebook is only worth having if the things it records happen. Play
+    // the whole formulary at once with the real bot and check the discoveries
+    // come in - a mechanic wired to nothing would show up here as a page that
+    // can never be written.
+    const book = new Formulary();
+    for (let seed = 0; seed < 6; seed += 1) {
+      const game = new Game({
+        level: 6, speed: 'LOW', seed, resistance: true, modifiers: MODIFIER_IDS,
+      });
+      let target = plan(game);
+      // Half the runs work the light and half never touch it. Both are real
+      // players, and only the second kind ever clears a run in the dark - a bot
+      // that always spends the light can never earn that badge, which is a fact
+      // about the bot rather than about the game.
+      const worksTheLight = seed % 2 === 0;
+      for (let f = 0; f < 90000 && !game.isOver; f += 1) {
+        game.setLight(worksTheLight && game.light < 0.5);
+        if (game.phase === PHASE.FALLING) game.setSoftDrop(!steer(game, target));
+        game.update(FRAME);
+        for (const event of game.drainEvents()) {
+          for (const id of discoveriesIn(event)) book.record(id, 'pharmaceutical');
+          if (event.type === 'spawn') {
+            target = plan(game);
+            game.setSoftDrop(false);
+          }
+          if (event.type === 'levelComplete') {
+            game.advanceLevel();
+            target = plan(game);
+          }
+        }
+      }
+    }
+    const missing = DISCOVERY_IDS.filter((id) => !book.has(id));
+    assert.deepEqual(missing, [], `nothing in play ever triggers: ${missing.join(', ')}`);
   });
 
   return 'every modifier bends a rule and none of them breaks one';

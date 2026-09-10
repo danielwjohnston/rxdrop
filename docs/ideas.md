@@ -217,7 +217,7 @@ in play. A sealed column is a narrower bottle, not a frozen one.
 
 ## Axis 3 - noticing what you found
 
-### The Formulary - `proposed`
+### The Formulary - `shipped`
 
 A notebook that starts blank and fills in as you *trigger* interactions - not as
 you read about them. First tolerant virus, first hybrid, first antibody, first
@@ -228,6 +228,25 @@ differently in the cave and in the clean room.
 This is what turns "there are interactions" into "I am finding the
 interactions", and it costs almost nothing: a set of flags, a line of copy each.
 
+*What shipped, and one change that made it better.* Ten discoveries, one for
+every mechanic on this page, and each one collects a note **per era** rather
+than a single note from wherever you happened to find it. Find a chain reaction
+in the cave and the shaman writes it up; find one again in the clean room and
+the technician writes it up beside them. So the notebook accumulates
+observations of one phenomenon across five eras of medicine, which is what a
+case book actually looks like - and it gives all fifty lines a reason to exist
+rather than forty-five of them being unreachable.
+
+A page you have not filled in says **nothing about itself**. It reads "Not yet
+observed" and no more. A notebook that lists what you have not done yet is a
+checklist, and a checklist is the opposite of finding something.
+
+The gauntlet gates the thing that would otherwise rot silently: it plays the
+whole formulary at once with the real bot and fails if any discovery is one that
+playing can never trigger. Half the runs work the light and half never touch it,
+because a bot that always spends the light can never clear a run in the dark -
+which is a fact about the bot, not about the game.
+
 ## What is already in
 
 | Shipped | What it does |
@@ -236,12 +255,22 @@ interactions", and it costs almost nothing: a set of flags, a line of copy each.
 | Collateral sensitivity | A tolerant virus stops answering to its own colour and starts answering to an older one, cleared beside it. |
 | Hybrid strains | Capped by the wrong colour too long, a virus combines into a colour no capsule is dealt in. Both parents cure it; either one alone wears it down. |
 | Run modifiers | Outbreak, blackout, rationing, contaminated batch and quarantine, choosable together, each with a bound the gauntlet enforces. |
+| The formulary | A notebook that fills in as you trigger interactions, collecting a note per era for each one. |
 | Antibodies | Both parents in one cascade synthesise a compound that takes the strain and the ring around it. |
 | The neck row | A row above the bottle. Filling the bottle is not a loss until capsules back up into the neck. |
 | Apothecary Through Time | Five eras, five vessels, five physicians, five notes. |
 | Daily challenge | One seeded bottle a day, the same for everyone. |
 | Versus | Two bottles on one keyboard, trading garbage. |
 | Offline play | Installs as a PWA and plays with the network off. |
+
+## Nothing here is `proposed` any more
+
+Every idea on this page is built. That is not a finish line - it is an empty
+inbox, and the whole point of the page is that anyone can fill it again.
+
+**Suggest one:** [mechanic](https://github.com/danielwjohnston/rxdrop/issues/new?template=mechanic.yml)
+· [challenge](https://github.com/danielwjohnston/rxdrop/issues/new?template=challenge.yml)
+· [theme](https://github.com/danielwjohnston/rxdrop/issues/new?template=theme.yml)
 
 ## How an idea gets in
 

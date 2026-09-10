@@ -331,6 +331,38 @@ try {
     assert.equal(layout.scrollsY, false, 'the game should fit on one screen');
   });
 
+  await check('the bottle gets the lion\'s share of a phone screen', async () => {
+    // The regression this pins: a tall HUD panel squeezed the bottle to a third
+    // of the screen and the game became unplayable on a phone without anything
+    // failing. The bottle is what you look at, so it gets the floor.
+    const share = await mobile.evaluate(() => {
+      const h = (sel) => {
+        const el = document.querySelector(sel);
+        return el ? el.getBoundingClientRect().height : 0;
+      };
+      const view = window.innerHeight;
+      return {
+        view,
+        board: h('#board') / view,
+        panels: (h('.panel--left') + h('.panel--right')) / view,
+        doctor: h('#doctor'),
+      };
+    });
+    assert.ok(
+      share.board >= 0.5,
+      `the bottle got ${(share.board * 100).toFixed(0)}% of the screen, wanted 50% or more`,
+    );
+    assert.ok(
+      share.panels <= 0.25,
+      `the panels took ${(share.panels * 100).toFixed(0)}% of the screen, wanted 25% or less`,
+    );
+    // The physician stays, but as a chip - a portrait is what caused the squeeze.
+    assert.ok(
+      share.doctor > 0 && share.doctor <= 56,
+      `the physician is ${share.doctor}px tall on a phone; wanted a chip, not a portrait`,
+    );
+  });
+
   await check('dragging, tapping and flicking the bottle work', async () => {
     const box = await mobile.locator('#board').boundingBox();
     const cx = box.x + box.width / 2;

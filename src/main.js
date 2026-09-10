@@ -10,9 +10,10 @@ import { Game } from './game.js';
 import { VersusMatch } from './versus.js';
 import { dailyKey, dailySetup, isToday, shareText } from './daily.js';
 import { Renderer, drawPillPreview, drawVirusTally } from './renderer.js';
-import { eraFor, entersEra } from './eras.js';
+import { ERAS, eraFor, entersEra } from './eras.js';
 import { collateralOf, hybridOf, isHybrid } from './board.js';
 import { MODIFIERS, describeModifiers, normaliseModifiers } from './modifiers.js';
+import { DISCOVERIES, Formulary, discoveriesIn } from './formulary.js';
 import { drawDoctor, POSE_HOLD } from './doctors.js';
 import { pillCells } from './pill.js';
 import { AudioEngine } from './audio.js';
@@ -20,6 +21,7 @@ import { InputController, KEY_MAP, VERSUS_KEY_MAP } from './input.js';
 
 const STORAGE_KEY = 'rxdrop.settings.v1';
 const DAILY_KEY = 'rxdrop.daily.v1';
+const FORMULARY_KEY = 'rxdrop.formulary.v1';
 const SPEED_ORDER = ['LOW', 'MEDIUM', 'HIGH'];
 const CONFIRM_LOCKOUT = 550;
 const LOCKOUT_SCREENS = new Set(['over', 'clear', 'daily', 'versus']);
@@ -44,6 +46,13 @@ const dom = {
   modifiers: el('modifiers'),
   modifiersNote: el('modifiers-note'),
   hudMods: el('hud-mods'),
+  notebook: el('notebook'),
+  formularySheet: el('screen-formulary'),
+  toast: el('toast'),
+  toastTitle: el('toast-title'),
+  toastText: el('toast-text'),
+  formularyCount: el('formulary-count'),
+  openFormulary: el('open-formulary'),
   lightMeter: el('light-meter'),
   lightFill: el('light-fill'),
   instantDropToggle: el('instant-drop'),
@@ -202,6 +211,114 @@ function saveDailyResult(result) {
     localStorage.setItem(DAILY_KEY, JSON.stringify(result));
   } catch {
     /* nothing to do */
+  }
+}
+
+/**
+ * The notebook, and the two lines that persist it.
+ *
+ * Loaded once at start rather than per write, and saved on every new entry -
+ * discoveries are rare enough that the write cost is nothing and losing one to
+ * a closed tab would be the whole point of the feature missed.
+ */
+const formulary = (() => {
+  try {
+    return Formulary.from(localStorage.getItem(FORMULARY_KEY));
+  } catch {
+    return Formulary.from(null);
+  }
+})();
+
+function saveFormulary() {
+  try {
+    localStorage.setItem(FORMULARY_KEY, JSON.stringify(formulary));
+  } catch {
+    /* private browsing - the notebook lasts the session */
+  }
+}
+
+/**
+ * Reads one game event for anything worth writing down.
+ *
+ * The notebook is a reader of the game and never a participant: it cannot
+ * change a rule, and it only ever records the era the discovery happened in.
+ */
+function noteDiscoveries(event) {
+  const found = discoveriesIn(event);
+  if (found.length === 0) return;
+  const where = eraFor(game?.level ?? previewLevel()).id;
+  let firstTime = null;
+  for (const id of found) {
+    const outcome = formulary.record(id, where);
+    if (!outcome) continue;
+    if (outcome === 'discovery' && !firstTime) firstTime = id;
+    saveFormulary();
+    syncFormularyCount();
+  }
+  // Only a first discovery is worth interrupting for. A note added to a
+  // discovery you already had is there when you next open the notebook.
+  if (firstTime) announceDiscovery(firstTime);
+}
+
+function announceDiscovery(id) {
+  const discovery = DISCOVERIES.find((d) => d.id === id);
+  if (!discovery) return;
+  audio.play('discovery');
+  dom.toastTitle.textContent = 'Written up';
+  dom.toastText.textContent = discovery.title;
+  dom.toast.hidden = false;
+  clearTimeout(announceDiscovery.timer);
+  announceDiscovery.timer = setTimeout(() => { dom.toast.hidden = true; }, 2600);
+}
+
+function syncFormularyCount() {
+  dom.formularyCount.textContent = `${formulary.count}/${DISCOVERIES.length}`;
+}
+
+/** Renders the notebook: found entries in full, the rest as blank pages. */
+function renderNotebook() {
+  dom.notebook.innerHTML = '';
+  const order = ERAS.map((e) => e.id);
+  for (const discovery of DISCOVERIES) {
+    const entry = document.createElement('article');
+    const found = formulary.has(discovery.id);
+    entry.className = `notebook__entry${found ? '' : ' is-blank'}`;
+
+    const heading = document.createElement('h3');
+    heading.className = 'notebook__title';
+    heading.textContent = found ? discovery.title : 'Not yet observed';
+    entry.append(heading);
+
+    const what = document.createElement('p');
+    what.className = 'notebook__what';
+    // An unfound entry says nothing about itself. A notebook that lists what
+    // you have not done yet is a checklist, and a checklist is the opposite of
+    // finding something.
+    what.textContent = found ? discovery.what : '';
+    entry.append(what);
+
+    if (found) {
+      for (const eraId of formulary.notesFor(discovery.id, order)) {
+        const era = ERAS.find((e) => e.id === eraId);
+        const note = document.createElement('p');
+        note.className = 'notebook__note';
+        const who = document.createElement('span');
+        who.className = 'notebook__who';
+        who.textContent = `${era.name}, ${era.period}`;
+        note.append(who, document.createTextNode(discovery.notes[eraId]));
+        entry.append(note);
+      }
+      const left = ERAS.length - formulary.notesFor(discovery.id, order).length;
+      if (left > 0) {
+        const more = document.createElement('p');
+        more.className = 'notebook__more';
+        more.textContent = left === 1
+          ? 'One era still has nothing to say about this.'
+          : `${left} eras still have nothing to say about this.`;
+        entry.append(more);
+      }
+    }
+    dom.notebook.append(entry);
   }
 }
 
@@ -486,6 +603,9 @@ function updateMusicMood() {
 
 function handleGameEvents() {
   for (const event of game.drainEvents()) {
+    // The notebook reads every event before anything reacts to it, so a
+    // discovery is recorded even if the reaction below throws.
+    noteDiscoveries(event);
     switch (event.type) {
       case 'clear':
         audio.play('clear', event);
@@ -973,6 +1093,27 @@ function syncModifiers() {
     : chosen.map((m) => `${m.name}: ${m.blurb}`).join(' ');
 }
 
+dom.openFormulary.addEventListener('click', () => {
+  renderNotebook();
+  dom.formularySheet.hidden = false;
+  dom.formularySheet.querySelector('[data-close-formulary]')?.focus();
+});
+
+const closeFormulary = () => { dom.formularySheet.hidden = true; };
+for (const button of document.querySelectorAll('[data-close-formulary]')) {
+  button.addEventListener('click', closeFormulary);
+}
+// Click the backdrop or press Escape: both are what a reader reaches for.
+dom.formularySheet.addEventListener('click', (event) => {
+  if (event.target === dom.formularySheet) closeFormulary();
+});
+window.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && !dom.formularySheet.hidden) {
+    event.stopPropagation();
+    closeFormulary();
+  }
+}, true);
+
 dom.resistanceToggle.addEventListener('change', () => {
   settings.resistance = dom.resistanceToggle.checked;
   saveSettings();
@@ -1095,6 +1236,7 @@ window.rxdrop = {
   hybridOf,
   isHybrid,
   syncDropStyle,
+  formulary,
   setModifiers: (ids) => {
     settings.modifiers = normaliseModifiers(ids);
     saveSettings();
@@ -1111,6 +1253,7 @@ audio.setMusicEnabled(settings.music, { resume: false });
 dom.resistanceToggle.checked = settings.resistance;
 syncDropStyle();
 buildModifierPicker();
+syncFormularyCount();
 setMode(settings.mode);
 showScreen('title');
 syncHud(true);

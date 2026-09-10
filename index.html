@@ -142,12 +142,16 @@
               <p class="daily-note" id="daily-note" hidden></p>
 
               <button class="button button--primary" data-start type="button">Start game</button>
+              <button class="button button--ghost" id="open-formulary" type="button">
+                The formulary <span class="pill-count" id="formulary-count">0/10</span>
+              </button>
               <p class="card__hint" id="controls-hint">
                 Move <kbd>&larr;</kbd><kbd>&rarr;</kbd> &middot; Rotate <kbd>Z</kbd><kbd>X</kbd>
                 &middot; Soft drop <kbd>&darr;</kbd> &middot; Hard drop <kbd>Space</kbd>
-                &middot; Pause <kbd>P</kbd> &middot; Mute <kbd>M</kbd>
+                &middot; Light <kbd>Shift</kbd> &middot; Pause <kbd>P</kbd> &middot; Mute <kbd>M</kbd>
               </p>
             </div>
+
 
             <!-- Pause -->
             <div class="card" id="screen-pause" data-screen="paused" hidden>
@@ -233,6 +237,29 @@
           <p class="seed">seed <span id="seed">0</span></p>
         </section>
       </main>
+
+      <!-- The physician's formulary. Its own layer rather than a card in the
+           playfield overlay: it is a thing to read, and the bottle's column is
+           too narrow a measure to read three paragraphs in. -->
+      <div class="sheet" id="screen-formulary" hidden>
+        <div class="sheet__card" role="dialog" aria-modal="true" aria-labelledby="formulary-heading">
+          <h2 class="card__title" id="formulary-heading">The formulary</h2>
+          <p class="card__body">
+            A notebook that fills in as you find things, not as you read about
+            them. Find the same thing in a later era and the physician there
+            writes it up again.
+          </p>
+          <div class="notebook" id="notebook"></div>
+          <button class="button button--primary" data-close-formulary type="button">Back</button>
+        </div>
+      </div>
+
+      <!-- Something written up in the formulary. Announces first discoveries
+           only; a note added to one you already had waits in the notebook. -->
+      <aside class="toast" id="toast" role="status" aria-live="polite" hidden>
+        <span class="toast__label" id="toast-title">Written up</span>
+        <strong class="toast__text" id="toast-text"></strong>
+      </aside>
 
       <nav class="touchpad" id="touchpad" aria-label="Touch controls">
         <button type="button" data-action="left" aria-label="Move left">&#9664;</button>

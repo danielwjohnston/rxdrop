@@ -7,7 +7,7 @@ list of nice thoughts.
 **Suggest one:** [mechanic](https://github.com/danielwjohnston/rxdrop/issues/new?template=mechanic.yml)
 · [challenge](https://github.com/danielwjohnston/rxdrop/issues/new?template=challenge.yml)
 · [theme](https://github.com/danielwjohnston/rxdrop/issues/new?template=theme.yml)
-· [talk it through first](https://github.com/danielwjohnston/rxdrop/discussions)
+· [something half-formed](https://github.com/danielwjohnston/rxdrop/issues/new)
 
 ## The goal these are aimed at
 
@@ -159,7 +159,7 @@ interactions", and it costs almost nothing: a set of flags, a line of copy each.
 
 ## How an idea gets in
 
-1. Someone opens an issue with one of the forms, or raises it in Discussions.
+1. Someone opens an issue - one of the forms, or a blank one for a "what if".
 2. It gets argued against the goal at the top of this page - does it *combine*,
    and can the player *answer* it?
 3. If it survives, it lands here as `proposed`, then gets built behind the

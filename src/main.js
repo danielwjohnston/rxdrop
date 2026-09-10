@@ -12,7 +12,7 @@ import { dailyKey, dailySetup, isToday, shareText } from './daily.js';
 import { Renderer, drawPillPreview, drawVirusTally } from './renderer.js';
 import { ERAS, eraFor, entersEra } from './eras.js';
 import { collateralOf, hybridOf, isHybrid } from './board.js';
-import { MODIFIERS, describeModifiers, normaliseModifiers } from './modifiers.js';
+import { MODIFIERS, describeModifiers, modifierFor, normaliseModifiers } from './modifiers.js';
 import { DISCOVERIES, Formulary, discoveriesIn } from './formulary.js';
 import { drawDoctor, POSE_HOLD } from './doctors.js';
 import { pillCells } from './pill.js';
@@ -367,6 +367,9 @@ function refreshDailyNote() {
   const setup = dailySetup(settings.dailyKey ?? dailyKey());
   const bits = [`Level ${setup.level}`, SPEEDS[setup.speed].name];
   if (setup.resistance) bits.push('Resistance');
+  // The day's modifiers belong on the card. Walking into a blackout you were
+  // never told about is a surprise, not a challenge.
+  if (setup.modifiers?.length) bits.push(describeModifiers(setup.modifiers));
   const previous = loadDailyResult();
   dom.dailyNote.textContent = isToday(previous, setup.key)
     ? `${setup.key} · ${bits.join(' · ')} — you scored ${previous.score.toLocaleString()}`
@@ -1270,6 +1273,8 @@ window.rxdrop = {
   isHybrid,
   syncDropStyle,
   formulary,
+  dailySetup,
+  modifierFor,
   setModifiers: (ids) => {
     settings.modifiers = normaliseModifiers(ids);
     saveSettings();

@@ -1,5 +1,5 @@
 import { MAX_LEVEL } from './constants.js';
-import { MODIFIER_IDS, describeModifiers } from './modifiers.js';
+import { MODIFIER_IDS, describeModifiers, normaliseModifiers } from './modifiers.js';
 
 /**
  * The daily challenge: one bottle a day, the same for everyone, derived from
@@ -32,14 +32,17 @@ export function dailySeed(key) {
  */
 export function dailyModifiers(seed) {
   const roll = (seed >>> 20) % 6;
-  if (roll < 2) return [];
+  if (roll < 2) return Object.freeze([]);
   const first = MODIFIER_IDS[(seed >>> 4) % MODIFIER_IDS.length];
-  if (roll < 4) return [first];
+  if (roll < 4) return normaliseModifiers([first]);
   // Step by a co-prime so the second is never the first, and every pair is
   // reachable across the calendar.
   const step = 1 + ((seed >>> 12) % (MODIFIER_IDS.length - 1));
   const index = (MODIFIER_IDS.indexOf(first) + step) % MODIFIER_IDS.length;
-  return [first, MODIFIER_IDS[index]];
+  // Normalised, so the day describes itself in the same order the game will
+  // report - otherwise the card and the run disagree about a pair for no
+  // reason a player could ever see.
+  return normaliseModifiers([first, MODIFIER_IDS[index]]);
 }
 
 /** The day's setup. Levels stay in a range that is a challenge, not a coin flip. */

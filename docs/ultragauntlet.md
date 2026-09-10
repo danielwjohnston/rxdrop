@@ -57,10 +57,11 @@ Run them all with `node tools/gauntlet.mjs`, or a few with
 | 6 | `resistance` | The new mechanic obeys the old rules. 200 seeded boards mutated repeatedly, checking a mutation never creates a free clear, never changes the virus count, and always hands play back. |
 | 7 | `collateral` | No virus may become unanswerable. Sweeps every colour at every resistance level to prove something still kills it, checks that a collateral kill only ever takes tolerant viruses, and that resolution terminates on a board where everything shrugs. |
 | 8 | `hybrid` | A combined strain must still come apart. Proves no capsule is ever dealt in a hybrid colour and no hybrid ever appears in a match; that both parents cure every strain in either order; that both in one cascade always synthesise an antibody; that one parent alone always breaks it in the end; and that a hybrid never forms anywhere it cannot be treated from. |
-| 9 | `versus` | Two games in one page stay separate. Asserts every attack sent is an attack received, that a match always resolves to exactly one winner, and that one player's input cannot touch the other's board. |
-| 10 | `playtest` | The game is playable, not merely legal. Asserts a hurried capsule never falls faster than a hand can place a lateral into it, and that a capsule always lands with time to be steered. `npm run playtest` runs the full version: a bot plays whole games and reports reaction budgets, juggling room, hybrid cures and how far it gets. |
-| 11 | `performance` | The rules are cheap. Measures worst-case and average `update()` cost at level 20 with resistance on against the 16.7 ms frame budget. |
-| 12 | `browser` | It works in a browser, not just in Node. Runs the Playwright checks: menus, gamepad, touch gestures, versus, the daily, offline play, and a page with neither Web Audio nor localStorage. Skips cleanly if Playwright is not installed. |
+| 9 | `modifiers` | A modifier may change a run, never end it. Executes the bound each modifier writes down: outbreak's three caps and its gravity floor, blackout's self-ending timer and never-black floor and a light that is neither free nor spendable into a corner, rationing's rotation, the contaminated batch washing out, quarantine's expiry and its placement-only reach - then plays every modifier alone and all five at once with the same bot the playtest uses. |
+| 10 | `versus` | Two games in one page stay separate. Asserts every attack sent is an attack received, that a match always resolves to exactly one winner, and that one player's input cannot touch the other's board. |
+| 11 | `playtest` | The game is playable, not merely legal. Asserts a hurried capsule never falls faster than a hand can place a lateral into it, and that a capsule always lands with time to be steered. `npm run playtest` runs the full version: a bot plays whole games and reports reaction budgets, juggling room, hybrid cures and how far it gets. |
+| 12 | `performance` | The rules are cheap. Measures worst-case and average `update()` cost at level 20 with resistance on against the 16.7 ms frame budget. |
+| 13 | `browser` | It works in a browser, not just in Node. Runs the Playwright checks: menus, gamepad, touch gestures, versus, the daily, offline play, and a page with neither Web Audio nor localStorage. Skips cleanly if Playwright is not installed. |
 
 ## What it has caught
 
@@ -88,6 +89,19 @@ The stages are not ceremony. Building this set surfaced real defects:
   parents". It also caught the antibody window being one clear wide rather than
   one cascade, which made the single most rewarding play in the game - clear a
   run, let the other parent fall into the gap - pay nothing extra.
+- **`modifiers`** was written alongside the modifiers and immediately caught the
+  blackout reservoir oscillating on its own floor - empty, refill one frame,
+  power one frame of light, empty again - which made the light infinite. The
+  playtest saw the same defect from the other side, as a row of numbers
+  identical to a plain game. Reintroduce any of the four bounds as a regression
+  and the matching check goes red: uncap outbreak's generations, make the light
+  restore instantly, stop washing out inert halves, or let a seal be permanent.
+- **`modifiers`** also caught something about checks rather than about the game.
+  Its playability check first used a random-column hard-dropper as the player,
+  which loses a level-4 bottle in ten capsules without clearing anything - so
+  the check failed on the *unmodified* game. The fix was to lift the playtest
+  bot into `tools/bot.mjs` so the gate and the measurement ask about the same
+  player; a stand-in that cannot play says nothing about the rule under test.
 - **`boundaries`** codifies the virus-ceiling rule after viruses were found
   spawning two rows below the neck by level 6.
 - **`browser`** caught three checks that had hard-coded row 15 as the floor of

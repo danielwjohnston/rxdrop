@@ -1,4 +1,5 @@
 import { MAX_LEVEL } from './constants.js';
+import { MODIFIER_IDS, describeModifiers } from './modifiers.js';
 
 /**
  * The daily challenge: one bottle a day, the same for everyone, derived from
@@ -20,6 +21,27 @@ export function dailySeed(key) {
   return hash >>> 0;
 }
 
+/**
+ * The modifiers a day is played with: none, one, or a pair, drawn from the date
+ * like everything else.
+ *
+ * A pair rather than a single one is the point. One modifier changes a run; two
+ * interact, and the interaction is what stops the daily being the same game at
+ * a different level. Roughly a third of days are plain, so the daily is still
+ * somewhere to learn the base game.
+ */
+export function dailyModifiers(seed) {
+  const roll = (seed >>> 20) % 6;
+  if (roll < 2) return [];
+  const first = MODIFIER_IDS[(seed >>> 4) % MODIFIER_IDS.length];
+  if (roll < 4) return [first];
+  // Step by a co-prime so the second is never the first, and every pair is
+  // reachable across the calendar.
+  const step = 1 + ((seed >>> 12) % (MODIFIER_IDS.length - 1));
+  const index = (MODIFIER_IDS.indexOf(first) + step) % MODIFIER_IDS.length;
+  return [first, MODIFIER_IDS[index]];
+}
+
 /** The day's setup. Levels stay in a range that is a challenge, not a coin flip. */
 export function dailySetup(key = dailyKey()) {
   const seed = dailySeed(key);
@@ -31,6 +53,7 @@ export function dailySetup(key = dailyKey()) {
     speed: speeds[(seed >>> 8) % speeds.length],
     // Roughly one day in three asks you to outrun mutation as well.
     resistance: (seed >>> 16) % 3 === 0,
+    modifiers: dailyModifiers(seed),
     daily: true,
   };
 }
@@ -42,9 +65,10 @@ export function isToday(result, key = dailyKey()) {
 
 /** A short result line to paste somewhere, with no board spoilers in it. */
 export function shareText(result, origin = '') {
-  const { key, level, speed, score, cleared, total, won, resistance } = result;
+  const { key, level, speed, score, cleared, total, won, resistance, modifiers } = result;
   const badges = [`Level ${Math.min(level, MAX_LEVEL)}`, speed];
   if (resistance) badges.push('Resistance');
+  if (modifiers?.length) badges.push(describeModifiers(modifiers));
   const outcome = won ? `Cleared ${total}/${total}` : `${cleared}/${total} viruses`;
   const lines = [
     `RxDrop Daily ${key}`,

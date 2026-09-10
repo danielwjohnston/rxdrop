@@ -1048,3 +1048,76 @@ body.is-versus .apothecary {
   -webkit-user-select: text;
   user-select: text;
 }
+
+/* ---- the modifier picker ------------------------------------------------ */
+
+.chooser--stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.45rem;
+}
+
+.mods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.mods__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.34rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(139, 160, 200, 0.32);
+  background: rgba(18, 24, 40, 0.55);
+  color: #b7c6e4;
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.mods__chip:hover {
+  border-color: rgba(139, 160, 200, 0.6);
+  color: #e6edfb;
+}
+
+.mods__chip.is-on {
+  background: color-mix(in srgb, var(--accent, #8bd6ff) 26%, transparent);
+  border-color: var(--accent, #8bd6ff);
+  color: #f2f7ff;
+}
+
+.mods__icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.mods__note {
+  color: #8ba0c8;
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+.meter__fill--light {
+  background: linear-gradient(90deg, #ffd666, #fff3c4);
+}
+
+.meter.is-spent .meter__fill--light {
+  background: linear-gradient(90deg, #6b5b2a, #8a7433);
+}
+
+.meter.is-lit .meter__track {
+  box-shadow: 0 0 0 1px rgba(255, 214, 102, 0.55);
+}
+
+.meter__hint {
+  color: #8ba0c8;
+  font-size: 0.7rem;
+}
+
+.mods--hud .mods__chip {
+  padding: 0.2rem 0.45rem;
+  font-size: 0.72rem;
+}

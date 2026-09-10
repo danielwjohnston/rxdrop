@@ -18,12 +18,15 @@ import { cell } from './board.js';
 export const HORIZONTAL_OFFSET = Object.freeze([1, 0]);
 export const VERTICAL_OFFSET = Object.freeze([0, -1]);
 
-export function createPill(colors, x = SPAWN_X, y = SPAWN_Y, orientation = 0) {
+export function createPill(colors, x = SPAWN_X, y = SPAWN_Y, orientation = 0, inert = -1) {
   // `kick` remembers the nudge the last rotation needed, so the next rotation
   // can undo it. Without that, turning a capsule in a tight spot and turning it
   // back leaves it a column over, and repeating it walks the capsule across the
   // bottle - which is the single worst thing rotation can do.
-  return { x, y, orientation, colors: [...colors], kick: null };
+  // `inert` is the index into `colors` of a half from a contaminated batch, or
+  // -1 for a clean capsule. Indexing the colour rather than the cell is what
+  // makes the flag follow its own half through a rotation.
+  return { x, y, orientation, colors: [...colors], kick: null, inert };
 }
 
 /** The two board cells a pill currently occupies, anchor first. */
@@ -32,18 +35,21 @@ export function pillCells(pill) {
   const swapped = pill.orientation >= 2;
   const first = swapped ? pill.colors[1] : pill.colors[0];
   const second = swapped ? pill.colors[0] : pill.colors[1];
+  const inert = pill.inert ?? -1;
+  const firstInert = inert === (swapped ? 1 : 0);
+  const secondInert = inert === (swapped ? 0 : 1);
 
   if (isHorizontal(pill)) {
     const [dx, dy] = HORIZONTAL_OFFSET;
     return [
-      { x: pill.x, y: pill.y, color: first, link: LINK.RIGHT },
-      { x: pill.x + dx, y: pill.y + dy, color: second, link: LINK.LEFT },
+      { x: pill.x, y: pill.y, color: first, link: LINK.RIGHT, inert: firstInert },
+      { x: pill.x + dx, y: pill.y + dy, color: second, link: LINK.LEFT, inert: secondInert },
     ];
   }
   const [dx, dy] = VERTICAL_OFFSET;
   return [
-    { x: pill.x, y: pill.y, color: first, link: LINK.UP },
-    { x: pill.x + dx, y: pill.y + dy, color: second, link: LINK.DOWN },
+    { x: pill.x, y: pill.y, color: first, link: LINK.UP, inert: firstInert },
+    { x: pill.x + dx, y: pill.y + dy, color: second, link: LINK.DOWN, inert: secondInert },
   ];
 }
 
@@ -54,7 +60,7 @@ export function isHorizontal(pill) {
 /** True if the pill can occupy its current position on the board. */
 export function fits(board, pill) {
   return pillCells(pill).every(
-    ({ x, y }) => board.inBounds(x, y) && board.isEmpty(x, y),
+    ({ x, y }) => board.inBounds(x, y) && board.open(x, y),
   );
 }
 
@@ -135,8 +141,10 @@ export function tryRotate(board, pill, direction = 1) {
 
 /** Stamps the pill into the board. */
 export function lockPill(board, pill) {
-  for (const { x, y, color, link } of pillCells(pill)) {
-    board.set(x, y, cell(color, PILL, link));
+  for (const { x, y, color, link, inert } of pillCells(pill)) {
+    const c = cell(color, PILL, link);
+    if (inert) c.inert = true;
+    board.set(x, y, c);
   }
 }
 

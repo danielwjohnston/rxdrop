@@ -113,6 +113,12 @@
                     <small>Viruses you leave alive mutate colour</small>
                   </span>
                 </label>
+
+                <div class="chooser chooser--stack">
+                  <span class="chooser__label">Modifiers</span>
+                  <div class="mods" id="modifiers" role="group" aria-label="Run modifiers"></div>
+                  <small class="mods__note" id="modifiers-note">None. One bottle, the plain rules.</small>
+                </div>
               </div>
 
               <label class="switch" for="instant-drop">
@@ -213,6 +219,12 @@
             <span class="readout__label">Resistance</span>
             <div class="meter__track"><div class="meter__fill" id="resistance-fill"></div></div>
           </div>
+          <div class="meter" id="light-meter" hidden>
+            <span class="readout__label">Light therapy</span>
+            <div class="meter__track"><div class="meter__fill meter__fill--light" id="light-fill"></div></div>
+            <small class="meter__hint">Hold Shift or L</small>
+          </div>
+          <div class="mods mods--hud" id="hud-mods" hidden aria-label="Run modifiers"></div>
           <canvas id="virus-tally" class="tally" height="70" aria-hidden="true"></canvas>
           <button class="button button--ghost" id="mute" type="button" aria-pressed="false">
             Sound: on

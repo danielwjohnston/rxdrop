@@ -41,9 +41,19 @@ import {
   SPEEDS,
   TOLERANCE_AT,
   VIRUS,
+  BLACKOUT_EVERY,
+  BLACKOUT_FLOOR,
+  BLACKOUT_LASTS,
+  DARK_AT,
+  QUARANTINE_MAX,
+  RATION_SPELL,
+  SPAWN_X,
+  SOFT_DROP_MIN,
 } from '../src/constants.js';
 import { Game, PHASE } from '../src/game.js';
-import { tryMove } from '../src/pill.js';
+import { MODIFIERS, MODIFIER_IDS, normaliseModifiers } from '../src/modifiers.js';
+import { createPill, fits, tryMove } from '../src/pill.js';
+import { FRAME, plan, steer } from './bot.mjs';
 import { VersusMatch } from '../src/versus.js';
 import { dailySetup } from '../src/daily.js';
 import { createRng } from '../src/rng.js';
@@ -602,6 +612,262 @@ stage('hybrid', 'A combined strain must still come apart', (check) => {
   });
 
   return 'both parents cure it, and one alone still wins in the end';
+});
+
+stage('modifiers', 'A modifier may change a run, never end it', (check) => {
+  // Every modifier in src/modifiers.js writes down the bound that keeps it from
+  // making a virus unanswerable. This stage is those sentences, executed.
+
+  check('every modifier states a bound, and the set is well formed', () => {
+    for (const mod of MODIFIERS) {
+      assert.ok(mod.bound.length > 40, `${mod.id} does not state its bound`);
+      assert.ok(mod.blurb.length > 20, `${mod.id} has no blurb`);
+    }
+    assert.equal(new Set(MODIFIER_IDS).size, MODIFIERS.length);
+  });
+
+  check('an unmodified run is untouched by any of it', () => {
+    // The most important check here. Every modifier is opt-in, so a plain game
+    // has to be bit-for-bit what it was before any of this existed.
+    const play = (modifiers) => {
+      const game = new Game({ level: 5, speed: 'LOW', seed: 909, resistance: true, modifiers });
+      playSpread(game, { pills: 40, rng: createRng(4) });
+      return { score: game.score, grid: JSON.stringify(game.board.grid) };
+    };
+    assert.deepEqual(play([]), play(['nonsense']), 'an unknown modifier must be ignored');
+    assert.deepEqual(play([]), play(undefined));
+  });
+
+  check('a seed reproduces a modified game exactly', () => {
+    for (const id of MODIFIER_IDS) {
+      const play = () => {
+        const game = new Game({
+          level: 6, speed: 'MEDIUM', seed: 515, resistance: true, modifiers: [id],
+        });
+        for (let f = 0; f < 4000; f += 1) {
+          game.setLight(f % 60 < 20);
+          game.update(16);
+          game.drainEvents();
+        }
+        return JSON.stringify({
+          score: game.score, sealed: game.board.sealed, grid: game.board.grid,
+        });
+      };
+      assert.equal(play(), play(), `${id} is not deterministic`);
+    }
+  });
+
+  check('outbreak never grows a level past its ceiling', () => {
+    for (let seed = 0; seed < 40; seed += 1) {
+      const game = new Game({ level: 8, speed: 'LOW', seed, modifiers: ['outbreak'] });
+      const cap = game.outbreakCap;
+      const ceiling = virusTopRow(game.board, game.level);
+      for (let i = 0; i < 300; i += 1) {
+        game.pillsPlaced += 1;
+        game.tickOutbreak();
+        for (const { y } of game.spreading) {
+          assert.ok(y >= ceiling, `seed ${seed} spread to row ${y}, above the ceiling`);
+        }
+        game.spreading = [];
+        assert.ok(game.virusesLeft <= cap, `seed ${seed} grew to ${game.virusesLeft} past ${cap}`);
+      }
+    }
+  });
+
+  check('outbreak never deals faster than a hand can steer', () => {
+    // The other half of the trade has to stay inside the same floor a held
+    // hurry is held to, or "twice as fast" becomes "unplaceable".
+    for (const speed of Object.keys(SPEEDS)) {
+      for (let level = 0; level <= MAX_LEVEL; level += 1) {
+        const game = new Game({ level, speed, seed: 3, modifiers: ['outbreak'] });
+        game.pillsPlaced = 400;
+        assert.ok(
+          game.dropInterval >= SOFT_DROP_MIN,
+          `${speed} level ${level} falls at ${game.dropInterval}ms a row`,
+        );
+      }
+    }
+  });
+
+  check('a blackout always ends on its own, whatever the light is doing', () => {
+    // The bound that makes blackout a mechanic rather than a lost run. Spend
+    // the reservoir to nothing, never touch the light again, and the bottle
+    // still has to come back.
+    const game = new Game({ level: 3, speed: 'LOW', seed: 6, modifiers: ['blackout'] });
+    for (let round = 0; round < 6; round += 1) {
+      game.updateLight(BLACKOUT_EVERY);
+      game.lightCharge = 0;
+      game.lightSpent = true;
+      game.setLight(false);
+      let dark = 0;
+      for (let t = 0; t < BLACKOUT_LASTS * 3; t += 16) {
+        game.updateLight(16);
+        if (game.isDark) dark += 16;
+      }
+      assert.equal(game.blackoutFor, 0, `round ${round} never ended`);
+      assert.ok(game.light > DARK_AT, `round ${round} left the bottle dark`);
+      assert.ok(dark <= BLACKOUT_LASTS + 2000, `round ${round} was dark for ${dark}ms`);
+    }
+  });
+
+  check('the bottle never fades to fully black', () => {
+    const game = new Game({ level: 3, speed: 'LOW', seed: 7, modifiers: ['blackout'] });
+    for (let t = 0; t < 120000; t += 16) {
+      game.updateLight(16);
+      assert.ok(game.light >= BLACKOUT_FLOOR, `light fell to ${game.light}`);
+    }
+  });
+
+  check('the light is never free, and never spent into a corner', () => {
+    // Holding it for every millisecond of every blackout is the most anyone
+    // can have. That has to still leave some dark - otherwise the reservoir
+    // is not a constraint and the modifier is a nuisance rather than a
+    // decision, which is exactly how the first tuning behaved.
+    const game = new Game({ level: 3, speed: 'LOW', seed: 8, modifiers: ['blackout'] });
+    let dark = 0;
+    const span = 120000;
+    for (let t = 0; t < span; t += 16) {
+      game.setLight(true);
+      game.updateLight(16);
+      if (game.isDark) dark += 16;
+    }
+    assert.ok(dark > span * 0.02, 'holding the light always never goes dark: the light is free');
+    assert.ok(dark < span * 0.5, `holding the light always is still dark ${dark}ms of ${span}ms`);
+  });
+
+  check('rationing brings every colour back inside one spell', () => {
+    const game = new Game({ level: 2, speed: 'LOW', seed: 9, modifiers: ['rationing'] });
+    for (let pills = 0; pills < RATION_SPELL * COLOR_COUNT * 3; pills += 1) {
+      game.pillsPlaced = pills;
+      const dealt = new Set();
+      for (let ahead = 0; ahead <= RATION_SPELL; ahead += 1) {
+        game.pillsPlaced = pills + ahead;
+        for (let draw = 0; draw < 9; draw += 1) for (const c of game.drawColors()) dealt.add(c);
+      }
+      assert.equal(dealt.size, COLOR_COUNT, `a colour was missing across a whole spell at ${pills}`);
+    }
+  });
+
+  check('a contaminated batch never becomes permanent weight', () => {
+    // Inert halves belong to no run, so if they could not be washed out they
+    // would fill the bottle on their own however well it was played.
+    for (let seed = 0; seed < 30; seed += 1) {
+      const board = new Board();
+      const rng = createRng(seed);
+      const floor = board.height - 1;
+      const color = rng.int(COLOR_COUNT);
+      for (const x of [0, 1, 2, 3]) board.set(x, floor, cell(color, PILL, null));
+      const bad = cell(rng.int(COLOR_COUNT), PILL, null);
+      bad.inert = true;
+      // Somewhere touching the run.
+      board.set(4, floor, bad);
+      const outcome = board.matchOutcome(board.findMatches(), true);
+      board.applyMatch(outcome);
+      assert.equal(board.get(4, floor), null, `seed ${seed} left an inert half behind`);
+    }
+  });
+
+  check('an inert half is never part of a run', () => {
+    for (let seed = 0; seed < 120; seed += 1) {
+      const rng = createRng(seed + 700);
+      const board = new Board();
+      generateLevel(board, 10, createRng(seed));
+      board.forEachCell((c, x, y) => {
+        if (c.type === VIRUS || rng.int(4) !== 0) return;
+        const half = cell(rng.int(COLOR_COUNT), PILL, null);
+        half.inert = true;
+        board.set(x, y, half);
+      });
+      // Fill the bottle with medicine so runs form everywhere.
+      for (let y = 0; y < board.height; y += 1) {
+        for (let x = 0; x < board.width; x += 1) {
+          if (board.isEmpty(x, y)) board.set(x, y, cell(rng.int(COLOR_COUNT), PILL, null));
+        }
+      }
+      for (const key of board.findMatches()) {
+        const [x, y] = key.split(',').map(Number);
+        assert.ok(!board.get(x, y)?.inert, `seed ${seed} matched an inert half at ${key}`);
+      }
+    }
+  });
+
+  check('a quarantine seal can never be permanent, and never blocks the deal', () => {
+    for (let seed = 0; seed < 40; seed += 1) {
+      const game = new Game({ level: 5, speed: 'LOW', seed, modifiers: ['quarantine'] });
+      let sealedFor = 0;
+      let worst = 0;
+      for (let pills = 1; pills < 400; pills += 1) {
+        game.pillsPlaced = pills;
+        game.tickQuarantine();
+        if (game.board.sealed === undefined) {
+          sealedFor = 0;
+          continue;
+        }
+        assert.notEqual(game.board.sealed, SPAWN_X, `seed ${seed} sealed a spawn column`);
+        assert.notEqual(game.board.sealed, SPAWN_X + 1, `seed ${seed} sealed a spawn column`);
+        sealedFor += 1;
+        worst = Math.max(worst, sealedFor);
+      }
+      assert.ok(worst <= QUARANTINE_MAX + 1, `seed ${seed} held a seal for ${worst} capsules`);
+    }
+  });
+
+  check('a sealed column blocks placement and nothing else', () => {
+    const board = new Board();
+    const floor = board.height - 1;
+    board.set(1, floor, cell(0, PILL, null));
+    board.sealed = 1;
+    assert.equal(board.isEmpty(1, 4), true, 'gravity must still see the column');
+    assert.equal(board.open(1, 4), false, 'but no capsule may rest in it');
+    assert.equal(fits(board, createPill([0, 1], 1, 4, 1)), false);
+    assert.equal(fits(board, createPill([0, 1], 0, 4, 0)), false, 'nor span it');
+    assert.equal(fits(board, createPill([0, 1], 5, 4, 0)), true);
+    // Matching is untouched: a run through the sealed column still clears.
+    for (const x of [0, 1, 2, 3]) board.set(x, floor - 1, cell(0, PILL, null));
+    const matched = board.findMatches();
+    assert.ok(matched.has(`1,${floor - 1}`), 'a run through a sealed column must still match');
+  });
+
+  check('every modifier, alone and all at once, keeps the bottle playable', () => {
+    // The whole point, measured rather than asserted: a modified bottle still
+    // deals capsules, still clears, and still ends by the ordinary rules.
+    const sets = [[], ...MODIFIER_IDS.map((id) => [id]), MODIFIER_IDS];
+    for (const modifiers of sets) {
+      const name = normaliseModifiers(modifiers).join('+') || 'none';
+      for (let seed = 0; seed < 4; seed += 1) {
+        const game = new Game({ level: 4, speed: 'LOW', seed, resistance: true, modifiers });
+        // The same bot the playtest report uses, so the gate and the
+        // measurement are asking about the same player. A random-column
+        // hard-dropper loses a level-4 bottle in ten capsules without clearing
+        // anything, which would say nothing about the modifier under test.
+        let target = plan(game);
+        let cleared = 0;
+        let capsules = 0;
+        for (let f = 0; f < 90000 && !game.isOver; f += 1) {
+          if (game.has('blackout')) game.setLight(game.light < 0.5);
+          if (game.phase === PHASE.FALLING) game.setSoftDrop(!steer(game, target));
+          game.update(FRAME);
+          for (const e of game.drainEvents()) {
+            if (e.type === 'clear') cleared += e.cells;
+            if (e.type === 'spawn') {
+              capsules += 1;
+              target = plan(game);
+              game.setSoftDrop(false);
+            }
+            if (e.type === 'levelComplete') {
+              game.advanceLevel();
+              target = plan(game);
+            }
+          }
+        }
+        assert.ok(capsules > 30, `${name} seed ${seed} only dealt ${capsules} capsules`);
+        assert.ok(cleared > 20, `${name} seed ${seed} only cleared ${cleared} cells`);
+        assert.ok(game.isOver || game.phase === PHASE.FALLING, `${name} seed ${seed} wedged`);
+      }
+    }
+  });
+
+  return 'every modifier bends a rule and none of them breaks one';
 });
 
 stage('versus', 'Two bottles, one exchange of garbage', (check) => {

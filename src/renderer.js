@@ -126,6 +126,11 @@ export class Renderer {
     this.drawResisted(game, layout);
     this.drawAntibodies(game, layout);
     this.drawMutations(game, layout, now);
+    this.drawSpread(game, layout);
+    this.drawSeal(game, layout);
+    // Last, so it dims everything: the veil is the light, and anything drawn
+    // after it would be visible in the dark and would be a lie.
+    this.drawDark(game, layout);
     ctx.restore();
   }
 
@@ -331,7 +336,7 @@ export class Renderer {
         const tolerant = tolerance && isTolerant(c);
         this.drawVirus(px, py, layout.cell, c.color, now, x, y, resistance, tolerant, isHybrid(c));
       }
-      else this.drawHalf(px, py, layout.cell, c.color, c.link);
+      else this.drawHalf(px, py, layout.cell, c.color, c.link, { inert: Boolean(c.inert) });
     });
   }
 
@@ -350,15 +355,73 @@ export class Renderer {
         { ghost: true },
       );
     }
-    for (const { x, y, color, link } of pillCells(game.pill)) {
+    for (const { x, y, color, link, inert } of pillCells(game.pill)) {
       this.drawHalf(
         layout.originX + x * layout.cell,
         layout.originY + y * layout.cell + offset,
         layout.cell,
         color,
         link,
+        { inert },
       );
     }
+  }
+
+  /**
+   * The quarantine seal: hatched bars over a column no capsule may enter.
+   *
+   * Drawn over the stack rather than under it, because the seal is the thing
+   * the player has to plan around and whatever is already in the column is just
+   * history.
+   */
+  drawSeal(game, layout) {
+    const column = game.board?.sealed;
+    if (column === undefined) return;
+    const { ctx } = this;
+    const x = layout.originX + column * layout.cell;
+    const w = layout.cell;
+    const h = layout.fieldH;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, layout.originY, w, h);
+    ctx.clip();
+    ctx.fillStyle = 'rgba(10, 12, 20, 0.55)';
+    ctx.fillRect(x, layout.originY, w, h);
+    ctx.strokeStyle = 'rgba(255, 214, 102, 0.65)';
+    ctx.lineWidth = Math.max(1, layout.cell * 0.09);
+    const step = layout.cell * 0.55;
+    for (let d = -h; d < w + h; d += step) {
+      ctx.beginPath();
+      ctx.moveTo(x + d, layout.originY);
+      ctx.lineTo(x + d + h, layout.originY + h);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Blackout: everything drawn so far, dimmed. Painting one veil over the
+   * finished bottle rather than dimming each piece keeps the light a single
+   * number and means nothing can forget to honour it.
+   */
+  drawDark(game, layout) {
+    if (!game.has?.('blackout')) return;
+    const light = game.light ?? 1;
+    if (light >= 1) return;
+    const { ctx } = this;
+    // Clipped to the vessel, not laid over it as a rectangle. A black box with
+    // visible corners reads as a bug; the bottle itself going dark reads as the
+    // lights going out, which is what happened.
+    const shape = bottleShape(layout, this.era.vessel);
+    ctx.save();
+    tracePath(ctx, shape);
+    ctx.clip();
+    ctx.globalAlpha = 1 - light;
+    ctx.fillStyle = '#05070d';
+    // From the spout down, so the neck goes dark with the rest of the vessel.
+    const top = Math.min(shape.neckTop, shape.top) - 8;
+    ctx.fillRect(shape.left - 8, top, shape.right - shape.left + 16, shape.bottom - top + 16);
+    ctx.restore();
   }
 
   /**
@@ -476,6 +539,34 @@ export class Renderer {
     }
   }
 
+  /**
+   * An outbreak spreading: a tendril from the parent virus to the newborn one,
+   * so a virus appearing out of nowhere reads as replication rather than as the
+   * board cheating.
+   */
+  drawSpread(game, layout) {
+    if (!game.spreading || game.spreading.length === 0) return;
+    const t = Math.min(1, (game.phaseTimer ?? 0) / MUTATION_ANIMATION);
+    const { ctx } = this;
+    for (const { from, x, y, color } of game.spreading) {
+      const tone = this.palette[color] ?? this.palette[0];
+      const ax = layout.originX + (from.x + 0.5) * layout.cell;
+      const ay = layout.originY + (from.y + 0.5) * layout.cell;
+      const bx = layout.originX + (x + 0.5) * layout.cell;
+      const by = layout.originY + (y + 0.5) * layout.cell;
+      ctx.save();
+      ctx.globalAlpha = 1 - t;
+      ctx.strokeStyle = tone.glow;
+      ctx.lineWidth = Math.max(2, layout.cell * 0.22 * (1 - t));
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(ax + (bx - ax) * Math.min(1, t * 1.6), ay + (by - ay) * Math.min(1, t * 1.6));
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
   /** A white flash over each virus that just changed colour. */
   drawMutations(game, layout, now) {
     if (!game.mutations || game.mutations.length === 0) return;
@@ -504,7 +595,7 @@ export class Renderer {
    * One half of a capsule. `link` decides which end stays square so a joined
    * pill reads as a single lozenge; a null link draws a lone round pip.
    */
-  drawHalf(px, py, cell, color, link, { ghost = false } = {}) {
+  drawHalf(px, py, cell, color, link, { ghost = false, inert = false } = {}) {
     const { ctx } = this;
     const inset = cell * 0.07;
     const size = cell - inset * 2;
@@ -537,6 +628,11 @@ export class Renderer {
 
     const tone = this.palette[color];
     const fill = ctx.createLinearGradient(x, y, x + size, y + size);
+    if (inert) {
+      // A bad batch keeps its colour so you can still see what you were dealt,
+      // but goes chalky and flat: no gloss, no depth, visibly not medicine.
+      ctx.globalAlpha = 0.5;
+    }
     fill.addColorStop(0, tone.light);
     fill.addColorStop(0.45, tone.base);
     fill.addColorStop(1, tone.dark);
@@ -548,6 +644,22 @@ export class Renderer {
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)';
     ctx.lineWidth = Math.max(1, cell * 0.05);
     ctx.stroke();
+
+    if (inert) {
+      ctx.globalAlpha = 0.85;
+      ctx.strokeStyle = 'rgba(12, 14, 20, 0.85)';
+      ctx.lineWidth = Math.max(1.5, cell * 0.09);
+      ctx.lineCap = 'round';
+      const pad = size * 0.3;
+      ctx.beginPath();
+      ctx.moveTo(x + pad, y + pad);
+      ctx.lineTo(x + size - pad, y + size - pad);
+      ctx.moveTo(x + size - pad, y + pad);
+      ctx.lineTo(x + pad, y + size - pad);
+      ctx.stroke();
+      ctx.restore();
+      return;
+    }
 
     // Gloss.
     ctx.globalAlpha = 0.5;

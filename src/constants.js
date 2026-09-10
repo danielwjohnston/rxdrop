@@ -70,6 +70,14 @@ export const LOCK_RESETS = 8;
  */
 export const SPAWN_GRACE = 1200;
 
+/**
+ * A beat between one capsule locking and the next taking gravity. Every action
+ * wants a moment to read before the next one starts - without it a capsule is
+ * already falling before the player has registered what they were dealt.
+ * Input is live during it; only gravity and the lock clock wait.
+ */
+export const DEAL_DELAY = 110;
+
 /** Milliseconds cleared cells stay on screen popping before they vanish. */
 export const CLEAR_ANIMATION = 320;
 
@@ -83,6 +91,25 @@ export const SETTLE_INTERVAL = 70;
  */
 export const RESISTANCE_INTERVAL = 8;
 export const RESISTANCE_MAX = 3;
+
+/**
+ * Collateral sensitivity. Resistance to one drug can create vulnerability to
+ * another - it is why antibiotic cycling works, and it is the reason a virus
+ * you have been hammering with the same medicine is best answered by an older
+ * one instead of more of the same.
+ *
+ * A virus at TOLERANCE_AT or above stops answering to its own colour: a run of
+ * four still clears the medicine, but the virus shrugs it off and sheds a
+ * stack. What kills it is its COLLATERAL colour, cleared in a line beside it.
+ *
+ * The mapping is one fixed cycle - red answers to blue, yellow to red, blue to
+ * yellow - so it can be learned once. The aura shows it anyway.
+ */
+export const TOLERANCE_AT = 2;
+export const COLLATERAL = Object.freeze([COLORS.BLUE, COLORS.RED, COLORS.YELLOW]);
+
+/** A collateral kill pays its virus payout twice. */
+export const COLLATERAL_BONUS = 2;
 
 /** Milliseconds a mutation flashes before the new colour takes over. */
 export const MUTATION_ANIMATION = 420;

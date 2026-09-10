@@ -176,6 +176,12 @@ it?".
 - Each virus in a single clear is worth double the last: at LOW speed one virus
   scores 100, two score 300, three score 700, and so on. MED and HI pay more.
 - Gravity gets faster every ten capsules.
+- With **resistance** on, a virus that survives long enough turns tolerant: four
+  of its own colour clears the medicine but the virus shrugs it off, shedding a
+  stack. What kills it is its **collateral colour** - red answers to blue,
+  yellow to red, blue to yellow - cleared in a line *beside* it, for double
+  score. A tolerant virus draws its aura in the colour that kills it, so the
+  rule never has to be memorised.
 - Clear every virus to finish the level. Filling the bottle to the brim is not
   a loss on its own: capsules are dealt into the neck above it, and you get a
   long fuse to steer one clear. The run ends only once the neck is blocked too,
@@ -184,12 +190,12 @@ it?".
 ## Development
 
 ```sh
-npm test           # 159 unit tests, no dependencies, well under a second
+npm test           # 184 unit tests, no dependencies, well under a second
 npm run test:watch # re-run on change
 
 # End-to-end checks in a real browser (Playwright is not a dependency):
 npm i --no-save playwright && npx playwright install chromium
-npm run test:browser  # 29 checks: menus, controls, versus, daily, offline, mobile
+npm run test:browser  # 31 checks: menus, controls, versus, daily, offline, mobile
 
 npm run gauntlet   # the full protocol below: every stage, one gate
 ```

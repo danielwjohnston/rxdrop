@@ -34,28 +34,38 @@ The game already has resistance: viruses that survive long enough build it and
 mutate to a colour you were not planning for. These extend that same idea rather
 than sitting next to it.
 
-### Tolerance, and collateral sensitivity - `proposed`
+### Tolerance, and collateral sensitivity - `shipped`
 
-A virus that has been sat under the *wrong* medicine builds tolerance to it.
-Today that ends in a mutation. Instead, let tolerance cut both ways:
+A virus that survives long enough builds tolerance, and tolerance cuts both
+ways:
 
 | Virus state | Its own colour | Its collateral colour |
 | --- | --- | --- |
-| Susceptible | 4 clears it | 4 clears it |
-| Tolerant | 4 no longer clears it - it survives and sheds a stack | 4 clears it, and pays double |
+| Susceptible | 4 clears it | nothing - an ordinary clear beside it does nothing |
+| Tolerant | 4 clears the medicine, the virus shrugs it off and sheds a stack | 4 cleared **beside** it kills it, and pays double |
 
 This is real: it is called **collateral sensitivity**, and it is why antibiotic
 cycling works. Resistance to one drug can *create* vulnerability to another.
-The game teaches it by making the answer to a tolerant virus "go back to the
-old medicine" rather than "bring more of the same".
 
-It reads on the board because the resistance aura already exists - tint it
-toward the colour that now kills it easily and the player learns the rule from
-one look, without a tutorial.
+The cycle is fixed and learnable - red answers to blue, yellow to red, blue to
+yellow - and you never have to memorise it, because a tolerant virus draws its
+aura in the colour that now kills it. Because a virus can only ever be part of a
+run of its own colour, the collateral clear works by **adjacency**: you build
+the older medicine in a line touching the virus rather than through it, which is
+a genuinely different play pattern from anything else in the game.
 
-*Why it might not work:* it makes a clear fail, and a clear that does not clear
-is the most frustrating thing a puzzle game can do. It has to be signposted so
-hard that it never feels like a bug.
+Two answers, so a tolerant virus is never a dead end:
+
+- The collateral colour beside it kills it outright, and pays double.
+- Its own colour still wears the tolerance down one stack at a time. Slow, but
+  it always works, which is what keeps the contraindication satisfied even on a
+  board with no room for a collateral run.
+
+*What it cost:* a clear that does not clear is the most frustrating thing a
+puzzle game can do, so the shrug is signposted hard - the medicine visibly
+bounces off, a dull thud replaces the clear chime, the physician winces, and the
+ring flashes the colour that would have worked. The failure teaches the answer
+instead of just denying you.
 
 ### Hybrid viruses - `proposed`
 
@@ -151,6 +161,7 @@ interactions", and it costs almost nothing: a set of flags, a line of copy each.
 | Shipped | What it does |
 | --- | --- |
 | Antibiotic resistance | Viruses that survive build resistance and mutate to another colour. The arms race the whole theme rests on. |
+| Collateral sensitivity | A tolerant virus stops answering to its own colour and starts answering to an older one, cleared beside it. |
 | The neck row | A row above the bottle. Filling the bottle is not a loss until capsules back up into the neck. |
 | Apothecary Through Time | Five eras, five vessels, five physicians, five notes. |
 | Daily challenge | One seeded bottle a day, the same for everyone. |

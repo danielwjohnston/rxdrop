@@ -197,6 +197,19 @@ export class AudioEngine {
         }
         break;
       }
+      case 'resist': {
+        // A dull thud that goes nowhere: the medicine landing and doing
+        // nothing. Deliberately unsatisfying next to the clear chime, so the
+        // ear learns the difference before the eye has to.
+        this.noise({ duration: 0.09, gain: 0.16, frequency: 900 });
+        this.tone(noteToFreq('D3'), {
+          duration: 0.16,
+          gain: 0.2,
+          type: 'triangle',
+          slide: noteToFreq('A2'),
+        });
+        break;
+      }
       case 'mutate': {
         // A sour, bending two-note figure: something on the board just changed
         // under you.

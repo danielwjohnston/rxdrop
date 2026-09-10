@@ -122,6 +122,40 @@ try {
     assert.ok(after.x > before.x + 1, `expected auto-shift, moved ${before.x} -> ${after.x}`);
   });
 
+  await check('a held direction does not slam the next capsule into the wall', async () => {
+    // Reported from play: holding left to wedge one capsule into a slot handed
+    // the next one an auto-shift already at full speed, and it hit the wall
+    // before the player could react.
+    try {
+      const before = await snapshot(page);
+      await page.keyboard.down('ArrowLeft');
+      await page.waitForTimeout(500);
+      const wedged = await snapshot(page);
+      assert.ok(
+        wedged.x < before.x - 1,
+        `auto-shift should be repeating by now (${before.x} -> ${wedged.x})`,
+      );
+
+      // Deal a fresh capsule with the key still down.
+      const dealt = await page.evaluate(() => {
+        const g = window.rxdrop.game;
+        g.spawnPill();
+        return g.pill.x;
+      });
+      await page.waitForTimeout(130);
+      const soon = await page.evaluate(() => window.rxdrop.game.pill.x);
+      assert.equal(soon, dealt, 'a fresh capsule must not move while the key is still down');
+
+      // And the delay is a beat, not a lockout: keep holding and it moves.
+      await page.waitForTimeout(400);
+      const later = await page.evaluate(() => window.rxdrop.game.pill.x);
+      assert.ok(later < dealt, 'after the beat the held key takes over again');
+    } finally {
+      // Always let go: a key left down poisons every check after this one.
+      await page.keyboard.up('ArrowLeft');
+    }
+  });
+
   await check('pause stops the game and Enter resumes it', async () => {
     await page.keyboard.press('KeyP');
     await page.waitForTimeout(150);
@@ -239,7 +273,8 @@ try {
   const eraPage = await browser.newPage({ viewport: { width: 1024, height: 820 } });
   eraPage.on('pageerror', (error) => errors.push(`era pageerror: ${error.message}`));
   await eraPage.bringToFront();
-  await eraPage.goto(`${BASE}/?level=16&speed=LOW&seed=7`, { waitUntil: 'networkidle' });
+  // resistance=1 so the tolerance rule, which rides on it, is live here.
+  await eraPage.goto(`${BASE}/?level=16&speed=LOW&seed=7&resistance=1`, { waitUntil: 'networkidle' });
   await eraPage.click('[data-start]');
   await eraPage.waitForTimeout(400);
 
@@ -267,6 +302,68 @@ try {
       state.painted > state.pixels * 0.05,
       `the physician barely painted: ${state.painted} of ${state.pixels} pixels`,
     );
+  });
+
+  await check('a tolerant virus shrugs off its own colour and dies to the older one', async () => {
+    const shrug = await eraPage.evaluate(() => {
+      const g = window.rxdrop.game;
+      const { TOLERANCE_AT } = window.rxdrop.constants;
+      g.board.forEachCell((c, x, y) => g.board.set(x, y, null));
+      const floor = g.board.height - 1;
+      g.board.set(3, floor, { color: 0, type: 'virus', link: null, resistance: TOLERANCE_AT });
+      for (const x of [0, 1, 2]) g.board.set(x, floor, { color: 0, type: 'pill', link: null });
+      g.startingViruses = 1;
+      g.score = 0;
+      g.beginResolution();
+      return { resisted: g.resistedCells.length, clearing: g.clearingCells.length };
+    });
+    assert.equal(shrug.resisted, 1, 'the virus should shrug its own colour off');
+    assert.equal(shrug.clearing, 3, 'the medicine around it still clears');
+    await settled(eraPage);
+    const after = await eraPage.evaluate(() => {
+      const g = window.rxdrop.game;
+      const floor = g.board.height - 1;
+      const c = g.board.get(3, floor);
+      return { alive: Boolean(c), resistance: c?.resistance ?? null, score: g.score };
+    });
+    assert.equal(after.alive, true, 'it survives the wrong medicine');
+    assert.equal(after.score, 0, 'and a clear that kills nothing scores nothing');
+
+    // Now the older medicine, cleared beside it.
+    const killed = await eraPage.evaluate(() => {
+      const g = window.rxdrop.game;
+      const { collateralOf, constants } = window.rxdrop;
+      // Wipe the bottle so nothing left falling from the previous case settles
+      // into the cell being asserted on.
+      g.board.forEachCell((c, x, y) => g.board.set(x, y, null));
+      const floor = g.board.height - 1;
+      g.board.set(3, floor, {
+        color: 0, type: 'virus', link: null, resistance: constants.TOLERANCE_AT,
+      });
+      const cure = collateralOf(0);
+      for (const x of [4, 5, 6, 7]) g.board.set(x, floor, { color: cure, type: 'pill', link: null });
+      // A bystander virus well away from the clear, so the level does not
+      // complete and park the page - later checks still need a live game.
+      g.board.set(0, floor - 6, { color: 1, type: 'virus', link: null });
+      g.startingViruses = 2;
+      g.virusesClearedThisLevel = 0;
+      g.score = 0;
+      g.beginResolution();
+      return g.outcome.collateral.length;
+    });
+    assert.equal(killed, 1, 'the collateral colour should kill it');
+    await settled(eraPage);
+    const gone = await eraPage.evaluate(() => {
+      const g = window.rxdrop.game;
+      return {
+        tolerant: g.board.get(3, g.board.height - 1),
+        cured: g.virusesClearedThisLevel,
+        score: g.score,
+      };
+    });
+    assert.equal(gone.tolerant, null, 'the virus is cured');
+    assert.equal(gone.cured, 1, 'and counted');
+    assert.ok(gone.score > 0, 'and a collateral kill pays');
   });
 
   await check('a new era announces itself with a physician\'s note', async () => {
@@ -900,6 +997,18 @@ async function rotateByTap(page, x, y) {
   await page.waitForTimeout(120);
   const after = await page.evaluate(() => window.rxdrop.game.pill.orientation);
   return { before, after };
+}
+
+/** Waits until the board has finished clearing and settling, however long it takes. */
+function settled(page) {
+  // Interval polling, not the default requestAnimationFrame: rAF can be
+  // throttled in a page the harness is not actively driving, and the wait then
+  // times out on a board that settled long ago.
+  return page.waitForFunction(
+    () => !['clearing', 'settling'].includes(window.rxdrop.game?.phase),
+    null,
+    { timeout: 5000, polling: 100 },
+  );
 }
 
 function snapshot(page) {

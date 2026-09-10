@@ -57,7 +57,8 @@ Run them all with `node tools/gauntlet.mjs`, or a few with
 | 6 | `resistance` | The new mechanic obeys the old rules. 200 seeded boards mutated repeatedly, checking a mutation never creates a free clear, never changes the virus count, and always hands play back. |
 | 7 | `versus` | Two games in one page stay separate. Asserts every attack sent is an attack received, that a match always resolves to exactly one winner, and that one player's input cannot touch the other's board. |
 | 8 | `performance` | The rules are cheap. Measures worst-case and average `update()` cost at level 20 with resistance on against the 16.7 ms frame budget. |
-| 9 | `browser` | It works in a browser, not just in Node. Runs the Playwright checks: menus, gamepad, touch gestures, versus, the daily, offline play, and a page with neither Web Audio nor localStorage. Skips cleanly if Playwright is not installed. |
+| 9 | `collateral` | No virus may become unanswerable. Sweeps every colour at every resistance level to prove something still kills it, checks that a collateral kill only ever takes tolerant viruses, and that resolution terminates on a board where everything shrugs. |
+| 10 | `browser` | It works in a browser, not just in Node. Runs the Playwright checks: menus, gamepad, touch gestures, versus, the daily, offline play, and a page with neither Web Audio nor localStorage. Skips cleanly if Playwright is not installed. |
 
 ## What it has caught
 
@@ -71,6 +72,10 @@ The stages are not ceremony. Building this set surfaced real defects:
   hidden behind a blank overlay with no way to resume.
 - **`browser`** caught that both versus canvases sized themselves independently,
   giving player one a bottle three times the size of player two's.
+- **`collateral`** was written before the mechanic and caught the thing that
+  mattered: removing the stack a shrugged clear sheds makes a tolerant virus
+  unkillable on a board with no room for a collateral run. The stage goes red on
+  exactly that.
 - **`boundaries`** codifies the virus-ceiling rule after viruses were found
   spawning two rows below the neck by level 6.
 - **`browser`** caught three checks that had hard-coded row 15 as the floor of

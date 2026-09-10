@@ -15,13 +15,24 @@ import { performance } from 'node:perf_hooks';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { Board, generateLevel, virus, virusTopRow } from '../src/board.js';
 import {
+  Board,
+  cell,
+  collateralOf,
+  generateLevel,
+  isTolerant,
+  virus,
+  virusTopRow,
+} from '../src/board.js';
+import {
+  COLOR_COUNT,
   MATCH_LENGTH,
   MAX_LEVEL,
+  PILL,
   RESISTANCE_INTERVAL,
   RESISTANCE_MAX,
   SPEEDS,
+  TOLERANCE_AT,
   VIRUS,
 } from '../src/constants.js';
 import { Game, PHASE } from '../src/game.js';
@@ -348,6 +359,103 @@ stage('resistance', 'The original mechanic must not break the rules', (check) =>
     assert.equal(game.resistanceLevel, 0);
   });
   return 'mutation is a threat, never a gift';
+});
+
+stage('collateral', 'A virus must never become unanswerable', (check) => {
+  /** A virus carrying a chosen amount of resistance. */
+  const virusAt = (color, resistance) => {
+    const c = cell(color, VIRUS, null);
+    c.resistance = resistance;
+    return c;
+  };
+
+  check('every virus, at every resistance, has an answer', () => {
+    // The contraindication the whole mechanic is built around. Sweep every
+    // colour and every resistance level, on a board with a stack under it, and
+    // prove something still kills it.
+    for (let color = 0; color < COLOR_COUNT; color += 1) {
+      for (let r = 0; r <= RESISTANCE_MAX; r += 1) {
+        const board = new Board();
+        const floor = board.height - 1;
+        board.set(3, floor, virusAt(color, r));
+        const tolerant = isTolerant(board.get(3, floor));
+        const medicine = tolerant ? collateralOf(color) : color;
+        const columns = tolerant ? [4, 5, 6, 7] : [0, 1, 2];
+        for (const x of columns) board.set(x, floor, cell(medicine, PILL, null));
+        board.resolve({ tolerance: true });
+        assert.equal(board.get(3, floor), null, `colour ${color} at r=${r} survived its answer`);
+      }
+    }
+  });
+
+  check('its own colour always wears the tolerance down', () => {
+    // The second answer, for a board with no room for a collateral run.
+    for (let color = 0; color < COLOR_COUNT; color += 1) {
+      const board = new Board();
+      const floor = board.height - 1;
+      board.set(3, floor, virusAt(color, RESISTANCE_MAX));
+      let attempts = 0;
+      while (board.get(3, floor) && attempts < RESISTANCE_MAX + 3) {
+        for (const x of [0, 1, 2]) board.set(x, floor, cell(color, PILL, null));
+        board.resolve({ tolerance: true });
+        attempts += 1;
+      }
+      assert.equal(board.get(3, floor), null, `colour ${color} never wore down`);
+      assert.ok(attempts <= RESISTANCE_MAX + 1, `colour ${color} took ${attempts} clears`);
+    }
+  });
+
+  check('a collateral kill only ever takes tolerant viruses', () => {
+    for (let seed = 0; seed < 120; seed += 1) {
+      const rng = createRng(seed);
+      const board = new Board();
+      generateLevel(board, 12, createRng(seed));
+      // Age a random scattering of viruses into tolerance.
+      board.forEachCell((c) => {
+        if (c.type === VIRUS && rng.int(3) === 0) c.resistance = TOLERANCE_AT;
+      });
+      const before = new Map();
+      board.forEachCell((c, x, y) => {
+        if (c.type === VIRUS) before.set(`${x},${y}`, isTolerant(c));
+      });
+      const matches = board.findMatches();
+      const outcome = board.matchOutcome(matches, true);
+      for (const { x, y } of outcome.collateral) {
+        assert.equal(before.get(`${x},${y}`), true, `seed ${seed} killed a susceptible virus`);
+      }
+    }
+  });
+
+  check('resolution always terminates, however many viruses shrug', () => {
+    for (let seed = 0; seed < 120; seed += 1) {
+      const board = new Board();
+      generateLevel(board, 16, createRng(seed));
+      board.forEachCell((c) => {
+        if (c.type === VIRUS) c.resistance = TOLERANCE_AT;
+      });
+      // Drop medicine across the board and make it resolve.
+      const rng = createRng(seed + 999);
+      for (let x = 0; x < board.width; x += 1) {
+        for (let y = board.height - 4; y < board.height; y += 1) {
+          if (!board.get(x, y)) board.set(x, y, cell(rng.int(COLOR_COUNT), PILL, null));
+        }
+      }
+      const stages = board.resolve({ tolerance: true });
+      assert.ok(stages.length < 200, `seed ${seed} ran ${stages.length} cascade stages`);
+      assert.equal(board.findMatches().size, 0, `seed ${seed} left a match on the board`);
+    }
+  });
+
+  check('tolerance is off when resistance is off', () => {
+    const board = new Board();
+    const floor = board.height - 1;
+    board.set(3, floor, virusAt(0, RESISTANCE_MAX));
+    for (const x of [0, 1, 2]) board.set(x, floor, cell(0, PILL, null));
+    board.resolve();
+    assert.equal(board.get(3, floor), null, 'the plain rules must be untouched');
+  });
+
+  return 'the older medicine always works, and hammering always wears it down';
 });
 
 stage('versus', 'Two bottles, one exchange of garbage', (check) => {

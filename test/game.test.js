@@ -4,6 +4,7 @@ import { Board, cell } from '../src/board.js';
 import {
   BOARD_BODY_HEIGHT,
   BOARD_HEIGHT,
+  DEAL_DELAY,
   LOCK_DELAY,
   LOCK_RESETS,
   NECK_ROWS,
@@ -467,5 +468,44 @@ describe('the neck row', () => {
     game.spawnPill();
     assert.equal(game.phase, PHASE.LOST);
     assert.ok(game.drainEvents().some((e) => e.type === 'gameOver'));
+  });
+});
+
+describe('the beat between capsules', () => {
+  it('holds gravity briefly so a new capsule can be read before it falls', () => {
+    const game = newGame({ speed: 'HIGH', level: 0 });
+    const start = game.pill.y;
+    tick(game, DEAL_DELAY - 32);
+    assert.equal(game.pill.y, start, 'the capsule should not have fallen yet');
+    tick(game, DEAL_DELAY + game.dropInterval + 32);
+    assert.ok(game.pill.y > start, 'and then it falls as normal');
+  });
+
+  it('is steerable during the beat - it is reaction time, not a freeze', () => {
+    const game = newGame();
+    const start = game.pill.x;
+    game.move(-1);
+    assert.equal(game.pill.x, start - 1, 'input is live from the first frame');
+  });
+
+  it('does not let the lock clock run during the beat', () => {
+    const game = newGame();
+    // Fill under the capsule so it spawns with nowhere to fall.
+    for (let x = 0; x < game.board.width; x += 1) {
+      for (let y = 1; y < game.board.height; y += 1) {
+        game.board.set(x, y, cell(PILL, (x + y) % 3, null));
+      }
+    }
+    game.spawnPill();
+    tick(game, DEAL_DELAY - 32);
+    assert.equal(game.lockTimer, 0, 'the fuse should not burn during the beat');
+  });
+
+  it('still resolves when a single giant frame swallows the beat', () => {
+    // The timing gauntlet feeds absurd frames; the beat must not eat one whole.
+    const game = newGame();
+    const start = game.pill.y;
+    game.update(DEAL_DELAY + game.dropInterval * 3);
+    assert.ok(game.pill.y > start, 'a long frame spends its remainder on the capsule');
   });
 });

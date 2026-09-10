@@ -19,7 +19,11 @@ export const HORIZONTAL_OFFSET = Object.freeze([1, 0]);
 export const VERTICAL_OFFSET = Object.freeze([0, -1]);
 
 export function createPill(colors, x = SPAWN_X, y = SPAWN_Y, orientation = 0) {
-  return { x, y, orientation, colors: [...colors] };
+  // `kick` remembers the nudge the last rotation needed, so the next rotation
+  // can undo it. Without that, turning a capsule in a tight spot and turning it
+  // back leaves it a column over, and repeating it walks the capsule across the
+  // bottle - which is the single worst thing rotation can do.
+  return { x, y, orientation, colors: [...colors], kick: null };
 }
 
 /** The two board cells a pill currently occupies, anchor first. */
@@ -61,7 +65,11 @@ function moved(pill, dx, dy) {
 /** Returns the moved pill, or null when the move is blocked. */
 export function tryMove(board, pill, dx, dy) {
   const next = moved(pill, dx, dy);
-  return fits(board, next) ? next : null;
+  if (!fits(board, next)) return null;
+  // Steering sideways re-homes the capsule, so any kick owed from an earlier
+  // rotation is forgotten. Falling does not: a capsule that turns, drops a row
+  // and turns back should still land where it started.
+  return dx !== 0 ? { ...next, kick: null } : next;
 }
 
 /**
@@ -107,11 +115,20 @@ const VERTICAL_KICKS = Object.freeze([
  */
 export function tryRotate(board, pill, direction = 1) {
   const orientation = (pill.orientation + (direction === 1 ? 1 : 3)) % 4;
-  const rotated = { ...pill, orientation };
-  const kicks = isHorizontal(rotated) ? HORIZONTAL_KICKS : VERTICAL_KICKS;
-  for (const [dx, dy] of kicks) {
+  const rotated = { ...pill, orientation, kick: null };
+  const table = isHorizontal(rotated) ? HORIZONTAL_KICKS : VERTICAL_KICKS;
+  // Undoing the previous kick comes first. That is what makes rotation
+  // reversible: turn a capsule in a tight spot, turn it back, and it is exactly
+  // where it started rather than a column over.
+  const owed = pill.kick ? [[-pill.kick[0], -pill.kick[1]]] : [];
+  for (const [dx, dy] of [...owed, ...table]) {
     const candidate = moved(rotated, dx, dy);
-    if (fits(board, candidate)) return candidate;
+    if (!fits(board, candidate)) continue;
+    // Only a nudge away from home is owed back; landing on the spot owes
+    // nothing, and undoing a kick settles the debt.
+    const settled = pill.kick && dx === -pill.kick[0] && dy === -pill.kick[1];
+    const kick = settled || (dx === 0 && dy === 0) ? null : [dx, dy];
+    return { ...candidate, kick };
   }
   return null;
 }

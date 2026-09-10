@@ -684,148 +684,6 @@ body.is-versus .playfield {
 
 /* ---- responsive -------------------------------------------------------- */
 
-@media (max-width: 720px) {
-  /* Fit everything on one screen: the canvas takes whatever is left over. */
-  .app {
-    height: 100dvh;
-    gap: 8px;
-    padding: calc(8px + env(safe-area-inset-top)) calc(8px + env(safe-area-inset-right))
-      calc(8px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left));
-    overflow: hidden;
-  }
-
-  .logo {
-    font-size: 1.6rem;
-  }
-
-  .stage {
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto 1fr;
-    grid-template-areas:
-      'left right'
-      'board board';
-    max-width: 460px;
-    gap: 8px;
-  }
-
-  .panel--left {
-    grid-area: left;
-  }
-
-  .panel--right {
-    grid-area: right;
-  }
-
-  .fields {
-    grid-area: board;
-    min-height: 0;
-  }
-
-  /* On a phone the app already fills the viewport, so versus should use all
-     the height it is given rather than a fixed share of it. */
-  body.is-versus .fields {
-    height: 100%;
-  }
-
-  .playfield {
-    min-height: 0;
-  }
-
-  .panel {
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px 14px;
-    padding: 8px 10px;
-  }
-
-  .readout__value {
-    font-size: 1.1rem;
-  }
-
-  .readout__value--big {
-    font-size: 1.4rem;
-  }
-
-  .next canvas {
-    height: 38px;
-  }
-
-  .tally {
-    display: none;
-  }
-
-  .touchpad button {
-    padding: 12px 0;
-  }
-
-  .card {
-    padding: 14px;
-    gap: 9px;
-  }
-
-  .next {
-    flex: 1 1 100px;
-  }
-
-  .seed {
-    margin: 0;
-  }
-
-  .tagline,
-  .colophon {
-    display: none;
-  }
-}
-
-/* Short screens: give every spare pixel to the bottle. */
-@media (max-width: 720px) and (max-height: 720px) {
-  .masthead,
-  .virus-bar,
-  .seed {
-    display: none;
-  }
-
-  .panel {
-    padding: 6px 8px;
-    gap: 4px 12px;
-  }
-
-  .next canvas {
-    height: 32px;
-  }
-
-  .readout__label {
-    font-size: 0.6rem;
-  }
-
-  .button--ghost {
-    padding: 6px 8px;
-    font-size: 0.62rem;
-  }
-
-  .touchpad button {
-    padding: 9px 0;
-    font-size: 1rem;
-  }
-}
-
-@media (pointer: coarse), (max-width: 720px) {
-  .touchpad {
-    display: grid;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .card {
-    animation: none;
-  }
-
-  .virus-bar__fill {
-    transition: none;
-  }
-}
-
 /* ---- the apothecary panel ------------------------------------------------ */
 
 .apothecary {
@@ -915,4 +773,262 @@ body.is-versus .apothecary {
 .colophon__link:hover,
 .colophon__link:focus-visible {
   color: var(--ink);
+}
+
+@media (max-width: 720px) {
+  /* One screen, no scrolling: the panels and the touchpad take what they need
+     and the bottle takes everything else. Every rule in here exists to keep
+     the bottle big - it is the thing you are actually looking at. */
+  .app {
+    height: 100dvh;
+    gap: 6px;
+    padding: calc(6px + env(safe-area-inset-top)) calc(8px + env(safe-area-inset-right))
+      calc(6px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left));
+    overflow: hidden;
+  }
+
+  .logo {
+    font-size: 1.35rem;
+    letter-spacing: 0.08em;
+  }
+
+  /* Two half-width columns made everything wrap, which is what ate the bottle.
+     Full-width strips fit four readouts on one line instead of one. */
+  .stage {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-areas:
+      'left'
+      'right'
+      'board';
+    max-width: 520px;
+    gap: 5px;
+  }
+
+  .panel--left {
+    grid-area: left;
+  }
+
+  .panel--right {
+    grid-area: right;
+  }
+
+  .fields {
+    grid-area: board;
+    /* The floor that stops a tall panel from squeezing the bottle to nothing. */
+    min-height: 50vh;
+  }
+
+  /* On a phone the app already fills the viewport, so versus should use all
+     the height it is given rather than a fixed share of it. */
+  body.is-versus .fields {
+    height: 100%;
+  }
+
+  .playfield {
+    min-height: 0;
+  }
+
+  .panel {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    align-content: flex-start;
+    gap: 4px 10px;
+    padding: 6px 8px;
+  }
+
+  .readout__label {
+    font-size: 0.56rem;
+  }
+
+  .readout__value {
+    font-size: 0.98rem;
+  }
+
+  .readout__value--big {
+    font-size: 1.25rem;
+  }
+
+  /* The physician becomes a chip beside the era name rather than a portrait. */
+  .apothecary {
+    flex: 0 0 auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 9px 2px 3px;
+    border-radius: 999px;
+  }
+
+  .apothecary canvas {
+    width: 30px;
+    max-width: 30px;
+  }
+
+  .apothecary__era {
+    font-size: 0.55rem;
+    text-align: left;
+    letter-spacing: 0.04em;
+  }
+
+  .apothecary__period {
+    display: none;
+  }
+
+  .next {
+    flex: 1 1 84px;
+  }
+
+  .next canvas {
+    height: 30px;
+    margin-top: 2px;
+  }
+
+  /* Give the bars a real basis - as bare flex items they collapse to a sliver
+     and read as a stray mark next to the count. */
+  .virus-bar {
+    flex: 1 1 60px;
+    height: 6px;
+    align-self: center;
+  }
+
+  .meter {
+    flex: 1 1 110px;
+  }
+
+  .tally {
+    display: none;
+  }
+
+  .touchpad {
+    gap: 6px;
+  }
+
+  .touchpad button {
+    padding: 10px 0;
+  }
+
+  .card {
+    padding: 14px;
+    gap: 9px;
+  }
+
+  .tagline,
+  .colophon,
+  .seed {
+    display: none;
+  }
+}
+
+/* Narrow phones: the status strip has to stay one line, so the buttons give
+   up padding before the bar gives up its row. */
+@media (max-width: 400px) {
+  .button--ghost {
+    padding: 6px 9px;
+    font-size: 0.62rem;
+  }
+
+  .panel {
+    gap: 4px 7px;
+  }
+
+  .apothecary__era {
+    font-size: 0.5rem;
+  }
+}
+
+/* A phone in landscape is WIDER than the phone breakpoint and far shorter than
+   a desktop, so it used to fall through to the desktop layout and scroll. The
+   three-column grid is right for that shape - it just has to fit one screen. */
+@media (max-height: 600px) and (pointer: coarse) {
+  .app {
+    height: 100dvh;
+    overflow: hidden;
+    gap: 5px;
+    padding: calc(4px + env(safe-area-inset-top)) calc(8px + env(safe-area-inset-right))
+      calc(4px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left));
+  }
+
+  .masthead,
+  .tagline,
+  .colophon,
+  .virus-bar,
+  .tally,
+  .seed {
+    display: none;
+  }
+
+  .stage {
+    max-width: 100%;
+    gap: 8px;
+  }
+
+  /* The desktop floor is taller than a landscape phone, so without this the
+     bottle is forced past the viewport and the app clips its bottom off. */
+  .playfield {
+    min-height: 0;
+  }
+
+  .panel {
+    padding: 4px 7px;
+    gap: 3px 10px;
+  }
+
+  .readout__label {
+    font-size: 0.55rem;
+  }
+
+  .readout__value {
+    font-size: 0.95rem;
+  }
+
+  .apothecary {
+    padding: 3px 4px 5px;
+  }
+
+  .apothecary canvas {
+    max-width: 44px;
+  }
+
+  .apothecary__era {
+    font-size: 0.55rem;
+  }
+
+  .apothecary__period {
+    display: none;
+  }
+
+  .next canvas {
+    height: 26px;
+  }
+
+  .button--ghost {
+    padding: 5px 8px;
+    font-size: 0.6rem;
+  }
+
+  .touchpad {
+    gap: 5px;
+  }
+
+  .touchpad button {
+    padding: 6px 0;
+    font-size: 0.92rem;
+  }
+}
+
+@media (pointer: coarse), (max-width: 720px) {
+  .touchpad {
+    display: grid;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    animation: none;
+  }
+
+  .virus-bar__fill {
+    transition: none;
+  }
 }

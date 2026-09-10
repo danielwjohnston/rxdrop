@@ -331,6 +331,42 @@ try {
     assert.equal(layout.scrollsY, false, 'the game should fit on one screen');
   });
 
+  await check('the bottle gets the lion\'s share of a phone screen', async () => {
+    // The regression this pins: a tall HUD panel squeezed the bottle to a third
+    // of the screen and the game became unplayable on a phone without anything
+    // failing. The bottle is what you look at, so it gets the floor.
+    const share = await mobile.evaluate(() => {
+      const h = (sel) => {
+        const el = document.querySelector(sel);
+        return el ? el.getBoundingClientRect().height : 0;
+      };
+      const view = window.innerHeight;
+      return {
+        view,
+        board: h('#board') / view,
+        panels: (h('.panel--left') + h('.panel--right')) / view,
+        doctor: h('#doctor'),
+      };
+    });
+    assert.ok(
+      share.board >= 0.5,
+      `the bottle got ${(share.board * 100).toFixed(0)}% of the screen, wanted 50% or more`,
+    );
+    assert.ok(
+      share.board <= 1,
+      `the bottle is taller than the screen (${(share.board * 100).toFixed(0)}%) and is being clipped`,
+    );
+    assert.ok(
+      share.panels <= 0.25,
+      `the panels took ${(share.panels * 100).toFixed(0)}% of the screen, wanted 25% or less`,
+    );
+    // The physician stays, but as a chip - a portrait is what caused the squeeze.
+    assert.ok(
+      share.doctor > 0 && share.doctor <= 56,
+      `the physician is ${share.doctor}px tall on a phone; wanted a chip, not a portrait`,
+    );
+  });
+
   await check('dragging, tapping and flicking the bottle work', async () => {
     const box = await mobile.locator('#board').boundingBox();
     const cx = box.x + box.width / 2;
@@ -451,6 +487,47 @@ try {
   });
 
   await mobile.close();
+
+  // A phone in landscape is WIDER than the phone breakpoint and much shorter
+  // than a desktop, so it used to fall through to the desktop layout and
+  // scroll. It has to fit one screen like every other handheld shape.
+  const landscape = await browser.newPage({
+    viewport: { width: 844, height: 390 },
+    isMobile: true,
+    hasTouch: true,
+  });
+  await landscape.bringToFront();
+  landscape.on('pageerror', (error) => errors.push(`landscape pageerror: ${error.message}`));
+
+  await check('a phone in landscape fits one screen', async () => {
+    await landscape.goto(`${BASE}/?level=3&speed=LOW&seed=99`, { waitUntil: 'networkidle' });
+    await landscape.click('[data-start]');
+    await landscape.waitForTimeout(350);
+    const state = await landscape.evaluate(() => ({
+      scrollsY: document.documentElement.scrollHeight > window.innerHeight + 2,
+      scrollsX: document.documentElement.scrollWidth > window.innerWidth + 2,
+      touchpad: getComputedStyle(document.getElementById('touchpad')).display,
+      board: document.getElementById('board').getBoundingClientRect().height,
+      view: window.innerHeight,
+    }));
+    assert.equal(state.scrollsY, false, 'landscape should not scroll vertically');
+    assert.equal(state.scrollsX, false, 'landscape should not scroll sideways');
+    assert.equal(state.touchpad, 'grid', 'the touch pad is the only way to play here');
+    // Both bounds matter. Too small is unplayable; taller than the viewport is
+    // worse, because the app hides its overflow and the bottom of the bottle is
+    // simply cut off with nothing to scroll to.
+    assert.ok(
+      state.board <= state.view,
+      `the bottle is ${state.board}px in a ${state.view}px screen - it is being clipped`,
+    );
+    assert.ok(
+      state.board / state.view >= 0.6,
+      `the bottle got ${((state.board / state.view) * 100).toFixed(0)}% of a landscape screen`,
+    );
+  });
+
+  await landscape.close();
+
 
   await check('music can be turned off from the title screen', async () => {
     const music = await browser.newPage({ viewport: { width: 1000, height: 900 } });

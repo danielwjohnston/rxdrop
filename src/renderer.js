@@ -195,26 +195,32 @@ export class Renderer {
     this.drawCap(shape, cell, vessel.cap, accent);
   }
 
-  /** Raised lettering panel on the patent-medicine bottle. */
+  /**
+   * Mould seams down the sides of the patent-medicine bottle. A panel of raised
+   * lettering across the middle is more authentic, but it sits behind the
+   * playfield and reads as a stray box over the viruses - so the embossing goes
+   * where a real two-piece mould leaves it, on the walls, out of the way.
+   */
   drawEmbossing(shape, cell, accent) {
     const { ctx } = this;
-    const w = (shape.right - shape.left) * 0.52;
-    const h = (shape.bottom - shape.lip) * 0.3;
-    const x = (shape.left + shape.right) / 2 - w / 2;
-    const y = shape.lip + (shape.bottom - shape.lip) * 0.1;
     ctx.save();
-    ctx.globalAlpha = 0.16;
+    ctx.globalAlpha = 0.22;
     ctx.strokeStyle = accent;
-    ctx.lineWidth = Math.max(1, cell * 0.07);
-    ctx.beginPath();
-    roundRect(ctx, x, y, w, h, cell * 0.3);
-    ctx.stroke();
-    // Three bars standing in for the maker's name, too small to read anyway.
-    ctx.fillStyle = accent;
-    for (let i = 0; i < 3; i += 1) {
-      const bw = w * (i === 1 ? 0.62 : 0.44);
-      ctx.fillRect(x + (w - bw) / 2, y + h * (0.26 + i * 0.22), bw, cell * 0.1);
+    ctx.lineWidth = Math.max(1, cell * 0.05);
+    for (const x of [shape.left + cell * 0.12, shape.right - cell * 0.12]) {
+      ctx.beginPath();
+      ctx.moveTo(x, shape.lip);
+      ctx.lineTo(x, shape.bottom - cell * 0.6);
+      ctx.stroke();
     }
+    // A shallow shoulder step, the seam a mould leaves where the halves meet.
+    ctx.globalAlpha = 0.14;
+    ctx.beginPath();
+    ctx.moveTo(shape.left + cell * 0.12, shape.lip + cell * 0.5);
+    ctx.lineTo(shape.left + cell * 0.42, shape.lip + cell * 0.5);
+    ctx.moveTo(shape.right - cell * 0.12, shape.lip + cell * 0.5);
+    ctx.lineTo(shape.right - cell * 0.42, shape.lip + cell * 0.5);
+    ctx.stroke();
     ctx.restore();
   }
 

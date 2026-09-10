@@ -90,7 +90,7 @@ a keyboard or two controllers, since the touch pad only drives player one.
 | Action | Keyboard | Touch | Gamepad |
 | --- | --- | --- | --- |
 | Move | <kbd>←</kbd> <kbd>→</kbd> or <kbd>A</kbd> <kbd>D</kbd> | buttons, or drag the bottle | d-pad / left stick |
-| Rotate | <kbd>Z</kbd> / <kbd>X</kbd>, <kbd>↑</kbd> | buttons, or tap the bottle | A / B |
+| Rotate | <kbd>Z</kbd> / <kbd>X</kbd>, <kbd>↑</kbd> | buttons, tap the bottle, or slide up | A / B |
 
 | Soft drop | <kbd>↓</kbd> or <kbd>S</kbd> | button, or swipe down | d-pad down |
 | Hard drop | <kbd>Space</kbd> | DROP, or flick down | d-pad up / Y |
@@ -184,12 +184,12 @@ it?".
 ## Development
 
 ```sh
-npm test           # 152 unit tests, no dependencies, well under a second
+npm test           # 159 unit tests, no dependencies, well under a second
 npm run test:watch # re-run on change
 
 # End-to-end checks in a real browser (Playwright is not a dependency):
 npm i --no-save playwright && npx playwright install chromium
-npm run test:browser  # 27 checks: menus, controls, versus, daily, offline, mobile
+npm run test:browser  # 29 checks: menus, controls, versus, daily, offline, mobile
 
 npm run gauntlet   # the full protocol below: every stage, one gate
 ```

@@ -33,6 +33,15 @@ body {
   margin: 0;
   font-family: var(--font);
   color: var(--ink);
+  /* This is a game you drag a finger across, not a document. Without these, a
+     swipe starts a text selection and a held finger raises the copy/paste
+     callout, both of which fight the controls on a touch screen. */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  /* Stops a downward swipe on the bottle turning into pull-to-refresh. */
+  overscroll-behavior: none;
   background:
     radial-gradient(circle at 20% 12%, rgba(55, 182, 255, 0.14), transparent 45%),
     radial-gradient(circle at 82% 78%, rgba(255, 75, 145, 0.12), transparent 48%),
@@ -634,6 +643,7 @@ kbd {
 }
 
 .touchpad button {
+  touch-action: manipulation;
   padding: 16px 0;
   font-size: 1.1rem;
   font-weight: 700;
@@ -1031,4 +1041,10 @@ body.is-versus .apothecary {
   .virus-bar__fill {
     transition: none;
   }
+}
+
+/* The seed is the one thing worth copying out of the page by hand. */
+.seed {
+  -webkit-user-select: text;
+  user-select: text;
 }

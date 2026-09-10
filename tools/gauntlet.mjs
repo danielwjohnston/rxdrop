@@ -36,6 +36,7 @@ import {
   VIRUS,
 } from '../src/constants.js';
 import { Game, PHASE } from '../src/game.js';
+import { tryMove } from '../src/pill.js';
 import { VersusMatch } from '../src/versus.js';
 import { dailySetup } from '../src/daily.js';
 import { createRng } from '../src/rng.js';
@@ -526,6 +527,67 @@ stage('versus', 'Two bottles, one exchange of garbage', (check) => {
     );
   });
   return 'garbage is conserved and the bottles stay separate';
+});
+
+stage('playtest', 'The game must be playable, not merely legal', (check) => {
+  // A thinner version of tools/playtest.mjs: the gauntlet gate is that a
+  // landed capsule is always steerable and a hurry never outruns a hand. The
+  // full report, with a bot playing whole games, is `npm run playtest`.
+  // An absolute floor, not SOFT_DROP_MIN: checking the tuning against the
+  // constant it comes from is a check that cannot fail. 60ms a row is about
+  // the fastest a capsule can fall with a lateral still placeable into it.
+  const HAND_FLOOR = 60;
+
+  check('a hurry never outruns a hand at any speed', () => {
+    for (const speed of ['LOW', 'MEDIUM', 'HIGH']) {
+      for (const level of [0, 10, 20]) {
+        const game = new Game({ level, speed, seed: 3 });
+        game.pillsPlaced = 80;
+        game.setSoftDrop(true);
+        assert.ok(
+          game.fallInterval >= HAND_FLOOR,
+          `${speed} level ${level} hurries at ${game.fallInterval}ms a row,`
+          + ` under the ${HAND_FLOOR}ms a hand needs`,
+        );
+      }
+    }
+  });
+
+  check('a landed capsule always has time to be steered', () => {
+    for (const speed of ['LOW', 'MEDIUM', 'HIGH']) {
+      const game = new Game({ level: 12, speed, seed: 9 });
+      for (let x = 0; x < game.board.width; x += 1) {
+        for (let y = 3; y < game.board.height; y += 1) {
+          if (!game.board.get(x, y)) game.board.set(x, y, cell((x + y) % 3, PILL, null));
+        }
+      }
+      game.spawnPill();
+      game.setSoftDrop(true);
+      for (let i = 0; i < 200; i += 1) {
+        game.update(16);
+        if (game.phase !== PHASE.FALLING || !game.pill) break;
+        if (!tryMove(game.board, game.pill, 0, 1)) {
+          assert.ok(
+            game.lockBudget - game.lockTimer > 150,
+            `${speed} left only ${game.lockBudget - game.lockTimer}ms on landing`,
+          );
+          break;
+        }
+      }
+    }
+  });
+
+  check('hurrying is faster than gravity but never instant', () => {
+    for (const speed of ['LOW', 'MEDIUM', 'HIGH']) {
+      const game = new Game({ level: 0, speed, seed: 4 });
+      const gravity = game.dropInterval;
+      game.setSoftDrop(true);
+      assert.ok(game.fallInterval < gravity, `${speed} does not hurry`);
+      assert.ok(game.fallInterval >= HAND_FLOOR, `${speed} hurry is a snap`);
+    }
+  });
+
+  return 'a capsule can always be steered where it lands';
 });
 
 stage('performance', 'A frame must fit in a frame', (check) => {

@@ -9,7 +9,8 @@
     "test": "node --test",
     "test:watch": "node --test --watch",
     "test:browser": "node tools/browser-check.mjs",
-    "gauntlet": "node tools/gauntlet.mjs"
+    "gauntlet": "node tools/gauntlet.mjs",
+    "playtest": "node tools/playtest.mjs"
   },
   "engines": {
     "node": ">=20"

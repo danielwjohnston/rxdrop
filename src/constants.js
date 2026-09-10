@@ -71,6 +71,17 @@ export const LOCK_RESETS = 8;
 export const SPAWN_GRACE = 1200;
 
 /**
+ * Hurrying a capsule down. Soft drop is a MULTIPLE of the level's own gravity
+ * rather than a fixed fast interval, so "a little faster" means the same thing
+ * at every speed instead of jumping fifteenfold at level 0. The floor keeps it
+ * from outrunning a hand at the top levels, where gravity is already quick.
+ */
+export const SOFT_DROP_FACTOR = 7;
+// 70ms a row is about as fast as a capsule can fall while a player can still
+// place a lateral into it. The playtest measures exactly this and fails below it.
+export const SOFT_DROP_MIN = 70;
+
+/**
  * A beat between one capsule locking and the next taking gravity. Every action
  * wants a moment to read before the next one starts - without it a capsule is
  * already falling before the player has registered what they were dealt.

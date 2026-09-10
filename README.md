@@ -92,7 +92,7 @@ a keyboard or two controllers, since the touch pad only drives player one.
 | Move | <kbd>←</kbd> <kbd>→</kbd> or <kbd>A</kbd> <kbd>D</kbd> | buttons, or drag the bottle | d-pad / left stick |
 | Rotate | <kbd>Z</kbd> / <kbd>X</kbd>, <kbd>↑</kbd> | buttons, tap the bottle, or slide up | A / B |
 
-| Soft drop | <kbd>↓</kbd> or <kbd>S</kbd> | button, or swipe down | d-pad down |
+| Hurry down | <kbd>↓</kbd> or <kbd>S</kbd> | HURRY button, or drag down | d-pad down |
 | Hard drop | <kbd>Space</kbd> | DROP, or flick down | d-pad up / Y |
 | Pause | <kbd>P</kbd> or <kbd>Esc</kbd> | Pause | Start |
 | Restart level | <kbd>R</kbd> | Restart, on the pause card | Back / Select |
@@ -176,6 +176,10 @@ it?".
 - Each virus in a single clear is worth double the last: at LOW speed one virus
   scores 100, two score 300, three score 700, and so on. MED and HI pay more.
 - Gravity gets faster every ten capsules.
+- **Hurrying** a capsule holds it at a multiple of the level's own gravity, with
+  a floor, so it is always fast enough to save time and never so fast you cannot
+  place a last lateral. There is no snap to the bottom unless you ask for one:
+  **Instant drop** is a setting on the title screen, off by default.
 - With **resistance** on, a virus that survives long enough turns tolerant: four
   of its own colour clears the medicine but the virus shrugs it off, shedding a
   stack. What kills it is its **collateral colour** - red answers to blue,
@@ -190,12 +194,12 @@ it?".
 ## Development
 
 ```sh
-npm test           # 184 unit tests, no dependencies, well under a second
+npm test           # 187 unit tests, no dependencies, well under a second
 npm run test:watch # re-run on change
 
 # End-to-end checks in a real browser (Playwright is not a dependency):
 npm i --no-save playwright && npx playwright install chromium
-npm run test:browser  # 31 checks: menus, controls, versus, daily, offline, mobile
+npm run test:browser  # 33 checks: menus, controls, versus, daily, offline, mobile
 
 npm run gauntlet   # the full protocol below: every stage, one gate
 ```

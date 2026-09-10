@@ -393,6 +393,76 @@ try {
   });
 
   await eraPage.close();
+  // The drop-style setting gets its own page: it toggles a setting and can end
+  // a level, neither of which is fair to leave behind for another check.
+  const dropPage = await browser.newPage({ viewport: { width: 1024, height: 820 } });
+  dropPage.on('pageerror', (error) => errors.push(`drop pageerror: ${error.message}`));
+  await dropPage.bringToFront();
+  await dropPage.goto(`${BASE}/?level=0&speed=LOW&seed=5`, { waitUntil: 'networkidle' });
+  await dropPage.click('[data-start]');
+  await dropPage.waitForTimeout(300);
+
+  await check('the drop control hurries by default and never snaps', async () => {
+    // Reported from play: wanting the capsule a little faster and getting a
+    // snap to the bottom instead, losing the last lateral every time.
+    const before = await snapshot(dropPage);
+    await dropPage.evaluate(() => {
+      const el = document.getElementById('instant-drop');
+      el.checked = false;
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    const label = await dropPage.textContent('#drop-button');
+    assert.equal(label.trim(), 'HURRY', 'the control should say what it does');
+
+    await dropPage.evaluate(() => {
+      const b = document.getElementById('drop-button');
+      b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    });
+    await dropPage.waitForTimeout(160);
+    const during = await dropPage.evaluate(() => ({
+      soft: window.rxdrop.game.softDropping,
+      y: window.rxdrop.game.pill?.y ?? null,
+    }));
+    await dropPage.evaluate(() => {
+      const b = document.getElementById('drop-button');
+      b.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+    });
+    assert.equal(during.soft, true, 'holding the control should hurry the capsule');
+    assert.ok(
+      during.y !== null && during.y < before.y + 12,
+      'hurrying must not put the capsule on the floor at once',
+    );
+  });
+
+  await check('instant drop is available for players who want it', async () => {
+    await dropPage.evaluate(() => {
+      const el = document.getElementById('instant-drop');
+      el.checked = true;
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    assert.equal((await dropPage.textContent('#drop-button')).trim(), 'DROP');
+    const snapped = await dropPage.evaluate(() => {
+      const g = window.rxdrop.game;
+      const before = g.pillsPlaced;
+      const b = document.getElementById('drop-button');
+      b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      b.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+      return { before, after: window.rxdrop.game.pillsPlaced };
+    });
+    // A snap lands the capsule, resolves and deals the next one in one go, so
+    // the phase is back to falling immediately - the count is the real signal.
+    assert.equal(snapped.after, snapped.before + 1, 'with the setting on, it should snap');
+    // Put it back, since off is the default the rest of the checks expect.
+    await dropPage.evaluate(() => {
+      const el = document.getElementById('instant-drop');
+      el.checked = false;
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  });
+
+  await dropPage.close();
+
+
 
   const mobile = await browser.newPage({
     viewport: { width: 390, height: 780 },
@@ -529,14 +599,21 @@ try {
     const spun = await rotateByTap(mobile, cx, cy);
     assert.notEqual(spun.after, spun.before, 'a tap should rotate the pill');
 
-    const before = await mobile.evaluate(() => window.rxdrop.game.pillsPlaced);
+    // A downward drag hurries the capsule. It must NOT snap it to the floor:
+    // with instant drop off, a flick is a request to go faster, not to commit.
+    const before = await mobile.evaluate(() => ({
+      placed: window.rxdrop.game.pillsPlaced,
+      y: window.rxdrop.game.pill?.y ?? 0,
+    }));
     await mobile.mouse.move(cx, cy - 80);
     await mobile.mouse.down();
     await mobile.mouse.move(cx, cy + 120, { steps: 3 });
+    const during = await mobile.evaluate(() => window.rxdrop.game.softDropping);
     await mobile.mouse.up();
-    await mobile.waitForTimeout(250);
+    await mobile.waitForTimeout(120);
     const after = await mobile.evaluate(() => window.rxdrop.game.pillsPlaced);
-    assert.equal(after, before + 1, 'a downward flick should hard drop');
+    assert.equal(during, true, 'dragging down should hurry the capsule');
+    assert.equal(after, before.placed, 'and must not snap it to the bottom');
   });
 
   await check('a gamepad drives the game', async () => {
@@ -576,7 +653,8 @@ try {
 
     const tap = (index, frames = 5) => holdFrames(pad, { index, frames });
 
-    await pad.goto(`${BASE}/?level=2&speed=LOW&seed=4242`, { waitUntil: 'networkidle' });
+// instantDrop=1: this check places capsules with Space, and is not about drop style.
+    await pad.goto(`${BASE}/?level=2&speed=LOW&seed=4242&instantDrop=1`, { waitUntil: 'networkidle' });
     await pad.click('[data-start]');
     await pad.waitForTimeout(250);
 
@@ -676,7 +754,8 @@ try {
     await music.bringToFront();
     const musicErrors = [];
     music.on('pageerror', (error) => musicErrors.push(error.message));
-    await music.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+// instantDrop=1: this check places capsules with Space, and is not about drop style.
+    await music.goto(`${BASE}/?instantDrop=1`, { waitUntil: 'networkidle' });
     await music.waitForTimeout(200);
 
     assert.equal(await music.isVisible('label[for="music"]'), true, 'the toggle is on the title card');
@@ -858,13 +937,22 @@ try {
     assert.equal(after[0], before[0] - 1, 'A moves player one');
     assert.equal(after[1], before[1] + 1, 'the arrows move player two');
 
-    await vs.keyboard.press('KeyE');
-    await vs.keyboard.press('Slash');
-    await vs.waitForTimeout(300);
+    // Each player's drop key hurries their own capsule, with instant drop off.
+    await vs.keyboard.down('KeyE');
+    await vs.keyboard.down('Slash');
+    await vs.waitForTimeout(120);
     assert.deepEqual(
-      await vs.evaluate(() => window.rxdrop.match.players.map((p) => p.pillsPlaced)),
-      [1, 1],
-      'each player has their own hard drop',
+      await vs.evaluate(() => window.rxdrop.match.players.map((p) => p.softDropping)),
+      [true, true],
+      'each player has their own hurry',
+    );
+    await vs.keyboard.up('KeyE');
+    await vs.keyboard.up('Slash');
+    await vs.waitForTimeout(120);
+    assert.deepEqual(
+      await vs.evaluate(() => window.rxdrop.match.players.map((p) => p.softDropping)),
+      [false, false],
+      'and letting go stops it',
     );
 
     // Garbage lands on the opponent, and the winner card appears.
@@ -885,7 +973,8 @@ try {
     const offlineErrors = [];
     offline.on('pageerror', (error) => offlineErrors.push(error.message));
 
-    await offline.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+// instantDrop=1: this check places capsules with Space, and is not about drop style.
+    await offline.goto(`${BASE}/?instantDrop=1`, { waitUntil: 'networkidle' });
     await offline.evaluate(() => navigator.serviceWorker.ready);
     // Poll until precaching settles: a fixed sleep is load-dependent, and a
     // busy machine turns it into a phantom failure.
@@ -945,7 +1034,8 @@ try {
         get: () => ({ getItem: denied, setItem: denied, removeItem: denied }),
       });
     });
-    await limited.goto(`${BASE}/?level=1&seed=7`, { waitUntil: 'networkidle' });
+// instantDrop=1: this check places capsules with Space, and is not about drop style.
+    await limited.goto(`${BASE}/?level=1&seed=7&instantDrop=1`, { waitUntil: 'networkidle' });
     await limited.click('[data-start]');
     await limited.waitForTimeout(250);
     for (let i = 0; i < 3; i += 1) {
@@ -1022,6 +1112,7 @@ function snapshot(page) {
     paused: window.rxdrop.game?.paused ?? null,
     phase: window.rxdrop.game?.phase ?? null,
     x: window.rxdrop.game?.pill?.x ?? null,
+    y: window.rxdrop.game?.pill?.y ?? null,
     orientation: window.rxdrop.game?.pill?.orientation ?? null,
     hudScore: document.getElementById('score').textContent,
     hudViruses: document.getElementById('viruses').textContent,

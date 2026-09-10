@@ -115,6 +115,15 @@
                 </label>
               </div>
 
+              <label class="switch" for="instant-drop">
+                <input type="checkbox" id="instant-drop" />
+                <span class="switch__track"><span class="switch__thumb"></span></span>
+                <span class="switch__text">
+                  <strong>Instant drop</strong>
+                  <small>Off: hold to hurry a capsule down. On: snap it to the bottom</small>
+                </span>
+              </label>
+
               <label class="switch" for="music">
                 <input type="checkbox" id="music" checked />
                 <span class="switch__track"><span class="switch__thumb"></span></span>
@@ -218,7 +227,7 @@
         <button type="button" data-action="softDrop" aria-label="Soft drop">&#9660;</button>
         <button type="button" data-action="right" aria-label="Move right">&#9654;</button>
         <button type="button" data-action="rotateCCW" aria-label="Rotate counter-clockwise">&#8630;</button>
-        <button type="button" data-action="hardDrop" aria-label="Hard drop">DROP</button>
+        <button type="button" data-action="hardDrop" id="drop-button" aria-label="Hurry the capsule down">HURRY</button>
         <button type="button" data-action="rotateCW" aria-label="Rotate clockwise">&#8631;</button>
       </nav>
 

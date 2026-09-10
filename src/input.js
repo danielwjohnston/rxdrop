@@ -142,7 +142,7 @@ export class InputController {
    * down to soft drop, flick down to hard drop, tap to rotate.
    * `cellSize` may be a function, so the thresholds follow the rendered board.
    */
-  attachSwipe(element, { cellSize = 32 } = {}) {
+  attachSwipe(element, { cellSize = 32, instantDrop = () => false } = {}) {
     const cell = () => (typeof cellSize === 'function' ? cellSize() || 32 : cellSize);
     let start = null;
     let lastStepX = 0;
@@ -195,7 +195,18 @@ export class InputController {
       const elapsed = performance.now() - start.time;
       this.release('softDrop');
       if (!moved && Math.hypot(dx, dy) < 12 && elapsed < 350) this.tap('rotateCW');
-      else if (dy > cell() * 3 && elapsed < 260 && Math.abs(dx) < cell()) this.tap('hardDrop');
+      // A quick flick down snaps the capsule to the bottom only when the player
+      // has asked for that. Otherwise it was a request to hurry, and the hold
+      // that got them here has already been serving it - snapping instead is
+      // how a run gets thrown away by someone who only wanted to go faster.
+      else if (
+        instantDrop()
+        && dy > cell() * 3
+        && elapsed < 260
+        && Math.abs(dx) < cell()
+      ) {
+        this.tap('hardDrop');
+      }
       start = null;
     };
 

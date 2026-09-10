@@ -484,6 +484,40 @@ try {
 
   await mobile.close();
 
+  // A phone in landscape is WIDER than the phone breakpoint and much shorter
+  // than a desktop, so it used to fall through to the desktop layout and
+  // scroll. It has to fit one screen like every other handheld shape.
+  const landscape = await browser.newPage({
+    viewport: { width: 844, height: 390 },
+    isMobile: true,
+    hasTouch: true,
+  });
+  await landscape.bringToFront();
+  landscape.on('pageerror', (error) => errors.push(`landscape pageerror: ${error.message}`));
+
+  await check('a phone in landscape fits one screen', async () => {
+    await landscape.goto(`${BASE}/?level=3&speed=LOW&seed=99`, { waitUntil: 'networkidle' });
+    await landscape.click('[data-start]');
+    await landscape.waitForTimeout(350);
+    const state = await landscape.evaluate(() => ({
+      scrollsY: document.documentElement.scrollHeight > window.innerHeight + 2,
+      scrollsX: document.documentElement.scrollWidth > window.innerWidth + 2,
+      touchpad: getComputedStyle(document.getElementById('touchpad')).display,
+      board: document.getElementById('board').getBoundingClientRect().height,
+      view: window.innerHeight,
+    }));
+    assert.equal(state.scrollsY, false, 'landscape should not scroll vertically');
+    assert.equal(state.scrollsX, false, 'landscape should not scroll sideways');
+    assert.equal(state.touchpad, 'grid', 'the touch pad is the only way to play here');
+    assert.ok(
+      state.board / state.view >= 0.6,
+      `the bottle got ${((state.board / state.view) * 100).toFixed(0)}% of a landscape screen`,
+    );
+  });
+
+  await landscape.close();
+
+
   await check('music can be turned off from the title screen', async () => {
     const music = await browser.newPage({ viewport: { width: 1000, height: 900 } });
     await music.bringToFront();

@@ -44,6 +44,11 @@
               <span class="readout__value" id="speed">LOW</span>
             </div>
           </div>
+          <div class="apothecary">
+            <canvas id="doctor" width="132" height="132" aria-hidden="true"></canvas>
+            <span class="apothecary__era" id="era-name">Pharmaceutical</span>
+            <span class="apothecary__period" id="era-period">1928 - 1999</span>
+          </div>
           <div class="next">
             <span class="readout__label">Next</span>
             <canvas id="next" width="120" height="60" aria-label="Next capsule"></canvas>
@@ -146,6 +151,11 @@
                 Score <strong id="clear-score">0</strong>.
               </p>
               <p class="card__best" id="clear-finale" hidden>Level 20 beaten - the bottle is clean!</p>
+              <figure class="note" id="clear-note" hidden>
+                <figcaption class="note__era"><span id="note-era">Era</span></figcaption>
+                <blockquote class="note__text" id="note-text"></blockquote>
+                <cite class="note__place" id="note-place"></cite>
+              </figure>
               <button class="button button--primary" id="next-level" data-next-level type="button">
                 Next level
               </button>

@@ -3,6 +3,8 @@ import { Game } from './game.js';
 import { VersusMatch } from './versus.js';
 import { dailyKey, dailySetup, isToday, shareText } from './daily.js';
 import { Renderer, drawPillPreview, drawVirusTally } from './renderer.js';
+import { eraFor, entersEra } from './eras.js';
+import { drawDoctor, POSE_HOLD } from './doctors.js';
 import { pillCells } from './pill.js';
 import { AudioEngine } from './audio.js';
 import { InputController, KEY_MAP, VERSUS_KEY_MAP } from './input.js';
@@ -43,6 +45,13 @@ const dom = {
   touchpad: el('touchpad'),
   clearTitle: el('clear-title'),
   clearLevel: el('clear-level'),
+  doctor: el('doctor'),
+  eraName: el('era-name'),
+  eraPeriod: el('era-period'),
+  clearNote: el('clear-note'),
+  noteEra: el('note-era'),
+  noteText: el('note-text'),
+  notePlace: el('note-place'),
   clearScore: el('clear-score'),
   clearFinale: el('clear-finale'),
   nextLevelButton: el('next-level'),
@@ -298,6 +307,56 @@ function quitToTitle() {
   syncHud(true);
 }
 
+// ---- the apothecary -------------------------------------------------------
+
+/**
+ * The era on screen, and the physician's pose. The pose is a short-lived
+ * reaction: a capsule dealt, a clear landed, the neck filling up.
+ */
+let era = eraFor(0);
+let appliedEra = null;
+let pose = 'idle';
+let poseUntil = 0;
+
+function setEra(next) {
+  era = next;
+  // Guard on what has actually been applied, not on `era` - the first call is
+  // for the era the page starts on, and it still has to paint everything.
+  if (appliedEra === next) return;
+  appliedEra = next;
+  for (const renderer of renderers) renderer.setEra(era);
+  document.body.dataset.era = era.id;
+  document.body.style.setProperty('--era-accent', era.accent);
+  document.body.style.setProperty('--era-back-1', era.backdrop[0]);
+  document.body.style.setProperty('--era-back-2', era.backdrop[1]);
+  dom.eraName.textContent = era.name;
+  dom.eraPeriod.textContent = era.period;
+  drawPillPreview(dom.next, game ? game.nextColors : null, era);
+}
+
+/** Holds a reaction pose for a beat, then it falls back to idle on its own. */
+function react(next) {
+  pose = next;
+  poseUntil = performance.now() + POSE_HOLD;
+}
+
+function drawPhysician(now) {
+  if (pose !== 'idle' && now > poseUntil) pose = 'idle';
+  const canvas = dom.doctor;
+  const rect = canvas.getBoundingClientRect();
+  if (rect.width === 0) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  canvas.width = Math.max(1, Math.round(rect.width * dpr));
+  canvas.height = Math.max(1, Math.round(rect.height * dpr));
+  const ctx = canvas.getContext('2d');
+  ctx.save();
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, rect.width, rect.height);
+  const size = Math.min(rect.width, rect.height);
+  drawDoctor(ctx, { x: (rect.width - size) / 2, y: rect.height - size, size, era, pose, now });
+  ctx.restore();
+}
+
 // ---- HUD ------------------------------------------------------------------
 
 function syncHud(force = false) {
@@ -318,7 +377,9 @@ function syncHud(force = false) {
   }
   dom.score.textContent = score.toLocaleString();
   dom.topScore.textContent = settings.topScore.toLocaleString();
-  dom.level.textContent = game ? game.level : previewLevel();
+  const level = game ? game.level : previewLevel();
+  setEra(eraFor(level));
+  dom.level.textContent = level;
   dom.speed.textContent = SPEEDS[game ? game.speedName : previewSpeed()].name;
   dom.viruses.textContent = shown ? shown.virusesLeft : '-';
   dom.seed.textContent = game ? game.seed : '-';
@@ -331,7 +392,7 @@ function syncHud(force = false) {
   if (resistant) {
     dom.resistanceFill.style.width = `${Math.round(shown.resistanceLevel * 100)}%`;
   }
-  if (force || game) drawPillPreview(dom.next, game ? game.nextColors : null);
+  if (force || game) drawPillPreview(dom.next, game ? game.nextColors : null, era);
 }
 
 function previewLevel() {
@@ -377,6 +438,7 @@ function handleGameEvents() {
       case 'clear':
         audio.play('clear', event);
         renderers[0].addShake(2 + Math.min(6, event.viruses * 2 + event.combo));
+        if (event.viruses > 0) react('cheer');
         break;
       case 'mutate':
         audio.play('mutate', event);
@@ -389,7 +451,8 @@ function handleGameEvents() {
         finishGameOver();
         break;
       case 'spawn':
-        drawPillPreview(dom.next, game.nextColors);
+        drawPillPreview(dom.next, game.nextColors, era);
+        react(event.blocked ? 'worry' : 'toss');
         break;
       default:
         audio.play(event.type, event);
@@ -411,7 +474,24 @@ function finishLevel(event) {
   dom.clearScore.textContent = game.score.toLocaleString();
   dom.clearFinale.hidden = !finale;
   dom.nextLevelButton.textContent = finale ? 'Play level 20 again' : 'Next level';
+  showNote(finale ? event.level : event.level + 1);
   showScreen('clear');
+}
+
+/**
+ * A physician's note, shown only on the level that carries you into a new era.
+ * Twenty sentences is the whole story layer; it earns its place by being short.
+ */
+function showNote(level) {
+  if (!entersEra(level)) {
+    dom.clearNote.hidden = true;
+    return;
+  }
+  const next = eraFor(level);
+  dom.noteEra.textContent = `${next.name} - ${next.subtitle}`;
+  dom.noteText.textContent = next.note.text;
+  dom.notePlace.textContent = next.note.place;
+  dom.clearNote.hidden = false;
 }
 
 function finishGameOver() {
@@ -738,13 +818,14 @@ function frame(now) {
       syncHud();
     }
     renderers[0].draw(game, now);
-    drawVirusTally(dom.virusTally, virusCounts(game.board), now);
+    drawVirusTally(dom.virusTally, virusCounts(game.board), now, era);
   } else {
     const preview = titleBoardGame();
     renderers[0].draw(preview, now);
-    drawVirusTally(dom.virusTally, virusCounts(preview.board), now);
+    drawVirusTally(dom.virusTally, virusCounts(preview.board), now, era);
   }
 
+  drawPhysician(now);
   requestAnimationFrame(frame);
 }
 

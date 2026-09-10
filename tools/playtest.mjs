@@ -257,6 +257,51 @@ function hurryCrossing(speed, level) {
   return { seconds: ms / 1000, rows: (game.pill?.y ?? BOARD_HEIGHT) - startY };
 }
 
+/**
+ * Threading: can a capsule actually be walked down a narrow channel?
+ *
+ * This is the "juggling" complaint made measurable. A one-wide shaft jogs a
+ * column every four rows, with the rows at each jog opened out so a capsule can
+ * step across - a corridor that turns in a single row is impossible for any
+ * two-cell piece and would measure nothing. The capsule is steered down using
+ * only real moves, one frame at a time. If gravity outruns the steering it gets
+ * stranded on a ledge, and the depth reached says how far you could thread it.
+ */
+const shaftFor = (y) => 2 + (Math.floor(y / 4) % 2) * 3;
+
+function threading(speed, { hurry }) {
+  const game = new Game({ level: 0, speed, seed: 2 });
+  const board = game.board;
+  board.forEachCell((c, x, y) => board.set(x, y, null));
+
+  for (let y = 4; y < board.height; y += 1) {
+    const open = new Set([shaftFor(y)]);
+    if (y % 4 === 0 || (y + 1) % 4 === 0) {
+      const from = Math.min(shaftFor(y - 2), shaftFor(y + 2));
+      const to = Math.max(shaftFor(y - 2), shaftFor(y + 2));
+      for (let x = from; x <= to; x += 1) open.add(x);
+    }
+    for (let x = 0; x < board.width; x += 1) {
+      if (!open.has(x)) board.set(x, y, { color: (x + y) % 3, type: 'pill', link: null });
+    }
+  }
+
+  game.spawnPill();
+  // Vertical, so it fits a one-wide shaft at all.
+  if (game.pill && game.pill.orientation % 2 === 0) game.rotate(1);
+  game.setSoftDrop(Boolean(hurry));
+
+  let deepest = game.pill?.y ?? 0;
+  for (let frame = 0; frame < 3000 && game.phase === PHASE.FALLING && game.pill; frame += 1) {
+    const want = shaftFor(Math.min(board.height - 1, game.pill.y + 2));
+    if (game.pill.x < want) game.move(1);
+    else if (game.pill.x > want) game.move(-1);
+    game.update(FRAME);
+    if (game.pill) deepest = Math.max(deepest, game.pill.y);
+  }
+  return { depth: deepest, of: board.height - 1 };
+}
+
 // ---- report ---------------------------------------------------------------
 
 const mean = (xs) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
@@ -309,6 +354,20 @@ for (const setup of setups) {
   );
   if (VERBOSE) {
     console.log(`      reaction budget mean ${mean(budgets).toFixed(0)}ms, worst ${min(budgets).toFixed(0)}ms`);
+  }
+}
+
+console.log('\nThreading: steering a capsule down a one-wide zigzag corridor');
+for (const speed of ['LOW', 'MEDIUM', 'HIGH']) {
+  for (const hurry of [false, true]) {
+    const { depth, of } = threading(speed, { hurry });
+    const share = depth / of;
+    const verdict = share >= 0.9 ? 'threaded' : share >= 0.6 ? 'partly' : 'STRANDED';
+    if (share < 0.6) failures += 1;
+    console.log(
+      `  ${speed.padEnd(7)}${hurry ? 'hurrying' : 'gravity '}`
+      + `  reached row ${String(depth).padStart(2)}/${of}  ${verdict}`,
+    );
   }
 }
 

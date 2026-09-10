@@ -233,6 +233,70 @@ try {
 
   await page.close();
 
+  // The apothecary layer: the era has to follow the level, and the physician
+  // has to actually paint - an empty canvas would look identical to a missing
+  // one at a glance.
+  const eraPage = await browser.newPage({ viewport: { width: 1024, height: 820 } });
+  eraPage.on('pageerror', (error) => errors.push(`era pageerror: ${error.message}`));
+  await eraPage.bringToFront();
+  await eraPage.goto(`${BASE}/?level=16&speed=LOW&seed=7`, { waitUntil: 'networkidle' });
+  await eraPage.click('[data-start]');
+  await eraPage.waitForTimeout(400);
+
+  await check('the era follows the level, vessel, palette and physician', async () => {
+    const state = await eraPage.evaluate(() => {
+      const canvas = document.getElementById('doctor');
+      const ctx = canvas.getContext('2d');
+      const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      let painted = 0;
+      for (let i = 3; i < data.length; i += 4) if (data[i] > 8) painted += 1;
+      return {
+        name: document.getElementById('era-name').textContent.trim(),
+        period: document.getElementById('era-period').textContent.trim(),
+        accent: getComputedStyle(document.body).getPropertyValue('--era-accent').trim(),
+        eraAttr: document.body.dataset.era,
+        painted,
+        pixels: data.length / 4,
+      };
+    });
+    assert.equal(state.name, 'Gene Therapy');
+    assert.equal(state.eraAttr, 'genetic');
+    assert.ok(state.period.length > 0, 'the era should show its period');
+    assert.notEqual(state.accent, '', 'the era accent should be set on the body');
+    assert.ok(
+      state.painted > state.pixels * 0.05,
+      `the physician barely painted: ${state.painted} of ${state.pixels} pixels`,
+    );
+  });
+
+  await check('a new era announces itself with a physician\'s note', async () => {
+    const note = await eraPage.evaluate(() => {
+      const g = window.rxdrop.game;
+      // Finish level 19 so the clear card carries the level-20 era check; the
+      // note only shows on a level that crosses into a new era.
+      g.board.forEachCell((c, x, y) => {
+        if (c.type === 'virus') g.board.set(x, y, null);
+      });
+      g.level = 3;
+      g.emit('levelComplete', { level: 3 });
+      return null;
+    });
+    void note;
+    await eraPage.waitForTimeout(200);
+    const shown = await eraPage.evaluate(() => ({
+      hidden: document.getElementById('clear-note').hidden,
+      era: document.getElementById('note-era').textContent,
+      text: document.getElementById('note-text').textContent,
+      place: document.getElementById('note-place').textContent,
+    }));
+    assert.equal(shown.hidden, false, 'crossing into level 4 should show the note');
+    assert.match(shown.era, /Apothecary/);
+    assert.ok(shown.text.length > 40);
+    assert.ok(shown.place.length > 0);
+  });
+
+  await eraPage.close();
+
   const mobile = await browser.newPage({
     viewport: { width: 390, height: 780 },
     isMobile: true,

@@ -8,17 +8,36 @@ import {
 } from './constants.js';
 import { pillCells } from './pill.js';
 import { PHASE } from './game.js';
+import { ERAS, eraFor, paletteFor } from './eras.js';
 
-/** Body, highlight and shadow tones for each colour id. */
-export const PALETTE = [
-  { base: '#ff4b4b', light: '#ff9d9d', dark: '#96122a', glow: '#ff8080' },
-  { base: '#ffd23f', light: '#fff29a', dark: '#a06a00', glow: '#ffe680' },
-  { base: '#37b6ff', light: '#a7e4ff', dark: '#0a4f8a', glow: '#7fd4ff' },
-];
+/**
+ * The default medicine tones - the pharmaceutical era's, which is the look the
+ * game had before there were eras. Anything drawing inside a bottle should use
+ * the renderer's own `palette`, which follows the level.
+ */
+export const PALETTE = paletteFor(ERAS[3]);
 
-/** Height of the spout above the bottle's shoulders, in cells. */
-const SPOUT_ROWS = 1.1;
+/**
+ * How each era's vessel takes the light. Glass is lit and transparent, clay is
+ * matte and swallows it, cryo is frosted and lit from below.
+ */
+const SURFACES = {
+  clay: { fill: ['#3a2418', '#241509', '#2e1c10'], sheen: 0.05, grid: 0.07, glow: 0.18 },
+  glass: { fill: ['#1a2748', '#0c1226', '#182042'], sheen: 0.16, grid: 0.1, glow: 0.42 },
+  embossed: { fill: ['#2c2410', '#170f05', '#241a0c'], sheen: 0.1, grid: 0.08, glow: 0.3 },
+  plastic: { fill: ['#142046', '#0a1028', '#180e38'], sheen: 0.12, grid: 0.09, glow: 0.5 },
+  cryo: { fill: ['#141a3a', '#0a0c1e', '#1a1240'], sheen: 0.22, grid: 0.11, glow: 0.6 },
+};
+
 const BOTTLE_PAD = 0.35;
+
+/** Turns an era accent (#rrggbb) into the same colour at a given alpha. */
+function withAlpha(hex, alpha) {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex);
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}
 
 /** Draws the bottle, the stack and the pill in play onto a 2D canvas. */
 export class Renderer {
@@ -28,6 +47,18 @@ export class Renderer {
     this.dpr = 1;
     this.shake = 0;
     this.layout = null;
+    this.setEra(ERAS[3]);
+  }
+
+  /** Points the renderer at an era: its palette, vessel and virus shapes. */
+  setEra(era) {
+    this.era = era ?? ERAS[3];
+    this.palette = paletteFor(this.era);
+  }
+
+  /** Convenience for callers that only know the level. */
+  setLevel(level) {
+    this.setEra(eraFor(level));
   }
 
   /** Matches the backing store to the element's CSS size and the device DPR. */
@@ -57,15 +88,14 @@ export class Renderer {
     const cell = Math.floor(
       Math.min(
         usableW / (board.width + BOTTLE_PAD * 2),
-        usableH / (board.height + SPOUT_ROWS + BOTTLE_PAD),
+        usableH / (board.height + this.era.vessel.spout + BOTTLE_PAD),
       ),
     );
     const fieldW = cell * board.width;
     const fieldH = cell * board.height;
     const originX = Math.round((this.cssWidth - fieldW) / 2);
-    const originY = Math.round(
-      (this.cssHeight - fieldH - cell * SPOUT_ROWS) / 2 + cell * SPOUT_ROWS,
-    );
+    const spout = cell * this.era.vessel.spout;
+    const originY = Math.round((this.cssHeight - fieldH - spout) / 2 + spout);
     return { cell, fieldW, fieldH, originX, originY };
   }
 
@@ -97,13 +127,15 @@ export class Renderer {
 
   drawBottle({ cell, fieldW, fieldH, originX, originY }, game) {
     const { ctx } = this;
-    const shape = bottleShape({ cell, fieldW, fieldH, originX, originY });
+    const { vessel, accent } = this.era;
+    const surface = SURFACES[vessel.surface] ?? SURFACES.plastic;
+    const shape = bottleShape({ cell, fieldW, fieldH, originX, originY }, vessel);
 
     tracePath(ctx, shape);
     const glass = ctx.createLinearGradient(shape.left, shape.top, shape.right, shape.bottom);
-    glass.addColorStop(0, 'rgba(20, 32, 70, 0.85)');
-    glass.addColorStop(0.5, 'rgba(10, 16, 40, 0.9)');
-    glass.addColorStop(1, 'rgba(24, 14, 56, 0.85)');
+    glass.addColorStop(0, surface.fill[0]);
+    glass.addColorStop(0.5, surface.fill[1]);
+    glass.addColorStop(1, surface.fill[2]);
     ctx.fillStyle = glass;
     ctx.fill();
 
@@ -117,7 +149,7 @@ export class Renderer {
     ctx.fillRect(shape.left, shape.top, shape.right - shape.left, shape.lip - shape.top);
 
     // Faint grid inside the bottle so the columns read clearly.
-    ctx.strokeStyle = 'rgba(139, 214, 255, 0.09)';
+    ctx.strokeStyle = withAlpha(accent, surface.grid);
     ctx.lineWidth = 1;
     ctx.beginPath();
     for (let i = 1; i < game.board.width; i += 1) {
@@ -131,45 +163,147 @@ export class Renderer {
     ctx.stroke();
 
     // The lip itself, so the neck reads as separate from the bottle.
-    ctx.strokeStyle = 'rgba(139, 214, 255, 0.4)';
+    ctx.strokeStyle = withAlpha(accent, 0.4);
     ctx.lineWidth = Math.max(1, cell * 0.06);
     ctx.beginPath();
     ctx.moveTo(shape.left, shape.lip);
     ctx.lineTo(shape.right, shape.lip);
     ctx.stroke();
 
+    if (vessel.surface === 'embossed') this.drawEmbossing(shape, cell, accent);
+    if (vessel.surface === 'cryo') this.drawFrost(shape, cell, accent);
+
     // Soft sheen hugging the inside of the left wall.
     const sheen = ctx.createLinearGradient(shape.left, 0, shape.left + cell * 1.2, 0);
-    sheen.addColorStop(0, 'rgba(255, 255, 255, 0.12)');
+    sheen.addColorStop(0, `rgba(255, 255, 255, ${surface.sheen})`);
     sheen.addColorStop(1, 'rgba(255, 255, 255, 0)');
     ctx.fillStyle = sheen;
     ctx.fillRect(shape.left, shape.neckTop, cell * 1.2, shape.bottom - shape.neckTop);
     ctx.restore();
 
-    // The outline itself, with a neon glow.
+    // The outline itself, glowing in the era's accent.
     ctx.save();
     tracePath(ctx, shape);
-    ctx.strokeStyle = '#8bd6ff';
+    ctx.strokeStyle = accent;
     ctx.lineWidth = Math.max(2, cell * 0.13);
     ctx.lineJoin = 'round';
-    ctx.shadowColor = 'rgba(55, 182, 255, 0.5)';
+    ctx.shadowColor = withAlpha(accent, surface.glow);
     ctx.shadowBlur = cell * 0.45;
     ctx.stroke();
     ctx.restore();
 
-    // Cap on the neck.
-    const capH = cell * 0.42;
-    ctx.fillStyle = '#8bd6ff';
+    this.drawCap(shape, cell, vessel.cap, accent);
+  }
+
+  /** Raised lettering panel on the patent-medicine bottle. */
+  drawEmbossing(shape, cell, accent) {
+    const { ctx } = this;
+    const w = (shape.right - shape.left) * 0.52;
+    const h = (shape.bottom - shape.lip) * 0.3;
+    const x = (shape.left + shape.right) / 2 - w / 2;
+    const y = shape.lip + (shape.bottom - shape.lip) * 0.1;
+    ctx.save();
+    ctx.globalAlpha = 0.16;
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = Math.max(1, cell * 0.07);
     ctx.beginPath();
-    roundRect(
-      ctx,
-      shape.neckLeft - cell * 0.16,
-      shape.neckTop - capH,
-      shape.neckW + cell * 0.32,
-      capH,
-      cell * 0.16,
-    );
-    ctx.fill();
+    roundRect(ctx, x, y, w, h, cell * 0.3);
+    ctx.stroke();
+    // Three bars standing in for the maker's name, too small to read anyway.
+    ctx.fillStyle = accent;
+    for (let i = 0; i < 3; i += 1) {
+      const bw = w * (i === 1 ? 0.62 : 0.44);
+      ctx.fillRect(x + (w - bw) / 2, y + h * (0.26 + i * 0.22), bw, cell * 0.1);
+    }
+    ctx.restore();
+  }
+
+  /** Frost creeping up the cryo-vial, and the light coming from under it. */
+  drawFrost(shape, cell, accent) {
+    const { ctx } = this;
+    ctx.save();
+    const under = ctx.createLinearGradient(0, shape.bottom, 0, shape.bottom - cell * 5);
+    under.addColorStop(0, withAlpha(accent, 0.35));
+    under.addColorStop(1, withAlpha(accent, 0));
+    ctx.fillStyle = under;
+    ctx.fillRect(shape.left, shape.bottom - cell * 5, shape.right - shape.left, cell * 5);
+    ctx.globalAlpha = 0.1;
+    ctx.fillStyle = '#ffffff';
+    for (let i = 0; i < 26; i += 1) {
+      const fx = shape.left + ((i * 97) % 100) / 100 * (shape.right - shape.left);
+      const fy = shape.bottom - ((i * 53) % 100) / 100 * (shape.bottom - shape.lip) * 0.7;
+      ctx.beginPath();
+      ctx.arc(fx, fy, cell * (0.06 + ((i * 31) % 7) / 60), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  /** Whatever is stopping this era's vessel. */
+  drawCap(shape, cell, style, accent) {
+    const { ctx } = this;
+    const cx = (shape.neckLeft + shape.neckRight) / 2;
+    ctx.save();
+    if (style === 'wax') {
+      // A poured seal, sagging unevenly over the mouth.
+      ctx.fillStyle = '#b8503a';
+      ctx.beginPath();
+      ctx.moveTo(shape.neckLeft - cell * 0.24, shape.neckTop + cell * 0.1);
+      for (let i = 0; i <= 6; i += 1) {
+        const t = i / 6;
+        const px = shape.neckLeft - cell * 0.24 + t * (shape.neckW + cell * 0.48);
+        ctx.lineTo(px, shape.neckTop + cell * (0.1 + (i % 2 ? 0.22 : 0.05)));
+      }
+      ctx.lineTo(shape.neckRight + cell * 0.24, shape.neckTop - cell * 0.34);
+      ctx.lineTo(shape.neckLeft - cell * 0.24, shape.neckTop - cell * 0.34);
+      ctx.closePath();
+      ctx.fill();
+    } else if (style === 'stopper') {
+      // Ground glass: a tapered plug under a round knob.
+      ctx.fillStyle = accent;
+      ctx.beginPath();
+      ctx.moveTo(cx - shape.neckW * 0.34, shape.neckTop);
+      ctx.lineTo(cx + shape.neckW * 0.34, shape.neckTop);
+      ctx.lineTo(cx + shape.neckW * 0.24, shape.neckTop - cell * 0.4);
+      ctx.lineTo(cx - shape.neckW * 0.24, shape.neckTop - cell * 0.4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(cx, shape.neckTop - cell * 0.62, cell * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (style === 'cork') {
+      ctx.fillStyle = '#c99a5d';
+      ctx.beginPath();
+      ctx.moveTo(cx - shape.neckW * 0.4, shape.neckTop + cell * 0.12);
+      ctx.lineTo(cx + shape.neckW * 0.4, shape.neckTop + cell * 0.12);
+      ctx.lineTo(cx + shape.neckW * 0.48, shape.neckTop - cell * 0.44);
+      ctx.lineTo(cx - shape.neckW * 0.48, shape.neckTop - cell * 0.44);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.25)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    } else if (style === 'ring') {
+      // A screw collar: two bands and a flat seal. beginPath first - roundRect
+      // only appends, so without it this fills the whole bottle outline.
+      ctx.fillStyle = accent;
+      ctx.beginPath();
+      roundRect(ctx, shape.neckLeft - cell * 0.1, shape.neckTop - cell * 0.34,
+        shape.neckW + cell * 0.2, cell * 0.16, cell * 0.06);
+      ctx.fill();
+      ctx.beginPath();
+      roundRect(ctx, shape.neckLeft - cell * 0.1, shape.neckTop - cell * 0.14,
+        shape.neckW + cell * 0.2, cell * 0.16, cell * 0.06);
+      ctx.fill();
+    } else {
+      const capH = cell * 0.42;
+      ctx.fillStyle = accent;
+      ctx.beginPath();
+      roundRect(ctx, shape.neckLeft - cell * 0.16, shape.neckTop - capH,
+        shape.neckW + cell * 0.32, capH, cell * 0.16);
+      ctx.fill();
+    }
+    ctx.restore();
   }
 
   drawStack(game, layout, now) {
@@ -222,7 +356,7 @@ export class Renderer {
       const radius = layout.cell * (0.5 + t * 0.55);
       ctx.save();
       ctx.globalAlpha = 1 - t;
-      const tone = PALETTE[color];
+      const tone = this.palette[color];
       const glow = ctx.createRadialGradient(cx, cy, layout.cell * 0.1, cx, cy, radius);
       glow.addColorStop(0, '#ffffff');
       glow.addColorStop(0.45, tone.glow);
@@ -308,7 +442,7 @@ export class Renderer {
       return;
     }
 
-    const tone = PALETTE[color];
+    const tone = this.palette[color];
     const fill = ctx.createLinearGradient(x, y, x + size, y + size);
     fill.addColorStop(0, tone.light);
     fill.addColorStop(0.45, tone.base);
@@ -345,12 +479,12 @@ export class Renderer {
    */
   drawVirus(px, py, cell, color, now, gx, gy, resistance = 0) {
     const { ctx } = this;
-    const tone = PALETTE[color];
+    const tone = this.palette[color];
     if (resistance > 0) {
       const pulse = 0.5 + 0.5 * Math.sin(now / (240 - resistance * 140) + gx + gy);
       ctx.save();
       ctx.globalAlpha = 0.15 + resistance * 0.5 * pulse;
-      ctx.strokeStyle = '#ffffff';
+      ctx.strokeStyle = this.era.accent;
       ctx.lineWidth = Math.max(1, cell * 0.05);
       ctx.setLineDash([cell * 0.12, cell * 0.1]);
       ctx.lineDashOffset = now / 40;
@@ -370,20 +504,24 @@ export class Renderer {
     ctx.translate(cx, cy);
     ctx.scale(squash, 2 - squash);
 
-    // Spiky arms.
+    // Arms: how many and what shape is the era's business. A cave-era humour
+    // has soft lobes; a sequenced capsid has hard spikes.
+    const style = this.era.virus;
     ctx.fillStyle = tone.dark;
-    for (let i = 0; i < 6; i += 1) {
-      const angle = (Math.PI * 2 * i) / 6 + Math.sin(phase) * 0.12;
+    for (let i = 0; i < style.arms; i += 1) {
+      const angle = (Math.PI * 2 * i) / style.arms + Math.sin(phase) * 0.12;
+      const ax = Math.cos(angle);
+      const ay = Math.sin(angle);
       ctx.beginPath();
-      ctx.ellipse(
-        Math.cos(angle) * r * 0.95,
-        Math.sin(angle) * r * 0.95,
-        r * 0.32,
-        r * 0.22,
-        angle,
-        0,
-        Math.PI * 2,
-      );
+      if (style.armShape === 'spike') {
+        const tip = r * 1.42;
+        ctx.moveTo(ax * tip, ay * tip);
+        ctx.lineTo(-ay * r * 0.28 + ax * r * 0.7, ax * r * 0.28 + ay * r * 0.7);
+        ctx.lineTo(ay * r * 0.28 + ax * r * 0.7, -ax * r * 0.28 + ay * r * 0.7);
+        ctx.closePath();
+      } else {
+        ctx.ellipse(ax * r * 0.95, ay * r * 0.95, r * 0.32, r * 0.22, angle, 0, Math.PI * 2);
+      }
       ctx.fill();
     }
 
@@ -394,7 +532,28 @@ export class Renderer {
     body.addColorStop(1, tone.dark);
     ctx.fillStyle = body;
     ctx.beginPath();
-    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    if (style.bodyShape === 'hex') {
+      for (let i = 0; i < 6; i += 1) {
+        const a = (Math.PI * 2 * i) / 6 - Math.PI / 2;
+        const px2 = Math.cos(a) * r * 1.04;
+        const py2 = Math.sin(a) * r * 1.04;
+        if (i === 0) ctx.moveTo(px2, py2);
+        else ctx.lineTo(px2, py2);
+      }
+      ctx.closePath();
+    } else if (style.bodyShape === 'lumpy') {
+      for (let i = 0; i <= 14; i += 1) {
+        const a = (Math.PI * 2 * i) / 14;
+        const wobble = r * (1 + Math.sin(a * 3 + phase * 0.5) * 0.09);
+        const px2 = Math.cos(a) * wobble;
+        const py2 = Math.sin(a) * wobble;
+        if (i === 0) ctx.moveTo(px2, py2);
+        else ctx.lineTo(px2, py2);
+      }
+      ctx.closePath();
+    } else {
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+    }
     ctx.fill();
     ctx.strokeStyle = 'rgba(0,0,0,0.4)';
     ctx.lineWidth = Math.max(1, cell * 0.045);
@@ -432,7 +591,7 @@ export class Renderer {
 }
 
 /** Draws a small preview of a pill, used for the "next" window. */
-export function drawPillPreview(canvas, colors) {
+export function drawPillPreview(canvas, colors, era = ERAS[3]) {
   const ctx = canvas.getContext('2d');
   const dpr = Math.min(window.devicePixelRatio || 1, 3);
   const rect = canvas.getBoundingClientRect();
@@ -448,14 +607,14 @@ export function drawPillPreview(canvas, colors) {
   const cell = Math.min(rect.height * 0.8, rect.width / 2.3);
   const x = (rect.width - cell * 2) / 2;
   const y = (rect.height - cell) / 2;
-  const renderer = { ctx };
+  const renderer = { ctx, era, palette: paletteFor(era) };
   Renderer.prototype.drawHalf.call(renderer, x, y, cell, colors[0], LINK.RIGHT);
   Renderer.prototype.drawHalf.call(renderer, x + cell, y, cell, colors[1], LINK.LEFT);
   ctx.restore();
 }
 
 /** Draws the remaining viruses per colour, with their counts, in a panel. */
-export function drawVirusTally(canvas, counts, now) {
+export function drawVirusTally(canvas, counts, now, era = ERAS[3]) {
   const ctx = canvas.getContext('2d');
   const dpr = Math.min(window.devicePixelRatio || 1, 3);
   const rect = canvas.getBoundingClientRect();
@@ -467,14 +626,15 @@ export function drawVirusTally(canvas, counts, now) {
   ctx.clearRect(0, 0, rect.width, rect.height);
   const slot = rect.width / 3;
   const cell = Math.min(slot * 0.72, rect.height * 0.72);
-  const renderer = { ctx };
+  const palette = paletteFor(era);
+  const renderer = { ctx, era, palette };
   counts.forEach((count, color) => {
     const x = slot * color + (slot - cell) / 2;
     const y = 2;
     ctx.globalAlpha = count === 0 ? 0.25 : 1;
     Renderer.prototype.drawVirus.call(renderer, x, y, cell, color, now, color * 4, 0);
     ctx.globalAlpha = 1;
-    ctx.fillStyle = count === 0 ? 'rgba(139, 160, 200, 0.6)' : PALETTE[color].light;
+    ctx.fillStyle = count === 0 ? 'rgba(139, 160, 200, 0.6)' : palette[color].light;
     ctx.font = `600 ${Math.round(cell * 0.42)}px ui-monospace, 'SFMono-Regular', monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
@@ -498,40 +658,50 @@ function landingCells(game) {
 }
 
 /** Geometry of the bottle: a body with a neck poking out of the top. */
-function bottleShape({ cell, fieldW, fieldH, originX, originY }) {
+function bottleShape({ cell, fieldW, fieldH, originX, originY }, vessel) {
   const pad = cell * BOTTLE_PAD;
-  const neckW = cell * 2.6;
+  const neckW = cell * vessel.neckWidth;
+  const left = originX - pad;
+  const right = originX + fieldW + pad;
+  // shoulder 0 is a square-shouldered jar, 1 an amphora that curves all the way
+  // in to the neck. Everything between is a lerp, which is why one path can
+  // draw five vessels.
+  const span = (right - left) / 2;
+  const shoulderR = cell * 0.3 + (span - neckW / 2) * vessel.shoulder;
   return {
-    left: originX - pad,
+    left,
     top: originY - pad,
-    right: originX + fieldW + pad,
+    right,
     bottom: originY + fieldH + pad,
-    radius: cell * 0.9,
+    baseR: cell * vessel.radius,
+    shoulderR,
     neckW,
     neckR: cell * 0.3,
     neckLeft: originX + fieldW / 2 - neckW / 2,
     neckRight: originX + fieldW / 2 + neckW / 2,
-    neckTop: originY - pad - cell * SPOUT_ROWS,
+    neckTop: originY - pad - cell * vessel.spout,
     // Bottom of the neck row: the lip capsules drop past to enter the bottle.
     lip: originY + cell * NECK_ROWS,
   };
 }
 
-/** Lays down the bottle outline as the current path (neck and body in one). */
+/** Lays down the vessel outline as the current path (neck and body in one). */
 function tracePath(ctx, s) {
+  const shoulder = Math.min(s.shoulderR, (s.right - s.left) / 2, s.bottom - s.top);
+  const base = Math.min(s.baseR, (s.right - s.left) / 2);
   ctx.beginPath();
   ctx.moveTo(s.neckLeft + s.neckR, s.neckTop);
   ctx.lineTo(s.neckRight - s.neckR, s.neckTop);
   ctx.arcTo(s.neckRight, s.neckTop, s.neckRight, s.neckTop + s.neckR, s.neckR);
   ctx.lineTo(s.neckRight, s.top);
-  ctx.lineTo(s.right - s.radius, s.top);
-  ctx.arcTo(s.right, s.top, s.right, s.top + s.radius, s.radius);
-  ctx.lineTo(s.right, s.bottom - s.radius);
-  ctx.arcTo(s.right, s.bottom, s.right - s.radius, s.bottom, s.radius);
-  ctx.lineTo(s.left + s.radius, s.bottom);
-  ctx.arcTo(s.left, s.bottom, s.left, s.bottom - s.radius, s.radius);
-  ctx.lineTo(s.left, s.top + s.radius);
-  ctx.arcTo(s.left, s.top, s.left + s.radius, s.top, s.radius);
+  ctx.lineTo(s.right - shoulder, s.top);
+  ctx.arcTo(s.right, s.top, s.right, s.top + shoulder, shoulder);
+  ctx.lineTo(s.right, s.bottom - base);
+  ctx.arcTo(s.right, s.bottom, s.right - base, s.bottom, base);
+  ctx.lineTo(s.left + base, s.bottom);
+  ctx.arcTo(s.left, s.bottom, s.left, s.bottom - base, base);
+  ctx.lineTo(s.left, s.top + shoulder);
+  ctx.arcTo(s.left, s.top, s.left + shoulder, s.top, shoulder);
   ctx.lineTo(s.neckLeft, s.top);
   ctx.lineTo(s.neckLeft, s.neckTop + s.neckR);
   ctx.arcTo(s.neckLeft, s.neckTop, s.neckLeft + s.neckR, s.neckTop, s.neckR);

@@ -1,0 +1,31 @@
+name: Suggest a challenge
+description: A run modifier, a daily twist, or a bottle worth beating.
+title: "[challenge] "
+labels: ["idea", "challenge"]
+body:
+  - type: textarea
+    id: twist
+    attributes:
+      label: The twist
+      description: What is different about this run from the first capsule?
+      placeholder: >-
+        The bottle goes dark every 30 seconds. A light-therapy switch brings it
+        back for a few seconds, so you are playing and re-lighting at once.
+    validations:
+      required: true
+  - type: textarea
+    id: pressure
+    attributes:
+      label: What does it take away, and what does it give back?
+      description: >-
+        A modifier that only takes is a punishment. The good ones trade -
+        faster capsules for a virus that replicates, say.
+    validations:
+      required: true
+  - type: input
+    id: ending
+    attributes:
+      label: How do you know you won it?
+      placeholder: Clear the bottle without ever switching the light on.
+    validations:
+      required: true

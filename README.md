@@ -123,6 +123,42 @@ after a button is pressed on it, so give the pad one press before expecting it
 to do anything. Restart sits on Back/Select rather than a face button, since it
 throws the current run away.
 
+## Apothecary Through Time
+
+The twenty levels run through five eras of medicine, and the bottle in front of
+you changes with them: a wax-sealed clay vessel for the cave, an apothecary jar,
+a snake-oil bottle, the pill bottle, a cryo-vial. A physician stands beside it -
+a shaman, a beaked plague doctor, a moustachioed quack, a white-coated doctor, a
+hooded technician - and reacts to what you do. Crossing into a new era brings one
+line from that physician's notes, and nothing else; the story layer is five
+sentences long on purpose.
+
+The theme is not decoration over the mechanic, it is the mechanic's argument.
+Viruses that survive your medicine build resistance and mutate, which is the same
+arms race that runs from herb paste to sequenced therapy: the cure stops working,
+so you need a new one.
+
+One rule constrains all of it. The three medicine colours keep their exact hues
+in every era - only saturation, surface and the glassware around them change. A
+sepia palette that made level 2 harder to read than level 20 would be a worse
+game however good the screenshot looked, and `test/eras.test.js` fails the build
+if an era drifts a hue or washes out below the legible band.
+
+## Suggesting mechanics, challenges and themes
+
+The design workshop lives in [`docs/ideas.md`](docs/ideas.md): the mechanics
+under consideration, what they combine with, and the one thing they all have to
+survive - no interaction may leave a virus unanswerable.
+
+Ideas go through GitHub, so anyone with an account can add one:
+[a mechanic](https://github.com/danielwjohnston/rxdrop/issues/new?template=mechanic.yml),
+[a challenge](https://github.com/danielwjohnston/rxdrop/issues/new?template=challenge.yml),
+[a theme](https://github.com/danielwjohnston/rxdrop/issues/new?template=theme.yml),
+or [Discussions](https://github.com/danielwjohnston/rxdrop/discussions) for the
+half-formed ones. The forms ask the questions that decide whether an idea is
+buildable - chiefly "what does it combine with?" and "how does the player answer
+it?".
+
 ## Rules
 
 - The bottle is 8 columns by 16 rows, with one more row above it for the neck.
@@ -145,12 +181,12 @@ throws the current run away.
 ## Development
 
 ```sh
-npm test           # 141 unit tests, no dependencies, well under a second
+npm test           # 152 unit tests, no dependencies, well under a second
 npm run test:watch # re-run on change
 
 # End-to-end checks in a real browser (Playwright is not a dependency):
 npm i --no-save playwright && npx playwright install chromium
-npm run test:browser  # 23 checks: menus, controls, versus, daily, offline, mobile
+npm run test:browser  # 25 checks: menus, controls, versus, daily, offline, mobile
 
 npm run gauntlet   # the full protocol below: every stage, one gate
 ```

@@ -1,0 +1,10 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Talk it through first
+    url: https://github.com/danielwjohnston/rxdrop/discussions
+    about: >-
+      Half-formed ideas, questions and "what if" are welcome in Discussions.
+      Use the forms here when an idea is concrete enough to build.
+  - name: Play RxDrop
+    url: https://danielwjohnston.github.io/rxdrop/
+    about: The game itself, in the browser. It installs and plays offline.

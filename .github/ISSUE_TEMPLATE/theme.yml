@@ -1,0 +1,32 @@
+name: Suggest a theme or an era
+description: A setting, a vessel, a physician, or a look for the bottle.
+title: "[theme] "
+labels: ["idea", "theme"]
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        The game runs through five eras of medicine. Any theme has to survive
+        one hard constraint: **the three medicine colours keep their hues.** An
+        era changes the glassware, the surfaces and the light around them, never
+        the hue - a palette that makes level 2 harder to read than level 20 is a
+        worse game, however good the screenshot looks.
+  - type: input
+    id: era
+    attributes:
+      label: The era or setting
+      placeholder: Field medicine, 1916
+    validations:
+      required: true
+  - type: textarea
+    id: vessel
+    attributes:
+      label: The vessel and the physician
+      description: What is the bottle, and who is standing beside it?
+    validations:
+      required: true
+  - type: textarea
+    id: mechanic
+    attributes:
+      label: Does the setting suggest a rule?
+      description: Optional, and the best ones do. Antibiotic resistance is why the eras exist at all.

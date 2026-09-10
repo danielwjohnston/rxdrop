@@ -138,20 +138,26 @@ export class InputController {
   }
 
   /**
-   * Swipes on the playfield: drag to move, flick down to drop, tap to rotate.
+   * Swipes on the playfield: drag sideways to move, slide up to rotate, hold
+   * down to soft drop, flick down to hard drop, tap to rotate.
    * `cellSize` may be a function, so the thresholds follow the rendered board.
    */
   attachSwipe(element, { cellSize = 32 } = {}) {
     const cell = () => (typeof cellSize === 'function' ? cellSize() || 32 : cellSize);
     let start = null;
     let lastStepX = 0;
+    let lastStepUp = 0;
     let moved = false;
 
     const onDown = (event) => {
       start = { x: event.clientX, y: event.clientY, time: performance.now() };
       lastStepX = 0;
+      lastStepUp = 0;
       moved = false;
       element.setPointerCapture?.(event.pointerId);
+      // Belt and braces with the CSS: some browsers still begin a selection
+      // from a pointerdown on a canvas.
+      event.preventDefault?.();
     };
     const onMove = (event) => {
       if (!start) return;
@@ -164,6 +170,18 @@ export class InputController {
         for (let i = 0; i < Math.abs(steps - lastStepX); i += 1) this.tap(direction);
         lastStepX = steps;
         moved = true;
+      }
+      // Sliding UP rotates, one turn per cell travelled. A tap rotates too, but
+      // a swipe is easier to aim mid-drag than lifting a finger to tap, and the
+      // gesture reads as standing the capsule up. Guarded on dx so a sloppy
+      // sideways drag never spins the capsule.
+      if (Math.abs(dx) < threshold) {
+        const up = Math.trunc(-dy / threshold);
+        if (up > lastStepUp) {
+          for (let i = 0; i < up - lastStepUp; i += 1) this.tap('rotateCW');
+          moved = true;
+        }
+        lastStepUp = Math.max(0, up);
       }
       if (dy > threshold * 1.5 && Math.abs(dx) < threshold) {
         this.press('softDrop');

@@ -331,6 +331,51 @@ try {
     assert.equal(layout.scrollsY, false, 'the game should fit on one screen');
   });
 
+  await check('sliding up the bottle rotates the capsule', async () => {
+    const box = await mobile.locator('#board').boundingBox();
+    const cell = await mobile.evaluate(() => window.rxdrop.renderer.layout.cell);
+    const before = await snapshot(mobile);
+    const cx = box.x + box.width / 2;
+    const cy = box.y + box.height * 0.6;
+    await mobile.mouse.move(cx, cy);
+    await mobile.mouse.down();
+    for (let i = 1; i <= 4; i += 1) await mobile.mouse.move(cx, cy - i * cell * 0.5, { steps: 2 });
+    await mobile.mouse.up();
+    await mobile.waitForTimeout(120);
+    const after = await snapshot(mobile);
+    assert.notEqual(after.orientation, before.orientation, 'sliding up should turn the capsule');
+    assert.equal(after.x, before.x, 'sliding up should not also move it sideways');
+  });
+
+  await check('a drag on the page never starts a text selection', async () => {
+    // Reported from play: dragging to move the capsule kept starting a text
+    // selection and raising the copy/paste callout instead of playing.
+    const style = await mobile.evaluate(() => {
+      const read = (el) => {
+        const s = getComputedStyle(el);
+        return s.webkitUserSelect || s.userSelect;
+      };
+      return {
+        body: read(document.body),
+        board: read(document.getElementById('board')),
+        panel: read(document.querySelector('.panel--left')),
+        callout: getComputedStyle(document.body).webkitTouchCallout || 'unset',
+      };
+    });
+    assert.equal(style.body, 'none', 'the page should not be selectable text');
+    assert.equal(style.board, 'none', 'the bottle should not be selectable');
+    assert.equal(style.panel, 'none', 'the HUD should not be selectable');
+
+    // And a real drag across the HUD must leave nothing selected.
+    const panel = await mobile.locator('.panel--left').boundingBox();
+    await mobile.mouse.move(panel.x + 8, panel.y + panel.height / 2);
+    await mobile.mouse.down();
+    await mobile.mouse.move(panel.x + panel.width - 8, panel.y + panel.height / 2, { steps: 8 });
+    await mobile.mouse.up();
+    const selected = await mobile.evaluate(() => String(window.getSelection() ?? ''));
+    assert.equal(selected, '', `dragging selected text: ${JSON.stringify(selected)}`);
+  });
+
   await check('the bottle gets the lion\'s share of a phone screen', async () => {
     // The regression this pins: a tall HUD panel squeezed the bottle to a third
     // of the screen and the game became unplayable on a phone without anything

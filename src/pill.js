@@ -65,27 +65,50 @@ export function tryMove(board, pill, dx, dy) {
 }
 
 /**
+ * Where a rotation may land when the naive turn does not fit, in the order it
+ * is tried. Being generous here matters more than being pure: a player who is
+ * up against a wall or the stack and presses rotate means "turn me", and
+ * refusing is far more annoying than nudging them a column.
+ *
+ * The order is the point. Each list tries the capsule's OWN two columns before
+ * stepping outside them, so a nudge lands where you were already looking.
+ */
+
+/** Turning to horizontal: cells (x, y) and (x + 1, y). */
+const HORIZONTAL_KICKS = Object.freeze([
+  [0, 0],
+  [-1, 0], // Blocked to the right, by a wall or the stack: lay down leftwards.
+  [1, 0], // Blocked to the left.
+  [0, -1], // Both sides blocked: lift a row and lay down there.
+  [-1, -1], // Lift and shift, for a capsule wedged into a corner.
+  [1, -1],
+]);
+
+/** Turning to vertical: cells (x, y) and (x, y - 1). */
+const VERTICAL_KICKS = Object.freeze([
+  [0, 0],
+  // The left column is blocked overhead, so stand up in the column the other
+  // half is already in. Trying this before stepping outside the capsule is what
+  // makes the nudge feel like the capsule rather than a teleport.
+  [1, 0],
+  [-1, 0], // Both of its own columns blocked: step out one.
+  [0, -1],
+  [1, -1],
+  [-1, -1],
+  // Last, because kicking downwards can drop a capsule onto the stack: this is
+  // what lets a freshly dealt capsule stand up in the neck row.
+  [0, 1],
+]);
+
+/**
  * Rotates by a quarter turn (+1 clockwise, -1 counter-clockwise), kicking the
  * pill away from walls and the stack when the naive rotation does not fit.
+ * Returns null only when there is genuinely nowhere for the capsule to turn.
  */
 export function tryRotate(board, pill, direction = 1) {
   const orientation = (pill.orientation + (direction === 1 ? 1 : 3)) % 4;
   const rotated = { ...pill, orientation };
-  const kicks = isHorizontal(rotated)
-    ? [
-        [0, 0],
-        [-1, 0],
-        [1, 0],
-        [0, -1],
-      ]
-    : [
-        [0, 0],
-        [0, -1],
-        [-1, 0],
-        [1, 0],
-        // Lets a freshly spawned pill stand up on the top row.
-        [0, 1],
-      ];
+  const kicks = isHorizontal(rotated) ? HORIZONTAL_KICKS : VERTICAL_KICKS;
   for (const [dx, dy] of kicks) {
     const candidate = moved(rotated, dx, dy);
     if (fits(board, candidate)) return candidate;

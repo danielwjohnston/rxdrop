@@ -481,10 +481,14 @@ export class Board {
    * threat is that your setup no longer matches, not a free clear.
    * Returns the cells that changed.
    */
-  mutateViruses(rng, limit) {
+  mutateViruses(rng, limit, only = null) {
     const mutated = [];
     this.forEachCell((c, x, y) => {
       if (c.type !== VIRUS) return;
+      // `only` ages one colour and leaves the rest alone, which is what a
+      // stock-out of that medicine does: the disease you cannot reach is the
+      // disease that gets worse.
+      if (only !== null && c.color !== only) return;
       // A hybrid has already combined; it ages by delivery, not by the clock.
       if (isHybrid(c)) return;
       const above = this.get(x, y - 1);

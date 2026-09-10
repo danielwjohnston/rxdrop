@@ -326,7 +326,7 @@ export class Renderer {
     // Tolerance rides on the resistance rule, so the aura that announces it has
     // to as well - drawing "this needs a different colour" on a board where
     // that is not true would be a lie the player cannot check.
-    const tolerance = Boolean(game.resistance);
+    const tolerance = Boolean(game.tolerance ?? game.resistance);
     game.board.forEachCell((c, x, y) => {
       if (clearing.has(`${x},${y}`)) return;
       const px = layout.originX + x * layout.cell;

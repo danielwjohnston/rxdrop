@@ -53,11 +53,14 @@ export const MODIFIERS = Object.freeze([
     name: 'Rationing',
     icon: '⊘',
     blurb: 'Only two medicines are in stock at a time.',
-    detail: 'One colour is out of stock for a spell. Every board state that '
-      + 'needed it has to wait, and the stack you build in the meantime is what '
-      + 'the wait costs you.',
+    detail: 'One colour is out of stock for a spell, and the disease you cannot '
+      + 'reach is the disease that gets worse: while a medicine is out of stock, '
+      + 'viruses of that colour build tolerance every capsule. Two colours make '
+      + 'runs easier to build, so without that the modifier would be a relief '
+      + 'rather than a challenge - the playtest measured exactly that.',
     bound: `The withheld colour rotates every ${RATION_SPELL} capsules, so no `
-      + 'colour is ever out of stock for longer than that.',
+      + 'colour is ever out of stock for longer than that, and tolerance always '
+      + 'has an answer in the medicine it never built a defence against.',
   }),
   Object.freeze({
     id: 'contaminated',

@@ -61,6 +61,7 @@ function playOne({ level, speed, resistance, seed, modifiers = [] }) {
     clears: 0,
     cascades: 0,
     collateral: 0,
+    viruses: 0,
     shrugs: 0,
     hybrids: 0,
     cured: 0,
@@ -120,6 +121,7 @@ function playOne({ level, speed, resistance, seed, modifiers = [] }) {
         game.setSoftDrop(false);
       } else if (event.type === 'clear') {
         stats.clears += 1;
+        stats.viruses += event.viruses ?? 0;
         if (event.combo > 1) stats.cascades += 1;
         stats.collateral += event.collateral ?? 0;
         stats.cured += event.cured ?? 0;
@@ -380,10 +382,16 @@ for (const setup of modified) {
     const share = total('darkFrames') / Math.max(1, runs.reduce((n, r) => n + r.frames, 0));
     notes.push(`dark ${(share * 100).toFixed(0)}% of the time, ${total('darkClears')} clears in it`);
   }
+  // Viruses per hundred capsules is the number that matters. Survival alone is
+  // misleading: a modifier can make the bottle easier to keep alive while making
+  // the level harder to actually finish, and only this column shows that.
+  const rate = mean(runs.map((r) => (r.capsules ? (r.viruses / r.capsules) * 100 : 0)));
   console.log(
     `  ${label.padEnd(34)}`
     + ` capsules ${String(Math.round(mean(runs.map((r) => r.capsules)))).padStart(4)}`
     + ` | clears ${String(Math.round(mean(runs.map((r) => r.clears)))).padStart(3)}`
+    + ` | viruses/100 ${rate.toFixed(1).padStart(4)}`
+    + ` | levels ${mean(runs.map((r) => r.levelsCleared)).toFixed(1)}`
     + (notes.length ? `\n      ${notes.join(' · ')}` : ''),
   );
   // The bound every modifier claims: it changes the run, it does not end it.

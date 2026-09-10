@@ -164,6 +164,22 @@ export class Game {
     return this.modifiers.includes(id);
   }
 
+  /**
+   * Whether tolerance is in play - a virus that stops answering to its own
+   * colour and starts answering to an older one.
+   *
+   * It rides on the resistance rule, and rationing brings it too. That is not
+   * decoration: a stock-out of one medicine is exactly how tolerance arises, and
+   * without it rationing has no cost at all. Two colours make runs EASIER to
+   * build, so the playtest found the modifier improving every number it
+   * measured - longer runs, more clears, faster virus kills and the only setup
+   * that finished levels. A modifier that makes the bottle easier while
+   * claiming to make it harder is a defect, not a preference.
+   */
+  get tolerance() {
+    return this.resistance || this.has('rationing');
+  }
+
   /** True when the bottle is dark enough for a clear to be worth a badge. */
   get isDark() {
     return this.has('blackout') && this.light <= DARK_AT;
@@ -503,7 +519,7 @@ export class Game {
     }
     // Tolerance rides on the resistance rule: with resistance off, a match
     // means exactly what it always did.
-    this.outcome = this.board.matchOutcome(matches, this.resistance);
+    this.outcome = this.board.matchOutcome(matches, this.tolerance);
     // A hybrid answers to both its parents. Book the deliveries in now so the
     // cells an antibody takes are part of the clear the player watches.
     this.cured = this.board.cureHybrids(this.outcome.deliveries ?? [], this.chain);
@@ -703,12 +719,22 @@ export class Game {
    * a mutation is playing, which holds the next capsule until it finishes.
    */
   tickResistance() {
-    if (!this.resistance) return false;
+    if (!this.tolerance) return false;
     if (this.pillsPlaced === 0) return false;
-    if (this.pillsPlaced % RESISTANCE_INTERVAL !== 0) return false;
     if (this.resistanceTickedAt === this.pillsPlaced) return false;
+    // Two clocks, and a run with both on obeys whichever comes first. The
+    // resistance clock ages everything slowly; the rationing clock ages only
+    // the colour that is out of stock, and ages it every capsule - what you
+    // cannot treat is what gets worse.
+    const aged = this.resistance && this.pillsPlaced % RESISTANCE_INTERVAL === 0;
+    const starved = this.has('rationing');
+    if (!aged && !starved) return false;
     this.resistanceTickedAt = this.pillsPlaced;
-    const mutations = this.board.mutateViruses(this.rng, RESISTANCE_MAX);
+    const mutations = this.board.mutateViruses(
+      this.rng,
+      RESISTANCE_MAX,
+      aged ? null : rationedOut(this.pillsPlaced),
+    );
     if (mutations.length === 0) return false;
     this.mutations = mutations;
     this.phase = PHASE.MUTATING;
@@ -814,7 +840,7 @@ export class Game {
 
   /** How close the board is to its next mutation, as 0..1, for the HUD. */
   get resistanceLevel() {
-    if (!this.resistance) return 0;
+    if (!this.tolerance) return 0;
     return this.board.peakResistance(RESISTANCE_MAX);
   }
 

@@ -192,6 +192,34 @@ capsules and it is back", not "the game is withholding it". Rationing draws from
 the same shuffled bag and passes over the missing colour, so the other two keep
 the bag's even spread instead of degenerating into a coin flip.
 
+*What the playtest caught, after this shipped.* As first built, rationing was a
+**relief**. Two colours make runs easier to build, and that outweighed the wait
+by every measure the bot took: longer runs, more clears, more viruses killed per
+capsule, and the only setup that ever finished a level. A modifier that makes
+the bottle easier while claiming to make it harder is a defect, not a
+preference.
+
+The fix is the thing the theme was pointing at the whole time: **a stock-out
+drives resistance.** While a medicine is out of stock, viruses of that colour
+build tolerance every capsule - the disease you cannot reach is the disease that
+gets worse - and rationing therefore brings tolerance with it whether or not
+resistance is switched on. It reuses a rule the game already has rather than
+adding one, and it converts "clearing is easier" into "the thing you cannot
+reach is getting worse".
+
+Be honest about what that produces: rationing is now the **slow grind**, not the
+deadly one. Runs last two to three times longer and finish more levels; each
+virus simply costs more capsules. That is a distinct texture rather than a
+difficulty setting, and the gauntlet holds it to the one claim that matters -
+viruses killed per capsule has to be *worse* than a plain bottle. Take the
+tolerance rule back out and that check goes red.
+
+*A second thing the check caught about itself:* the first version measured over
+a frame budget too small for a rationed run to end. Rationed games last far
+longer, so the budget truncated them mid-run and the comparison inverted - the
+check reported rationing as easier when it was not, for a reason that had
+nothing to do with the game.
+
 ### Contaminated batch - `shipped`
 
 Some capsules are inert - they stack, they fall, they clear nothing. Dumping

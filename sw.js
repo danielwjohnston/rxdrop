@@ -6,7 +6,7 @@
  * Bump CACHE when the file list or any cached file changes: the new worker
  * precaches under the new name and deletes the old cache on activate.
  */
-const CACHE = 'rxdrop-v12';
+const CACHE = 'rxdrop-v13';
 
 const PRECACHE = [
   './',

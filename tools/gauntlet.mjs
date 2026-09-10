@@ -749,6 +749,56 @@ stage('modifiers', 'A modifier may change a run, never end it', (check) => {
     }
   });
 
+  check('rationing costs something instead of making the bottle easier', () => {
+    // The defect this check exists for: two colours make runs EASIER to build,
+    // so rationing on its own improved every number the playtest took - longer
+    // runs, more clears, faster virus kills and the only setup that finished
+    // levels. A modifier that makes the bottle easier while claiming to make it
+    // harder is a defect, not a preference.
+    //
+    // The measure is viruses killed per capsule placed, because that is what
+    // the modifier is supposed to slow down. Surviving longer is not the same
+    // as doing better, and the two moved in opposite directions here.
+    // The frame budget has to be large enough for every run to END, not merely
+    // to run for a while. Rationed games last two to three times longer, so a
+    // budget that truncates them measures a different slice of each and the
+    // comparison inverts - which is exactly what the first version of this
+    // check reported.
+    const rate = (modifiers) => {
+      let viruses = 0;
+      let capsules = 0;
+      for (let seed = 0; seed < 10; seed += 1) {
+        const game = new Game({ level: 4, speed: 'LOW', seed, modifiers });
+        let target = plan(game);
+        for (let f = 0; f < 250000 && !game.isOver; f += 1) {
+          if (game.phase === PHASE.FALLING) game.setSoftDrop(!steer(game, target));
+          game.update(FRAME);
+          for (const event of game.drainEvents()) {
+            if (event.type === 'clear') viruses += event.viruses ?? 0;
+            if (event.type === 'spawn') {
+              capsules += 1;
+              target = plan(game);
+              game.setSoftDrop(false);
+            }
+            if (event.type === 'levelComplete') {
+              game.advanceLevel();
+              target = plan(game);
+            }
+          }
+        }
+      }
+      return capsules ? viruses / capsules : 0;
+    };
+    const plain = rate([]);
+    const rationed = rate(['rationing']);
+    assert.ok(plain > 0 && rationed > 0, 'both setups should clear something');
+    assert.ok(
+      rationed < plain,
+      `rationing kills ${(rationed * 100).toFixed(1)} viruses per 100 capsules`
+      + ` against ${(plain * 100).toFixed(1)} plain - it is making the bottle easier`,
+    );
+  });
+
   check('a contaminated batch never becomes permanent weight', () => {
     // Inert halves belong to no run, so if they could not be washed out they
     // would fill the bottle on their own however well it was played.
@@ -874,9 +924,19 @@ stage('modifiers', 'A modifier may change a run, never end it', (check) => {
     // come in - a mechanic wired to nothing would show up here as a page that
     // can never be written.
     const book = new Formulary();
-    for (let seed = 0; seed < 6; seed += 1) {
+    // A mix of setups rather than one, because the discoveries do not all live
+    // in the same kind of run. The whole formulary at once churns the board
+    // hard enough that the rarest find - both parents of a strain in one
+    // cascade - effectively never happens; resistance on its own is where that
+    // one turns up.
+    const setups = [
+      { resistance: true, modifiers: MODIFIER_IDS },
+      { resistance: true, modifiers: [] },
+      { resistance: true, modifiers: ['outbreak', 'blackout'] },
+    ];
+    for (let seed = 0; seed < 18; seed += 1) {
       const game = new Game({
-        level: 6, speed: 'LOW', seed, resistance: true, modifiers: MODIFIER_IDS,
+        level: 6, speed: 'LOW', seed, ...setups[seed % setups.length],
       });
       let target = plan(game);
       // Half the runs work the light and half never touch it. Both are real
@@ -884,7 +944,7 @@ stage('modifiers', 'A modifier may change a run, never end it', (check) => {
       // that always spends the light can never earn that badge, which is a fact
       // about the bot rather than about the game.
       const worksTheLight = seed % 2 === 0;
-      for (let f = 0; f < 90000 && !game.isOver; f += 1) {
+      for (let f = 0; f < 250000 && !game.isOver; f += 1) {
         game.setLight(worksTheLight && game.light < 0.5);
         if (game.phase === PHASE.FALLING) game.setSoftDrop(!steer(game, target));
         game.update(FRAME);

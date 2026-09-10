@@ -616,9 +616,19 @@ try {
   });
 
   await check('the formulary fills in as you trigger things, not as you read them', async () => {
-    const blank = await modPage.evaluate(() => {
-      localStorage.removeItem('rxdrop.formulary.v1');
+    // Clearing the store is not enough on its own - the notebook is loaded into
+    // memory once at start, so it has to be reloaded to actually come back
+    // blank. Without this the check depends on nothing earlier in the suite
+    // having triggered a discovery, which is not a thing to depend on.
+    await modPage.evaluate(() => {
+      // Quit first. A live game keeps writing the notebook back as it plays, so
+      // clearing the store under a running bottle just gets it rewritten before
+      // the reload lands.
       window.rxdrop.quit();
+      localStorage.removeItem('rxdrop.formulary.v1');
+    });
+    await modPage.reload({ waitUntil: 'networkidle' });
+    const blank = await modPage.evaluate(() => {
       document.getElementById('open-formulary').click();
       const entries = [...document.querySelectorAll('.notebook__entry')];
       return {
@@ -926,6 +936,121 @@ try {
 
     assert.deepEqual(padErrors, []);
     await pad.close();
+  });
+
+  await check('a phone can actually work the light, and the icons are not tofu', async () => {
+    // Blackout is a modifier a phone player can switch on. Without a control
+    // on the pad they can switch it on and then have no way to answer it - the
+    // light is a HELD key, and a phone has no keys.
+    await mobile.goto(`${BASE}/?level=2&speed=LOW&seed=8&mods=blackout,quarantine`, {
+      waitUntil: 'networkidle',
+    });
+
+    // Icons are drawn rather than typed, because a glyph is a bet on the
+    // reader's font having it - and quarantine's first glyph rendered as a
+    // tofu box on a phone.
+    const icons = await mobile.evaluate(() => {
+      const svgs = [...document.querySelectorAll('#modifiers .mods__icon')];
+      return {
+        count: svgs.length,
+        drawn: svgs.every((s) => s.tagName.toLowerCase() === 'svg' && s.querySelector('path')),
+        painted: svgs.every((s) => s.getBoundingClientRect().width > 4),
+      };
+    });
+    assert.equal(icons.count, 5, 'every modifier should carry an icon');
+    assert.equal(icons.drawn, true, 'icons must be drawn, not typed');
+    assert.equal(icons.painted, true, 'and must actually take up space');
+
+    assert.equal(await mobile.isVisible('#light-button'), false, 'no light button before a run');
+    await mobile.click('[data-start]');
+    await mobile.waitForTimeout(300);
+    assert.equal(await mobile.isVisible('#light-button'), true, 'the pad needs a light button');
+
+    await mobile.evaluate(() => {
+      const g = window.rxdrop.game;
+      g.blackoutFor = 5000;
+      g.light = 0.1;
+      g.lightCharge = 1;
+      g.lightSpent = false;
+    });
+    const dark = await mobile.evaluate(() => window.rxdrop.game.light);
+    assert.ok(dark < 0.35, 'the bottle should be dark to start with');
+
+    const button = await mobile.locator('#light-button').boundingBox();
+    await mobile.touchscreen.tap(button.x + button.width / 2, button.y + button.height / 2);
+    // A tap is a press and a release, so hold it properly instead.
+    await mobile.dispatchEvent('#light-button', 'pointerdown');
+    await mobile.waitForTimeout(400);
+    const lit = await mobile.evaluate(() => ({
+      light: window.rxdrop.game.light,
+      lighting: window.rxdrop.game.lighting,
+    }));
+    await mobile.dispatchEvent('#light-button', 'pointerup');
+    assert.equal(lit.lighting, true, 'holding the pad button should arm the light');
+    assert.ok(lit.light > dark, `the bottle should brighten, went ${dark} to ${lit.light}`);
+
+    await mobile.waitForTimeout(200);
+    assert.equal(
+      await mobile.evaluate(() => window.rxdrop.game.lighting),
+      false,
+      'letting go should drop the light',
+    );
+
+    // And the pad must still fit: a sixth control cannot cost the bottle.
+    const fits = await mobile.evaluate(() => ({
+      scrollH: document.documentElement.scrollWidth > innerWidth,
+      share: document.getElementById('board').getBoundingClientRect().height / innerHeight,
+    }));
+    assert.equal(fits.scrollH, false, 'the light button pushed the page sideways');
+    assert.ok(fits.share > 0.4, `the bottle fell to ${(fits.share * 100).toFixed(0)}% of the screen`);
+  });
+
+  await check('the bottle never reaches the touchpad, however much is switched on', async () => {
+    // The bug this exists for: the mobile layout had a `min-height: 50vh` floor
+    // on the bottle with no matching ceiling on the panels. Switch on enough
+    // modifiers and the panels grew past what was left - and because the app is
+    // `overflow: hidden`, the excess did not scroll. The bottle was drawn
+    // straight over the controls, 159px of it on a small phone.
+    //
+    // A size check alone never caught it: the canvas WAS tall. What was wrong
+    // was where it ended up, so this measures the gap between the two rather
+    // than the height of either.
+    const everything = 'outbreak,blackout,rationing,contaminated,quarantine';
+    for (const size of [{ width: 360, height: 640 }, { width: 390, height: 780 }]) {
+      const phone = await browser.newPage({ viewport: size, isMobile: true, hasTouch: true });
+      phone.on('pageerror', (error) => errors.push(`overlap pageerror: ${error.message}`));
+      await phone.goto(`${BASE}/?level=8&speed=LOW&seed=6&resistance=1&mods=${everything}`, {
+        waitUntil: 'networkidle',
+      });
+      await phone.click('[data-start]');
+      await phone.waitForTimeout(400);
+      const m = await phone.evaluate(() => {
+        const rect = (sel) => {
+          const el = document.querySelector(sel);
+          const b = el.getBoundingClientRect();
+          return { top: b.top, bottom: b.bottom, height: b.height };
+        };
+        return {
+          board: rect('#board'),
+          pad: rect('.touchpad'),
+          scrollH: document.documentElement.scrollWidth > innerWidth,
+          vh: innerHeight,
+        };
+      });
+      const label = `${size.width}x${size.height}`;
+      assert.ok(
+        m.board.bottom <= m.pad.top + 1,
+        `${label}: the bottle overlaps the touchpad by ${Math.round(m.board.bottom - m.pad.top)}px`,
+      );
+      assert.ok(m.pad.bottom <= m.vh + 1, `${label}: the touchpad runs off the bottom`);
+      assert.equal(m.scrollH, false, `${label}: the page scrolls sideways`);
+      // And it still has to be worth looking at with everything switched on.
+      assert.ok(
+        m.board.height / m.vh > 0.3,
+        `${label}: the bottle fell to ${((m.board.height / m.vh) * 100).toFixed(0)}% of the screen`,
+      );
+      await phone.close();
+    }
   });
 
   await mobile.close();

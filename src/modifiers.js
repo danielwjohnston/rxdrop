@@ -27,7 +27,11 @@ export const MODIFIERS = Object.freeze([
   Object.freeze({
     id: 'outbreak',
     name: 'Outbreak',
-    icon: '☣',
+    // Icons are drawn, not typed. A glyph is a bet on the reader's font
+    // having it, and that bet loses: the first version of the picker showed
+    // quarantine as a tofu box on a phone. These are paths in a 24x24 box.
+    icon: 'M12 4a3 3 0 1 1 0 6 3 3 0 0 1 0-6M5 15a3 3 0 1 1 0 6 3 3 0 0 1 0-6'
+      + 'M19 15a3 3 0 1 1 0 6 3 3 0 0 1 0-6M12 10v4M12 14l-5 2M12 14l5 2',
     blurb: 'Viruses replicate. Capsules come twice as fast.',
     detail: 'Every few capsules a virus spreads into an empty cell beside it. '
       + 'Gravity halves to pay for it, so you place roughly twice as many '
@@ -39,7 +43,7 @@ export const MODIFIERS = Object.freeze([
   Object.freeze({
     id: 'blackout',
     name: 'Blackout',
-    icon: '◐',
+    icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 3v18a9 9 0 0 1 0-18z',
     blurb: 'The bottle goes dark. Hold the light to bring it back.',
     detail: 'Light drains away and the bottle fades. The light-therapy control '
       + 'is held, not pressed, and it spends a reservoir that refills while you '
@@ -51,7 +55,7 @@ export const MODIFIERS = Object.freeze([
   Object.freeze({
     id: 'rationing',
     name: 'Rationing',
-    icon: '⊘',
+    icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M6 6l12 12',
     blurb: 'Only two medicines are in stock at a time.',
     detail: 'One colour is out of stock for a spell, and the disease you cannot '
       + 'reach is the disease that gets worse: while a medicine is out of stock, '
@@ -65,7 +69,7 @@ export const MODIFIERS = Object.freeze([
   Object.freeze({
     id: 'contaminated',
     name: 'Contaminated batch',
-    icon: '✖',
+    icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M8 8l8 8M16 8l-8 8',
     blurb: 'Some capsule halves are inert. They clear nothing.',
     detail: 'A bad batch stacks and falls like any other capsule but belongs to '
       + 'no run. Dumping it somewhere harmless is a skill of its own - and '
@@ -76,7 +80,7 @@ export const MODIFIERS = Object.freeze([
   Object.freeze({
     id: 'quarantine',
     name: 'Quarantine',
-    icon: '⌷',
+    icon: 'M8 3v18M16 3v18M8 7l8-4M8 13l8-4M8 19l8-4',
     blurb: 'A column is sealed off until you clear beside it.',
     detail: 'The bottle gets narrower and the shape of the board becomes the '
       + 'puzzle. Clear a cell in either neighbouring column to break the seal.',

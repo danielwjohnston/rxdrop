@@ -229,7 +229,7 @@ npm run test:watch # re-run on change
 
 # End-to-end checks in a real browser (Playwright is not a dependency):
 npm i --no-save playwright && npx playwright install chromium
-npm run test:browser  # 38 checks: menus, controls, versus, daily, offline, mobile
+npm run test:browser  # 40 checks: menus, controls, versus, daily, offline, mobile
 
 npm run gauntlet   # the full protocol below: every stage, one gate
 ```

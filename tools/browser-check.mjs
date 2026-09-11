@@ -1081,7 +1081,10 @@ try {
     }));
     assert.equal(entered.inLight, true, 'tapping the pad button should open the chamber');
     assert.ok(entered.piece, 'and deal light to steer');
-    assert.match(entered.label, /BOTTLE/, 'the button should now offer the way back');
+    assert.match(entered.label, /BACK TO THE BENCH/, 'the button should now offer the way back');
+    // And it says how much of the sample is still filmed, because that is the
+    // number the decision to stay or go actually turns on.
+    assert.match(entered.label, /\(\d+ left\)|STERILE/, `no film count on the pad: "${entered.label}"`);
 
     await mobile.touchscreen.tap(button.x + button.width / 2, button.y + button.height / 2);
     await mobile.waitForTimeout(250);

@@ -339,6 +339,192 @@ board and renderer were already cleanly separated, so it was a real piece of
 work and not a rewrite - the awkward part was that `Game` owned exactly one
 falling piece.
 
+### Sonotherapy - `proposed`
+
+*The idea:* "Sonic therapy, and the gameplay could be beat matching like Tap Tap
+Revolution or DDR. Falling things and you gotta do the sonics in the right
+sequence to destabilise them enough for treatment. Like they have cell membranes
+that have to be sonically broken."
+
+This is the strongest proposal on the page, and not because rhythm is fun. It is
+the strongest because of **where it plugs in**. Every other idea here changes one
+or two things. This one changes *all of them*, and it does it by giving the
+soundtrack - which is currently atmosphere - a job.
+
+#### The medicine is real, and it is the sibling of the one already built
+
+**Sonodynamic therapy** is the acoustic twin of the photodynamic therapy the
+bottle already runs on. Low-frequency ultrasound permeabilises bacterial
+membranes and drives antibiotics through them - the **bioacoustic effect** - and
+it is studied against exactly the biofilm phototherapy was built to cut. PDT and
+SDT are genuinely paired modalities in the literature.
+
+So the two therapies are not two flavours of "special move". They do different
+work on different parts of the problem:
+
+| | Targets | Restores |
+| --- | --- | --- |
+| **Medicine** | the organism | - |
+| **Phototherapy** | the biofilm hiding it | **information** - you can see |
+| **Sonotherapy** | the membrane protecting it | **efficacy** - the drug binds |
+
+That table is the whole design. Light tells you where the disease is.
+Sound makes the disease answerable. Medicine finishes it.
+
+*On the name:* "sonic" is somebody else's blue hedgehog. **Sonotherapy** is the
+real word, parallels Phototherapy exactly, and the player-facing verb can just be
+**resonate**.
+
+#### The shape: a layer, not a chamber
+
+The obvious build is a second chamber - enter it, tap lanes, leave. That would be
+wrong, and the reason is worth stating because it is the same mistake the
+blackout made.
+
+Phototherapy already owns "stop playing the bottle and go play a second puzzle".
+Building sonotherapy the same way gives the game two mechanics with one shape,
+and the second one will feel like the first one wearing a hat.
+
+**Sonotherapy is the opposite shape: it never takes your hands off the capsule.**
+The beat is always running - the music is already there - and what sonotherapy
+adds is that *the timing of what you were already doing now means something.*
+
+- A capsule that **locks on the beat** sonicates the row it landed in.
+- A rotation on the beat counts. A hurry released on the beat counts.
+- Miss the beat and nothing happens. It was just a capsule, which is what it is
+  today.
+
+You are not interrupted, you are *graded*. Phototherapy costs you the dose in
+your hand. Sonotherapy costs you nothing but demands everything, which is a
+completely different feeling and the reason to have both.
+
+#### The sequence
+
+"The right sequence" is the part that makes this a game rather than a metronome.
+
+Each strain has a **resonant frequency** - the three medicine colours are three
+tones - and breaking a membrane takes a **phrase**, not a hit: four or eight
+beats, shown approaching a hit line, in the era's own musical language. The
+phrase tells you which strain you are tuned to. Play it clean and that strain
+**resonates**: its membrane goes, and everything in the section listening to that
+frequency is suddenly treatable.
+
+Which means the era soundtrack stops being decoration and becomes **the
+interface**. The prehistoric phrase is heavy toms on a modal drone. The genomic
+phrase is a sequenced arpeggio. Same mechanic, and the player learns eleven
+musical dialects because each one is a control scheme.
+
+That is the strongest argument on this page for building out the music-per-period
+system: it would no longer be paint.
+
+#### What it does to every system already in the bottle
+
+This is the test from the top of the page - does it *combine* - and it passes it
+harder than anything here:
+
+- **Tolerance** gets its second answer. Today a virus that shrugs off its colour
+  answers only to the older medicine cleared beside it. Sonicate it and the
+  shield is stripped: it answers to its own colour again. Two routes to the same
+  cure with different costs, which is what a formulary is for.
+- **Hybrids** come apart. A hybrid needs both parents in one breath. A resonated
+  hybrid separates into halves you can treat singly - the hardest thing in the
+  game gets a skill-priced escape hatch.
+- **Biofilm damps sound.** A fogged row *cannot* be sonicated. Light first, then
+  sound, then the drug. A three-step protocol with a required **ordering**, which
+  is a genuinely new kind of puzzle for this bottle and the best single
+  interaction in the proposal.
+- **Outbreak gets a clock you can hear.** Replication lands on the downbeat. The
+  bar is now a threat timer, and a player who can count knows when the next one
+  is coming.
+- **Rationing gets a verb.** While a colour is out of stock you currently wait.
+  Instead you spend the spell resonating the strain you cannot dose, so it is
+  ready the moment stock returns.
+- **Quarantine stops being a dead zone.** A seal blocks matter. Sound goes
+  through it. You can treat into quarantine even while you cannot place into it.
+- **The contaminated batch is redeemed.** An inert half carries no drug - but it
+  carries vibration perfectly well. The worst piece in the game becomes the best
+  drumstick, which is exactly the kind of reversal this page is for.
+- **Antibodies** already fire on a cascade of both parents. On the downbeat, the
+  ring travels further.
+- **The virus theatre keeps the beat.** The mascots are the metronome - they bob
+  on it, flinch on a hit, and mock you when you drift. That solves the
+  accessibility requirement below with the thing the art direction already wants.
+
+#### The bounds
+
+Every modifier here states why it cannot leave a virus unanswerable. This one
+needs more than usual, because rhythm is the most exclusionary mechanic in games:
+
+- **A run can be won without ever hitting a beat.** Every virus keeps its
+  existing answer - its own colour, or the older medicine beside it. Sonotherapy
+  is a second route, never a gate. Same bound phototherapy states.
+- **A miss is a non-event, never a penalty.** Nothing gets harder for being
+  off-beat. The moment a missed beat *costs* something, the mechanic becomes a
+  tax on players who cannot hear it, and the fun of the whole thing is upside
+  only.
+- **The beat is always on at least two channels.** Audible *and* visible, so it
+  is playable with the sound off and playable without watching for it. Haptics,
+  where they exist, are a third - never the only one.
+- **Latency is calibrated, not assumed.** Bluetooth headphones run 150-300ms
+  behind. Without an offset calibration this mechanic is broken for a large
+  fraction of players and they will read it as the game being wrong. A
+  calibration screen is not polish here, it is a bound.
+- **The timing window is a setting**, with a wide option, and the wide option is
+  not a lesser mode.
+- **Sound never makes a virus harder to reach**, and never adds resistance.
+
+#### Forks
+
+1. **Layer or chamber?** Recommended: layer, for the reason above. A chamber
+   would duplicate phototherapy's shape. If playtesting says the layer is too
+   subtle to notice, the fallback is a chamber - but try the layer first.
+2. **Dedicated tap, or reuse the lock?** A dedicated key is unmissable and
+   teaches itself; reusing the capsule lock is far more elegant and means the
+   rhythm is never a second thing to do. Ship both behind a toggle, like the
+   phototherapy variants, and decide with a hand.
+3. **Does the beat drive the game's other clocks?** Quantising gravity to the bar
+   would make RxDrop a rhythm game outright. That is a bigger swing than this
+   entry is proposing and should be argued for separately - but it is the
+   interesting version, and worth a prototype before it is dismissed.
+4. **How much does a phrase buy?** One strain in one row, or every virus of that
+   colour in the band? Cheap and frequent, or rare and enormous.
+
+#### Haptics, honestly
+
+`navigator.vibrate()` works on Android Chrome. Gamepads can rumble through
+`vibrationActuator.playEffect('dual-rumble', ...)` in Chromium browsers. **iOS
+Safari has no web vibration API at all**, and neither does anything else on iOS,
+because every iOS browser is Safari underneath - which covers at least one of the
+people currently playtesting this game. So haptics ship as a third channel that
+makes a good thing better, and the mechanic has to be complete without them.
+
+#### What it would cost to build, without flattering it
+
+More than phototherapy, and the expensive part is not the gameplay:
+
+- **A transport.** The audio engine today triggers effects and loops two
+  chiptunes. A rhythm mechanic needs a sample-accurate beat clock off
+  `AudioContext.currentTime` with a look-ahead scheduler - never
+  `requestAnimationFrame` or `Date.now()`, both of which drift audibly. This is
+  the single biggest piece of work and everything else waits on it.
+- **Music as data.** Eras would each need a score - a timeline the transport
+  reads - rather than imperative loops. That is the same refactor the
+  eleven-period music direction needs anyway, so it gets paid for twice.
+- **Input timestamps at the event, not the frame.** A 60Hz frame is 16ms of slop,
+  which is most of a tight timing window. Hits have to be judged against
+  `event.timeStamp`, mapped into audio time.
+- **A determinism problem that has to be designed in, not retrofitted.** Stage 2
+  of the gauntlet is "a seed reproduces a game exactly", and wall-clock audio
+  time is not reproducible. The answer is that the *score* is seeded and the
+  player's hits are inputs like any other - but it means the beat clock must be
+  **injectable**, so tests and the bot can run on a virtual transport. Cheap to
+  design in now; expensive to bolt on later. Nothing about this should be built
+  until that decision is made.
+
+The bottle, the board and the renderer are already separated enough that the
+gameplay side is tractable. It is the audio engine that is not ready, and that is
+worth knowing before anyone starts.
+
 ### Rationing - `shipped`
 
 For a stretch, only two of the three colours are dealt. Every board state that
@@ -452,6 +638,14 @@ which is a fact about the bot, not about the game.
 
 ## What is open
 
+**Sonotherapy** is proposed and not built - see above. It is the sibling of the
+phototherapy that shipped: light cuts the biofilm hiding the disease, sound
+breaks the membrane protecting it, and the drug finishes what the other two
+opened up. It is the only proposal on this page that touches every system already
+in the bottle, and the only one blocked on a piece of engineering rather than a
+decision - the audio engine has no transport, and a rhythm mechanic is a
+sample-accurate beat clock before it is anything else.
+
 **Phototherapy** shipped and replaced the blackout, which worked and did not
 mean anything. Its three open forks ship as toggles rather than as decisions -
 see above.
@@ -465,7 +659,7 @@ Worth writing down so nobody has to rediscover it:
 
 - **Versus does not take modifiers.** Two bottles trading garbage still play the
   plain rules. Some of them raise real questions for a two-player game - does a
-  blackout hit both bottles at once, does an outbreak on your side feed the
+  fogged bottle hit both players at once, does an outbreak on your side feed the
   other one - and guessing at those answers is a worse outcome than leaving it
   open.
 - **Rationing is the slow grind, not the deadly one.** It is honest about that

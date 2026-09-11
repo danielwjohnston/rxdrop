@@ -254,6 +254,13 @@ body::after {
   inset: 0;
   display: grid;
   place-items: center;
+  /* Scrolls rather than clips. This is the difference between a tall card and
+     an unplayable game: a tester on an iPhone could not see the Start button at
+     all, because the card was 662px inside a 547px overlay and the overflow had
+     nowhere to go. A card may be too tall - it may never be unreachable. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 12px;
   background: rgba(4, 7, 18, 0.82);
   backdrop-filter: blur(3px);
@@ -267,6 +274,10 @@ body::after {
 
 .card {
   width: min(100%, 340px);
+  /* Never taller than the overlay it sits in; the overlay scrolls instead. */
+  max-height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -524,6 +535,11 @@ kbd {
 
 .button {
   appearance: none;
+  /* 44px is the smallest thing a thumb reliably hits. The primary button on the
+     smallest phone was measuring 37px once the card tightened up, which is the
+     sort of thing that turns "I could not find Play" into "I found Play and it
+     did not seem to do anything". */
+  min-height: 44px;
   padding: 10px 14px;
   font: inherit;
   font-weight: 700;
@@ -840,6 +856,17 @@ body.is-versus .apothecary {
 
   .panel--right {
     grid-area: right;
+  }
+
+  /*
+   * Nothing in the panels means anything before you have played: SCORE 0,
+   * TOP 0, an empty NEXT and a disabled PAUSE. On a phone that is most of the
+   * first screen, and it is a fair share of why a tester's first reaction to
+   * opening this was "wtf is this". They arrive when the game does.
+   */
+  body:not(.is-playing) .panel--left,
+  body:not(.is-playing) .panel--right {
+    display: none;
   }
 
   .fields {
@@ -1336,4 +1363,101 @@ body.is-versus .apothecary {
 
 @media (prefers-reduced-motion: reduce) {
   .toast { animation: none; }
+}
+
+
+/* ---- the title card's disclosures --------------------------------------- */
+
+/*
+ * Play is the first control on the screen and everything else is folded away
+ * behind these. Two testers opened the game cold: one could not find the start
+ * button at all, the other said "wtf is this". Twelve controls before any sign
+ * of what the game is will do that.
+ */
+.fold {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--panel-edge);
+  border-radius: 10px;
+  background: rgba(12, 17, 30, 0.4);
+}
+
+.fold__summary {
+  padding: 8px 12px;
+  color: var(--ink);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.fold__summary::-webkit-details-marker {
+  display: none;
+}
+
+.fold__summary::after {
+  content: '+';
+  color: #8ba0c8;
+  font-weight: 400;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.fold[open] > .fold__summary::after {
+  content: '\2212';
+}
+
+.fold__body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 12px 12px;
+}
+
+.how__goal,
+.how__more {
+  margin: 0;
+  color: #c6d3ec;
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.how__goal strong {
+  color: var(--ink);
+}
+
+.how__diagram {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  background: rgba(6, 10, 20, 0.55);
+}
+
+.how__caption {
+  margin: 0;
+  color: #8ba0c8;
+  font-size: 0.74rem;
+  line-height: 1.4;
+}
+
+.how__keys {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.how__keys dt {
+  color: #8ba0c8;
+  white-space: nowrap;
+}
+
+.how__keys dd {
+  margin: 0;
+  color: var(--ink);
 }

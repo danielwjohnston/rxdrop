@@ -9,7 +9,7 @@ import {
 import { Game } from './game.js';
 import { VersusMatch } from './versus.js';
 import { dailyKey, dailySetup, isToday, shareText } from './daily.js';
-import { Renderer, drawPillPreview, drawVirusTally } from './renderer.js';
+import { Renderer, drawMatchDiagram, drawPillPreview, drawVirusTally } from './renderer.js';
 import { ERAS, eraFor, entersEra } from './eras.js';
 import { collateralOf, hybridOf, isHybrid } from './board.js';
 import { MODIFIERS, describeModifiers, modifierFor, normaliseModifiers } from './modifiers.js';
@@ -44,6 +44,10 @@ const dom = {
   resistanceFill: el('resistance-fill'),
   resistanceToggle: el('resistance'),
   modifiers: el('modifiers'),
+  howToPlay: el('how-to-play'),
+  howControls: el('how-controls'),
+  howDiagram: el('how-diagram'),
+  optionsFold: el('options-fold'),
   modifiersNote: el('modifiers-note'),
   hudMods: el('hud-mods'),
   notebook: el('notebook'),
@@ -65,7 +69,6 @@ const dom = {
   tunables: el('tunables'),
   modeBlurb: el('mode-blurb'),
   dailyNote: el('daily-note'),
-  controlsHint: el('controls-hint'),
   mute: el('mute'),
   pauseButton: el('pause-button'),
   touchpad: el('touchpad'),
@@ -99,7 +102,7 @@ const screens = Object.fromEntries(
 );
 
 const MODE_BLURBS = {
-  solo: 'Rotate the capsules and stack four of a colour in a row to wipe out the viruses.',
+  solo: 'Line up four of a colour to wipe out the viruses.',
   daily: 'One bottle a day, the same for everyone. Your result is worth sharing.',
   versus: 'Two players, one keyboard. Clear more than four at once to dump garbage on your rival.',
 };
@@ -142,6 +145,8 @@ function loadSettings() {
     topScore: 0,
     resistance: false,
     instantDrop: false,
+    /** False until the first game is started, which is what opens the rules. */
+    hasPlayed: false,
     modifiers: [],
     mode: 'solo',
     music: true,
@@ -189,6 +194,7 @@ function saveSettings() {
         topScore: settings.topScore,
         resistance: settings.resistance,
         instantDrop: settings.instantDrop,
+        hasPlayed: settings.hasPlayed,
         modifiers: settings.modifiers,
         music: settings.music,
         mode,
@@ -333,6 +339,8 @@ function clampLevel(value) {
 function showScreen(name) {
   screen = name;
   screenShownAt = performance.now();
+  // The HUD panels only mean something once there is a game behind them.
+  document.body.classList.toggle('is-playing', name !== 'title');
   for (const [key, node] of Object.entries(screens)) node.hidden = key !== name;
   dom.overlay.hidden = name === 'playing';
   dom.pauseButton.textContent = name === 'paused' ? 'Resume' : 'Pause';
@@ -354,7 +362,7 @@ function setMode(next) {
       : MODE_BLURBS[next];
   // The daily's level, speed and resistance come from the date.
   dom.tunables.hidden = next === 'daily';
-  dom.controlsHint.hidden = next === 'versus';
+  buildControlsHelp();
   refreshDailyNote();
   syncHud(true);
 }
@@ -402,6 +410,11 @@ function startGame(options = {}) {
     settings.activeDaily = null;
   }
 
+  if (!settings.hasPlayed) {
+    settings.hasPlayed = true;
+    saveSettings();
+    dom.howToPlay.open = false;
+  }
   topScoreAtStart = settings.topScore;
   game = new Game(setup);
   input.setKeyMap(KEY_MAP);
@@ -1089,6 +1102,79 @@ function modifierIcon(mod) {
   return svg;
 }
 
+/**
+ * The controls, described for the device in front of you.
+ *
+ * The old version listed keyboard keys and nothing else, which on a phone is a
+ * list of things you do not have - and "it really wasn't clear what the
+ * controls were" is exactly what came back from a tester on one.
+ */
+/**
+ * On a first visit the rules are open; after you have played once they are
+ * folded away.
+ *
+ * "How to play" closed by default is the same mistake as burying Start: someone
+ * who has never seen this genre has no reason to think the fold contains
+ * anything they need, and every reason to close the tab instead.
+ */
+function openHowToPlayOnFirstVisit() {
+  dom.howToPlay.open = !settings.hasPlayed;
+}
+
+function buildControlsHelp() {
+  if (mode === 'versus') {
+    // Versus splits one keyboard down the middle, so the single-player list
+    // would be actively wrong here rather than merely incomplete.
+    setControlRows([
+      ['A D', 'Player one moves'],
+      ['Q W', 'Player one turns'],
+      ['S', 'Player one hurries'],
+      ['\u2190 \u2192', 'Player two moves'],
+      [', .', 'Player two turns'],
+      ['\u2193', 'Player two hurries'],
+    ]);
+    return;
+  }
+  const rows = TOUCH_ONLY
+    ? [
+      ['\u25c0 \u25b6', 'Move the capsule left and right'],
+      ['\u21ba \u21bb', 'Turn it'],
+      ['\u25bc / HURRY', 'Hold to bring it down faster'],
+      ['Swipe', 'Drag the bottle to move, flick up to turn'],
+    ]
+    : [
+      ['\u2190 \u2192', 'Move the capsule left and right'],
+      ['Z X', 'Turn it'],
+      ['\u2193', 'Hold to bring it down faster'],
+      ['P', 'Pause'],
+      ['M', 'Mute'],
+    ];
+  setControlRows(rows);
+}
+
+function setControlRows(rows) {
+  dom.howControls.innerHTML = '';
+  for (const [key, what] of rows) {
+    dom.howControls.append(
+      Object.assign(document.createElement('dt'), { textContent: key }),
+      Object.assign(document.createElement('dd'), { textContent: what }),
+    );
+  }
+}
+
+/**
+ * The match rule, drawn rather than described: three halves and a virus of one
+ * colour in a row, and the burst that takes them.
+ *
+ * A sentence about lining up four is easy to write and easy to skim past. The
+ * picture is the thing someone who has never seen this genre actually needs.
+ */
+function drawHowDiagram() {
+  const canvas = dom.howDiagram;
+  if (!canvas || canvas.clientWidth === 0) return;
+  drawMatchDiagram(canvas, eraFor(previewLevel()), performance.now());
+}
+
 function buildModifierPicker() {
   dom.modifiers.innerHTML = '';
   for (const mod of MODIFIERS) {
@@ -1291,7 +1377,10 @@ audio.setMusicEnabled(settings.music, { resume: false });
 dom.resistanceToggle.checked = settings.resistance;
 syncDropStyle();
 buildModifierPicker();
+buildControlsHelp();
 syncFormularyCount();
+openHowToPlayOnFirstVisit();
+requestAnimationFrame(() => drawHowDiagram());
 setMode(settings.mode);
 showScreen('title');
 syncHud(true);

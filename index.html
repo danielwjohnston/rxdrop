@@ -79,77 +79,102 @@
             <div class="card" id="screen-title" data-screen="title">
               <h2 class="card__title">RxDrop</h2>
 
+              <!-- Play first. Everything that is not "start the game" lives
+                   behind a disclosure below, because the first thing two
+                   testers said about this screen was that it was a wall of
+                   controls before any sign of what the game was. -->
+              <p class="card__body" id="mode-blurb">
+                Line up four of a colour to wipe out the viruses.
+              </p>
+
+              <button class="button button--primary" data-start type="button">Play</button>
+
               <div class="segmented segmented--wide" role="group" aria-label="Mode">
                 <button type="button" data-mode="solo" class="is-selected">Solo</button>
                 <button type="button" data-mode="daily">Daily</button>
                 <button type="button" data-mode="versus">Versus</button>
               </div>
 
-              <p class="card__body" id="mode-blurb">
-                Rotate the capsules and stack four of a colour in a row to wipe out
-                the viruses.
-              </p>
-
-              <div class="tunables" id="tunables">
-                <div class="chooser">
-                  <span class="chooser__label">Level</span>
-                  <button class="chooser__step" data-adjust="level" data-delta="-1" type="button" aria-label="Lower level">&minus;</button>
-                  <output class="chooser__value" id="choose-level">0</output>
-                  <button class="chooser__step" data-adjust="level" data-delta="1" type="button" aria-label="Raise level">+</button>
-                </div>
-                <div class="chooser">
-                  <span class="chooser__label">Speed</span>
-                  <div class="segmented" role="group" aria-label="Speed">
-                    <button type="button" data-speed="LOW" class="is-selected">Low</button>
-                    <button type="button" data-speed="MEDIUM">Med</button>
-                    <button type="button" data-speed="HIGH">Hi</button>
-                  </div>
-                </div>
-                <label class="switch" for="resistance">
-                  <input type="checkbox" id="resistance" />
-                  <span class="switch__track"><span class="switch__thumb"></span></span>
-                  <span class="switch__text">
-                    <strong>Resistance</strong>
-                    <small>Viruses you leave alive mutate colour</small>
-                  </span>
-                </label>
-
-                <div class="chooser chooser--stack">
-                  <span class="chooser__label">Modifiers</span>
-                  <div class="mods" id="modifiers" role="group" aria-label="Run modifiers"></div>
-                  <small class="mods__note" id="modifiers-note">None. One bottle, the plain rules.</small>
-                </div>
-              </div>
-
-              <label class="switch" for="instant-drop">
-                <input type="checkbox" id="instant-drop" />
-                <span class="switch__track"><span class="switch__thumb"></span></span>
-                <span class="switch__text">
-                  <strong>Instant drop</strong>
-                  <small>Off: hold to hurry a capsule down. On: snap it to the bottom</small>
-                </span>
-              </label>
-
-              <label class="switch" for="music">
-                <input type="checkbox" id="music" checked />
-                <span class="switch__track"><span class="switch__thumb"></span></span>
-                <span class="switch__text">
-                  <strong>Music</strong>
-                  <small>Chiptune loops; effects stay on</small>
-                </span>
-              </label>
-
               <p class="daily-note" id="daily-note" hidden></p>
 
-              <button class="button button--primary" data-start type="button">Start game</button>
-              <button class="button button--ghost" id="open-formulary" type="button">
-                The formulary <span class="pill-count" id="formulary-count">0/10</span>
-              </button>
-              <p class="card__hint" id="controls-hint">
-                Move <kbd>&larr;</kbd><kbd>&rarr;</kbd> &middot; Rotate <kbd>Z</kbd><kbd>X</kbd>
-                &middot; Soft drop <kbd>&darr;</kbd> &middot; Hard drop <kbd>Space</kbd>
-                &middot; Light <kbd>Shift</kbd> &middot; Pause <kbd>P</kbd> &middot; Mute <kbd>M</kbd>
-              </p>
+              <details class="fold" id="how-to-play">
+                <summary class="fold__summary">How to play</summary>
+                <div class="fold__body">
+                  <p class="how__goal">
+                    <strong>Clear every virus.</strong> Capsules fall in two halves.
+                    Line up <strong>four of one colour</strong> in a row or a column
+                    and they burst - viruses count toward the four.
+                  </p>
+                  <canvas id="how-diagram" class="how__diagram" width="480" height="120" aria-hidden="true"></canvas>
+                  <p class="how__caption" id="how-diagram-caption">
+                    Three yellow halves and a yellow virus: four in a row, so the
+                    virus goes with them.
+                  </p>
+                  <dl class="how__keys" id="how-controls"></dl>
+                  <p class="how__more">
+                    Don't let the capsules back up out of the neck at the top.
+                    That is the only way to lose.
+                  </p>
+                </div>
+              </details>
+
+              <details class="fold" id="options-fold">
+                <summary class="fold__summary">Options</summary>
+                <div class="fold__body">
+                  <div class="tunables" id="tunables">
+                    <div class="chooser">
+                      <span class="chooser__label">Level</span>
+                      <button class="chooser__step" data-adjust="level" data-delta="-1" type="button" aria-label="Lower level">&minus;</button>
+                      <output class="chooser__value" id="choose-level">0</output>
+                      <button class="chooser__step" data-adjust="level" data-delta="1" type="button" aria-label="Raise level">+</button>
+                    </div>
+                    <div class="chooser">
+                      <span class="chooser__label">Speed</span>
+                      <div class="segmented" role="group" aria-label="Speed">
+                        <button type="button" data-speed="LOW" class="is-selected">Low</button>
+                        <button type="button" data-speed="MEDIUM">Med</button>
+                        <button type="button" data-speed="HIGH">Hi</button>
+                      </div>
+                    </div>
+                    <label class="switch" for="resistance">
+                      <input type="checkbox" id="resistance" />
+                      <span class="switch__track"><span class="switch__thumb"></span></span>
+                      <span class="switch__text">
+                        <strong>Resistance</strong>
+                        <small>Viruses you leave alive mutate colour</small>
+                      </span>
+                    </label>
+
+                    <div class="chooser chooser--stack">
+                      <span class="chooser__label">Modifiers</span>
+                      <div class="mods" id="modifiers" role="group" aria-label="Run modifiers"></div>
+                      <small class="mods__note" id="modifiers-note">None. One bottle, the plain rules.</small>
+                    </div>
+                  </div>
+
+                  <label class="switch" for="instant-drop">
+                    <input type="checkbox" id="instant-drop" />
+                    <span class="switch__track"><span class="switch__thumb"></span></span>
+                    <span class="switch__text">
+                      <strong>Instant drop</strong>
+                      <small>Off: hold to hurry a capsule down. On: snap it to the bottom</small>
+                    </span>
+                  </label>
+
+                  <label class="switch" for="music">
+                    <input type="checkbox" id="music" checked />
+                    <span class="switch__track"><span class="switch__thumb"></span></span>
+                    <span class="switch__text">
+                      <strong>Music</strong>
+                      <small>Chiptune loops; effects stay on</small>
+                    </span>
+                  </label>
+
+                  <button class="button button--ghost" id="open-formulary" type="button">
+                    The formulary <span class="pill-count" id="formulary-count">0/10</span>
+                  </button>
+                </div>
+              </details>
             </div>
 
 

@@ -162,6 +162,22 @@ until it is on, because a link that 404s is worse than no link.) The forms ask t
 buildable - chiefly "what does it combine with?" and "how does the player answer
 it?".
 
+## Picking it up
+
+The title screen is one sentence, a **Play** button, and two folds. On a first
+visit the rules are open and show the one thing the genre assumes you already
+know - four of a colour in a row bursts, and a virus counts toward the four -
+drawn with the same code that draws the bottle, so the diagram cannot drift from
+the game. The controls listed are the ones your device actually has: the on-screen
+pad and swipes on a phone, keys on a keyboard, both players' halves in versus.
+
+Everything else - level, speed, resistance, modifiers, drop style, music, the
+formulary - is behind **Options**, folded away. That ordering is not a
+preference. Two people opened this cold: one could not find the start button at
+all on an iPhone, and the other's first reaction was "wtf is this". There were
+twelve controls ahead of Play, and the card was taller than the screen it was
+clipped inside.
+
 ## Rules
 
 - The bottle is 8 columns by 16 rows, with one more row above it for the neck.
@@ -236,7 +252,7 @@ npm run test:watch # re-run on change
 
 # End-to-end checks in a real browser (Playwright is not a dependency):
 npm i --no-save playwright && npx playwright install chromium
-npm run test:browser  # 40 checks: menus, controls, versus, daily, offline, mobile
+npm run test:browser  # 42 checks: menus, controls, versus, daily, offline, mobile
 
 npm run gauntlet   # the full protocol below: every stage, one gate
 ```

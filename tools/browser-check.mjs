@@ -578,10 +578,11 @@ try {
     assert.equal(running.lightMeter, true, 'phototherapy should show the clarity meter');
   });
 
-  await check('the lamp is a chamber you play, and it costs you the dose in hand', async () => {
+  await check('the lamp is a chamber you play, and it suspends the bench', async () => {
     // The whole point of the rewrite. The old blackout was weather: it dimmed
     // on a timer and you held a key to stop it. This is a treatment you go and
-    // deliver, and what it costs you is the capsule you were holding.
+    // deliver, and while you are at it the sample is held: nothing grows, and
+    // the dose in your hand waits for you.
     const before = await modPage.evaluate(() => {
       const g = window.rxdrop.game;
       // Silt the bottle up so there is something to treat.
@@ -606,8 +607,8 @@ try {
     assert.ok(entered.piece, 'the chamber should deal light to steer');
     assert.equal(entered.width, 5, 'and take the chosen chamber width');
 
-    // Going commits the dose in hand and holds the next one.
-    assert.equal(entered.column, null, 'the capsule in hand should have been committed');
+    // Going suspends the bench: the dose in hand is exactly where it was.
+    assert.equal(entered.column, before.column, 'the dose should not have moved');
 
     // Steering now drives the light, not the medicine.
     const wasAt = await modPage.evaluate(() => window.rxdrop.game.chamber.piece.x);
@@ -617,20 +618,20 @@ try {
       capsule: window.rxdrop.game.pill?.x ?? null,
       light: window.rxdrop.game.chamber?.piece?.x ?? null,
     }));
-    assert.equal(steered.capsule, null, 'no capsule should be falling while you are at the lamp');
+    assert.equal(steered.capsule, entered.column, 'the dose should not be steerable from the lamp');
     assert.ok(steered.light <= wasAt, 'left should have driven the light');
 
-    // A completed line lights that row of the patient, and spills either side.
+    // A line is a dose, not a coordinate: it scrubs the lowest filmed row.
     const lit = await modPage.evaluate(() => {
       const g = window.rxdrop.game;
-      const was = [...g.fog];
-      g.lightRows([9]);
-      return { row: g.fog[9], above: g.fog[8], below: g.fog[10], far: g.fog[3], wasFar: was[3] };
+      g.fog = g.fog.map(() => 0.7);
+      const lowest = g.lowestFilmedRow;
+      g.scrubFilm(1);
+      return { lowest, cleaned: g.fog[lowest], next: g.lowestFilmedRow, above: g.fog[lowest - 1] };
     });
-    assert.equal(lit.row, 0, 'the lit row should clear outright');
-    assert.ok(lit.above < 0.7 && lit.above > 0, 'and spill into the row above');
-    assert.ok(lit.below < 0.7 && lit.below > 0, 'and the row below');
-    assert.equal(lit.far, lit.wasFar, 'but not reach across the whole bottle');
+    assert.equal(lit.cleaned, 0, 'the lowest filmed row should have been scrubbed');
+    assert.equal(lit.next, lit.lowest - 1, 'and the queue should move up one');
+    assert.equal(lit.above, 0.7, 'without reaching the row above yet');
 
     // The key is a TOGGLE: releasing it must not dump you out of the chamber.
     await modPage.keyboard.up('KeyL');
@@ -648,29 +649,29 @@ try {
       'pressing it again should leave the chamber',
     );
 
-    // And the lamp rests. A control that silently refuses reads as a broken
-    // control, so the pad button has to say so rather than just not work.
-    const resting = await modPage.evaluate(() => {
+    // The lamp is always available - a failed attempt costs regrowth, never the
+    // switch - so it must reopen at once.
+    const again = await modPage.evaluate(() => {
       const button = document.getElementById('light-button');
       return {
-        cooldown: window.rxdrop.game.lampCooldown,
         ready: window.rxdrop.game.lampReady,
-        label: button.textContent.trim(),
         disabled: button.disabled,
+        label: button.textContent.trim(),
       };
     });
-    assert.ok(resting.cooldown > 0, 'the lamp should be resting after a session');
-    assert.equal(resting.ready, false);
-    assert.equal(resting.disabled, true, 'the pad button should be unpressable while it rests');
-    assert.match(resting.label, /^LAMP \d+s$/, `the pad should count down, got "${resting.label}"`);
+    assert.equal(again.ready, true, 'the lamp should be usable again at once');
+    assert.equal(again.disabled, false, 'and the pad button should never be dead');
+    assert.match(again.label, /LIGHT THERAPY/, `unexpected pad label "${again.label}"`);
 
     await modPage.keyboard.press('KeyL');
-    await modPage.waitForTimeout(120);
+    await modPage.waitForTimeout(150);
     assert.equal(
       await modPage.evaluate(() => window.rxdrop.game.inLight),
-      false,
-      'the lamp should refuse to open while it rests',
+      true,
+      'the lamp should reopen straight away',
     );
+    await modPage.keyboard.press('KeyL');
+    await modPage.waitForTimeout(120);
   });
 
   await check('a sealed column refuses capsules and breaks when you clear beside it', async () => {
@@ -1090,20 +1091,20 @@ try {
       'tapping it again should leave the chamber',
     );
 
-    // The lamp then rests, and the pad says so rather than going quiet. A tap
-    // on a resting lamp must do nothing at all.
-    const rested = await mobile.evaluate(() => ({
+    // The lamp is always available: a failed attempt costs the film coming back
+    // harder, never the switch. A tap must reopen it.
+    const again = await mobile.evaluate(() => ({
       label: document.getElementById('light-button').textContent.trim(),
       disabled: document.getElementById('light-button').disabled,
     }));
-    assert.match(rested.label, /^LAMP \d+s$/, `the pad should count down, got "${rested.label}"`);
-    assert.equal(rested.disabled, true);
+    assert.match(again.label, /LIGHT THERAPY/, `unexpected pad label "${again.label}"`);
+    assert.equal(again.disabled, false, 'the pad button must never be dead');
     await mobile.touchscreen.tap(button.x + button.width / 2, button.y + button.height / 2);
-    await mobile.waitForTimeout(200);
+    await mobile.waitForTimeout(250);
     assert.equal(
       await mobile.evaluate(() => window.rxdrop.game.inLight),
-      false,
-      'a tap on a resting lamp must not open it',
+      true,
+      'the lamp should reopen on a tap',
     );
 
     // And the pad must still fit: a sixth control cannot cost the bottle.

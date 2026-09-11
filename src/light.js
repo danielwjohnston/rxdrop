@@ -1,11 +1,17 @@
 /**
  * The light chamber: phototherapy, played as falling light.
  *
- * A second falling-piece game inside the same bottle. Tetromino-shaped light
- * falls; completing a horizontal line lights that ROW of the patient. The
- * mapping is literal and one-to-one, which is the whole point - light has a
- * target, so "which part of the patient do I need to see" is a question worth
- * answering rather than a brightness slider.
+ * A second falling-piece game, played to clean the sample. Tetromino-shaped
+ * light falls; every completed line is a DOSE, and the Game spends it on the
+ * lowest row still carrying film.
+ *
+ * A line is deliberately not a coordinate. The first build mapped each line to
+ * the row it completed on, which sounds targeted and is not: tetromino lines
+ * complete at the floor of the well, so 60% of all light landed in the bottom
+ * three rows of the bottle and the top five were never lit once across forty
+ * measured sessions. Gravity was choosing the treatment. As a queue it is
+ * legible instead - make a line anywhere, the bottle cleans from the bottom up,
+ * and seventeen of them sterilise the sample.
  *
  * Two rules keep it honest:
  *

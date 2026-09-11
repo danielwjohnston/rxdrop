@@ -228,7 +228,23 @@ at once.
 the light chamber. **Tetromino-shaped light falls**, and your controls drive the
 light piece instead of the capsule.
 
-**3. A line of light is a row of the patient.** Complete a horizontal line and
+**3. A line of light is a DOSE, not a coordinate.** *Revised in play.* The rule
+below - a line lights the row it completed on - sounds targeted and is not:
+tetromino lines complete at the floor of the well, so a measurement of forty
+sessions found 60% of all light landing in the bottom three rows of the bottle
+and the top five never lit once. Gravity was choosing the treatment, which is
+exactly why the lamp read as a minigame with a pipe attached rather than a
+therapy: *"what's the point of playing tetris if it's not meaningful to be a
+therapy? otherwise just stick with the pills."*
+
+What ships: a completed line scrubs the film from the **lowest dirty row**,
+wherever in the well you made it. The bottle cleans from the bottom up and
+seventeen lines sterilise the sample. And the disease is **held** while the lamp
+is on - nothing grows, nothing spreads, and the dose in your hand waits where you
+left it - so a session costs you progress rather than ground, and you may stay as
+long as you keep playing. The original wording is kept below for the record.
+
+**3a. (superseded) A line of light is a row of the patient.** Complete a horizontal line and
 *that row is illuminated*. Four lines at once lights a band. The mapping is
 one-to-one and literal: what you clear in the light chamber is what you can see
 in the bottle. This is the part that makes the whole idea work - light has a

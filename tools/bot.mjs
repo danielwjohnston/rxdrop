@@ -240,32 +240,31 @@ export function steerLight(game, target) {
 /**
  * When a player goes to the lamp and when they come back.
  *
- * A visit is BOUNDED - by lines won or by time spent, whichever comes first -
- * and that is not a convenience, it is the only sane policy. The first version
- * of this left when the worst row in the bottle was clear again, and with
- * viruses across a dozen rows there is always a row re-fogging: the bot walked
- * into the chamber, stayed sixteen seconds, and lost the game with eight
- * capsules placed. Nobody plays like that.
+ * Under the new rules the lamp HOLDS the sample - nothing grows, nothing
+ * spreads, the dose in hand waits - so there is no danger in staying and no
+ * reason to leave early. A player goes in when the sample has filmed over,
+ * scrubs it clean, and comes back to the bench.
+ *
+ * Leaving on a line count was the old policy and it deadlocks under these
+ * rules: two lines barely dents the film, so the bot walked straight back in,
+ * and with the bench frozen the run stopped advancing at all. The gauntlet
+ * found that as a stage that would not finish.
  *
  * `state` is the caller's, so one bot can run several games.
  */
-export function workTheLamp(game, state = {}, { enterAt = 0.55, lines = 2, maxMs = 5000, ready = true } = {}) {
+export function workTheLamp(game, state = {}, { enterAt = 0.5, exitAt = 0.05, maxMs = 30000, ready = true } = {}) {
   if (!game.has('phototherapy')) return null;
   if (!game.inLight) {
-    // Only go once the dose in hand is where you want it. Entering commits the
-    // capsule where it stands, so a bot that walks off mid-flight dumps every
-    // one of them into the spawn column and tops the bottle out in six - which
-    // says nothing about the mechanic and everything about the bot.
     if (ready && game.lampReady && game.worstFog >= enterAt) {
       game.enterLight();
-      state.litAtEntry = game.rowsLit;
       state.spent = 0;
     }
     return null;
   }
   state.spent = (state.spent ?? 0) + FRAME;
-  const won = game.rowsLit - (state.litAtEntry ?? 0);
-  if (won >= lines || state.spent >= maxMs) {
+  // Come back when the sample is clean, or when this attempt has plainly
+  // stalled - a flooded well ends the session on its own.
+  if (game.worstFog <= exitAt || state.spent >= maxMs) {
     game.leaveLight('done');
     return null;
   }

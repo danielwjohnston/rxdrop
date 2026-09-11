@@ -225,7 +225,7 @@ clipped inside.
   | Modifier | What it does | Why it is survivable |
   | --- | --- | --- |
   | Outbreak | Viruses replicate into empty cells; gravity halves to pay for it | A virus spreads once and never again, never above the virus ceiling, never past 1.6x the starting population |
-  | Phototherapy | The bottle silts up row by row, worst where the disease is; press Shift or L to go to the light chamber, where tetromino-shaped light falls and a completed line lights that row of the patient | The fog plateaus rather than compounding and a row never goes fully black, the lamp always comes back after its cooldown, and a run can be won without ever entering the chamber |
+  | Phototherapy | The sample films over row by row, worst where the disease is; press Shift or L to put it under the light, where tetromino-shaped light falls and every completed line scrubs the lowest dirty row clean. The disease is held while the lamp is on | The film plateaus rather than compounding and a row never goes fully black, the lamp can always be switched on, and a run can be won without ever using it |
   | Rationing | Only two medicines in stock; viruses of the missing colour build tolerance every capsule while it is gone | The withheld colour rotates on a fixed timer, and tolerance always answers to the older medicine cleared beside it |
   | Contaminated batch | Some capsule halves are inert and belong to no run | An inert half washes out with any clear it is touching |
   | Quarantine | A column is sealed and refuses capsules | Clearing beside it breaks the seal, and it lifts on its own regardless; spawn columns are never sealed |

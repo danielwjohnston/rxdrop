@@ -20,7 +20,6 @@ import {
   COLOR_COUNT,
   CONTAMINATION_EVERY,
   FOG_MAX,
-  LIGHT_COOLDOWN,
   LIGHT_SESSION,
   PILL,
   QUARANTINE_MAX,
@@ -166,62 +165,127 @@ describe('phototherapy: the fog, and the light you make to cut it', () => {
     assert.equal(plain.enterLight(), false, 'there is no chamber without the modifier');
   });
 
-  it('going to the lamp commits the dose in your hand and holds the next', () => {
-    // The cost, and the whole decision. An earlier build let the capsule go on
-    // falling unsteered while you worked the lamp; every abandoned capsule
-    // landed in the spawn column and a tower there topped the bottle out in
-    // eight visits. So entering places the dose where you last left it, and
-    // nothing new is dealt until you come back.
+  it('going to the lamp suspends the bench: the dose waits for you', () => {
+    // Everything is held while the sample is under the light. Two earlier rules
+    // died here: letting the capsule fall unsteered dumped every one into the
+    // spawn column, and committing it on the way in did the same thing more
+    // slowly once the lamp became free to flick on and off.
     const game = foggy();
     game.update(200);
     const placed = game.pillsPlaced;
-    const landing = hardDropPosition(game.board, game.pill);
-    assert.equal(game.enterLight(), true);
-    assert.equal(game.pillsPlaced, placed + 1, 'the dose in hand should have been placed');
-    assert.ok(game.chamber.piece, 'the chamber should deal a piece');
-    assert.equal(game.pill, null, 'and nothing new should be dealt while you are at the lamp');
-    assert.ok(
-      game.board.get(landing.x, landing.y)?.type != null,
-      'the dose should have gone where a hard drop would have put it',
-    );
+    const held = { ...game.pill };
+    assert.ok(game.pill, 'there should be a dose in hand to suspend');
 
-    // Steering now drives the light, not the medicine.
+    assert.equal(game.enterLight(), true);
+    assert.ok(game.chamber.piece, 'the chamber should deal a piece');
+    assert.deepEqual({ ...game.pill }, held, 'the dose should be exactly where it was');
+
+    // Steering drives the light, not the medicine.
     const lightColumn = game.chamber.piece.x;
     const moved = game.move(-1);
     assert.equal(game.chamber.piece.x, moved ? lightColumn - 1 : lightColumn,
-      'left should have driven the light, or nothing at all');
-    assert.equal(game.pill, null, 'and still no capsule to move');
+      'left should have driven the light');
+    assert.deepEqual({ ...game.pill }, held, 'and left the dose alone');
 
-    for (let t = 0; t < 3000; t += 16) {
+    for (let t = 0; t < 8000; t += 16) {
       game.update(16);
+      if (game.chamber) game.chamber.grid.fill(null);
     }
-    assert.equal(game.pill, null, 'the bottle stays as you left it until you come back');
-    assert.ok(game.dealHeld, 'the next capsule is waiting, not falling');
-    assert.equal(game.pillsPlaced, placed + 1, 'no capsule fell unsteered while you worked');
+    assert.deepEqual({ ...game.pill }, held, 'the dose should not have fallen while you were away');
+    assert.equal(game.pillsPlaced, placed, 'and nothing should have been placed');
 
+    // And it is yours again the moment you come back.
     game.leaveLight('done');
-    game.update(16);
-    assert.ok(game.pill, 'leaving deals the capsule that was waiting');
-    assert.equal(game.dealHeld, false);
+    assert.deepEqual({ ...game.pill }, held, 'the dose should still be there');
+    for (let t = 0; t < 4000 && game.pillsPlaced === placed
+      && (game.pill?.y ?? held.y) <= held.y; t += 16) game.update(16);
+    assert.ok(
+      (game.pill && game.pill.y > held.y) || game.pillsPlaced > placed,
+      'the bench should start moving again once the lamp is off',
+    );
   });
 
-  it('a completed line lights that row of the patient, and spills either side', () => {
+  it('the lamp can be flicked on and off without costing the bottle', () => {
+    // The failure this closes, caught by the gauntlet: entering used to commit
+    // the dose where it stood, so six visits stacked six capsules in the spawn
+    // column and ended the run.
+    const game = foggy();
+    game.update(200);
+    for (let i = 0; i < 20; i += 1) {
+      assert.equal(game.enterLight(), true, `visit ${i}: the lamp refused to open`);
+      game.update(64);
+      game.leaveLight('done');
+      assert.equal(game.isOver, false, `visit ${i}: toggling the lamp ended the run`);
+    }
+    assert.ok(game.pillsPlaced <= 1, 'toggling should not have placed capsules');
+  });
+
+  it('a line scrubs the lowest dirty row, wherever the line was made', () => {
+    // The rule that makes the lamp legible. A tetromino line completes at the
+    // floor of the WELL, which has nothing to do with which part of the sample
+    // needs treating - so the line is not a coordinate, it is a dose, and the
+    // bottle cleans from the bottom up.
     const game = foggy();
     game.fog = game.fog.map(() => 0.8);
     game.enterLight();
-    game.lightRows([8]);
-    assert.equal(game.fog[8], 0, 'the line should clear its own row outright');
-    assert.ok(game.fog[7] < 0.8 && game.fog[7] > 0, 'and half-clear the row above');
-    assert.ok(game.fog[9] < 0.8 && game.fog[9] > 0, 'and the row below');
-    assert.equal(game.fog[12], 0.8, 'but not reach across the whole bottle');
+
+    game.scrubFilm(1);
+    assert.equal(game.fog[16], 0, 'the lowest row should have been scrubbed');
+    assert.equal(game.fog[15], 0.8, 'and nothing above it touched yet');
+
+    game.scrubFilm(1);
+    assert.equal(game.fog[15], 0, 'the next one up goes next');
+    assert.equal(game.fog[14], 0.8);
   });
 
-  it('four lines at once floods the bottle', () => {
+  it('four lines at once scrub four rows, still from the bottom', () => {
     const game = foggy();
     game.fog = game.fog.map(() => 0.8);
     game.enterLight();
-    game.lightRows([6, 7, 8, 9]);
-    assert.ok(game.fog.every((f) => f < 0.8), 'a flood should reach every row');
+    game.scrubFilm(4);
+    for (const y of [13, 14, 15, 16]) assert.equal(game.fog[y], 0, `row ${y} should be clean`);
+    assert.equal(game.fog[12], 0.8, 'and the fifth row up left alone');
+  });
+
+  it('enough lines sterilise the sample, and it says so', () => {
+    const game = foggy();
+    game.fog = game.fog.map(() => 0.8);
+    game.enterLight();
+    game.drainEvents();
+    game.scrubFilm(game.height);
+    assert.ok(game.fog.every((f) => f === 0), 'every row should be clean');
+    assert.equal(game.lowestFilmedRow, -1);
+    assert.ok(game.drainEvents().some((e) => e.type === 'sterile'), 'it should announce a sterile sample');
+  });
+
+  it('holds the disease while the lamp is on', () => {
+    // Under the light you have stopped treating and started looking. Nothing
+    // grows, nothing thickens: the cost of the lamp is progress, not ground.
+    const game = foggy();
+    for (let t = 0; t < 20000; t += 16) game.updateLight(16);
+    const fogged = [...game.fog];
+    assert.ok(Math.max(...fogged) > 0.1, 'the sample should have filmed over first');
+
+    game.enterLight();
+    // Keep the well clear so the session is not cut short by flooding it: this
+    // is a test about what the film does while the lamp is on, and being thrown
+    // out of the chamber ends that.
+    let held = 0;
+    for (let t = 0; t < 30000 && game.inLight; t += 16) {
+      game.updateLight(16);
+      if (game.chamber) game.chamber.grid.fill(null);
+      held += 16;
+    }
+    assert.ok(held > 20000, `the lamp only stayed on for ${held}ms`);
+    // Only scrubbing may have changed it, never growth.
+    for (let y = 0; y < game.height; y += 1) {
+      assert.ok(game.fog[y] <= fogged[y] + 1e-9, `row ${y} filmed over while the lamp was on`);
+    }
+
+    // And it resumes the moment you go back to the bench.
+    game.leaveLight('done');
+    for (let t = 0; t < 5000; t += 16) game.updateLight(16);
+    assert.ok(Math.max(...game.fog) > Math.max(...fogged) - 1e-9, 'the film should resume once the lamp is off');
   });
 
   it('treating the patient clears the air; a shrug fouls it', () => {
@@ -251,12 +315,14 @@ describe('phototherapy: the fog, and the light you make to cut it', () => {
     game.chamber.piece = null;
     assert.equal(game.chamber.saturated, true);
 
+    const regrowth = game.filmRegrowth;
     game.updateLight(16);
     assert.equal(game.inLight, false, 'a flooded chamber should end the session');
     assert.equal(game.isOver, false, 'and never the run');
-    // And the lamp comes back, so a flood is a setback rather than a loss.
-    for (let t = 0; t < LIGHT_COOLDOWN + 100; t += 16) game.updateLight(16);
-    assert.equal(game.lampReady, true, 'the lamp should come back after a flood');
+    // A failed attempt costs you the film coming back harder, never the lamp.
+    assert.ok(game.filmRegrowth > regrowth, 'a flood should make the film regrow faster');
+    assert.equal(game.lampReady, true, 'the lamp should be usable again at once');
+    assert.equal(game.enterLight(), true, 'and open straight away');
   });
 
   it('light stands until it is cleared, however long you are in there', () => {

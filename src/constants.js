@@ -241,14 +241,21 @@ export const LIGHT_SPILL = 1;
  */
 export const LIGHT_SPILL_BY_LINES = Object.freeze([0, 1, 2, 4, 99]);
 
-/**
- * How long a locked light cell lasts before it fades.
+/*
+ * Light used to carry a lifetime here (LIGHT_DECAY). It does not any more.
  *
- * Light that does not become a line dissipates, so the chamber is never a safe
- * room to hide in when the bottle gets frightening: you make lines or you lose
- * what you put in.
+ * The rule was "unused light dissipates, so a tower of it can never be banked",
+ * and built as written it ate the player's work: "lights disappear before i get
+ * a chance to line up for the tetris". The measurement agreed - a greedy bot
+ * hurrying every piece needs 2.5s for a line in the narrow chamber and 4.3s in
+ * the full-width one, and a person deciding where to put a piece is well past
+ * both, so at 7s the first cells were dying under the third piece.
+ *
+ * Light now stands until a line clears it or the session ends. Nothing is
+ * needed in its place: standing at the lamp places no capsules and cures no
+ * viruses, so the bottle charges for the time by itself, and a chamber packed to
+ * the lip floods and ends the session.
  */
-export const LIGHT_DECAY = 7000;
 
 /** With the timer variant, how long one session in the chamber lasts. */
 export const LIGHT_SESSION = 6000;
@@ -285,8 +292,15 @@ export const FOG_RELIEF = 0.22;
  * whole run and the bottle is hard to read, never unplayable. And the falling
  * capsule is drawn over the fog rather than under it, so the dark costs you
  * information about the stack, never the ability to act.
+ *
+ * Raised from 0.82 on the report that "the film actually doesn't cover enough
+ * to not be playable" - which was fair. At 18% visible you could still read the
+ * stack well enough that the lamp was never worth the capsules it costs, and a
+ * treatment nobody needs is decoration. At 7% the stack is genuinely lost and
+ * the decision has teeth, while the capsule and the column it will land in stay
+ * drawn on top of it, so the fog still only ever costs information.
  */
-export const FOG_MAX = 0.82;
+export const FOG_MAX = 0.93;
 /** Above this a row counts as fogged, which is what a badge is worth. */
 export const FOGGED_AT = 0.5;
 

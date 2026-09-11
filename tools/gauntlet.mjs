@@ -40,6 +40,7 @@ import {
   BOARD_WIDTH,
   DEAL_DELAY,
   LIGHT_COOLDOWN,
+  LIGHT_WIDTH_NARROW,
   FOG_MAX,
   PILLS_PER_SPEED_UP,
   RESISTANCE_INTERVAL,
@@ -60,6 +61,7 @@ import { FRAME, plan, steer, steerLight, workTheLamp } from './bot.mjs';
 import { VersusMatch } from '../src/versus.js';
 import { dailySetup } from '../src/daily.js';
 import { createRng } from '../src/rng.js';
+import { LightChamber } from '../src/light.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -733,19 +735,68 @@ stage('modifiers', 'A modifier may change a run, never end it', (check) => {
   });
 
   check('the chamber always deals, and never becomes a dead end', () => {
-    // Light decays, so however badly the chamber is stacked it clears itself.
+    // Light no longer fades, so a packed chamber cannot clear itself. The same
+    // bound is reached the other way round: drowning it ends the SESSION and
+    // hands you back to the bottle, and the lamp comes back after its cooldown.
     // It costs the session, never the run.
-    for (const width of [5, BOARD_WIDTH]) {
+    for (const width of [LIGHT_WIDTH_NARROW, BOARD_WIDTH]) {
       const game = new Game({ level: 4, speed: 'LOW', seed: 3, modifiers: ['phototherapy'], lightWidth: width });
       assert.equal(game.enterLight(), true, `width ${width}: the lamp refused to open`);
       assert.equal(game.chamber.width, width);
       assert.ok(game.chamber.piece, `width ${width}: the chamber dealt nothing`);
-      // Pack it solid, then watch it recover on its own.
-      for (let i = 0; i < game.chamber.grid.length; i += 1) game.chamber.grid[i] = { life: 800 };
+
+      for (let i = 0; i < game.chamber.grid.length; i += 1) game.chamber.grid[i] = { lit: true };
       game.chamber.piece = null;
-      assert.equal(game.chamber.saturated, true);
-      for (let t = 0; t < 4000 && game.chamber.saturated; t += 16) game.updateLight(16);
-      assert.equal(game.chamber.saturated, false, `width ${width}: the chamber never recovered`);
+      game.updateLight(FRAME);
+      assert.equal(game.inLight, false, `width ${width}: a flooded chamber trapped the player`);
+      assert.equal(game.isOver, false, `width ${width}: a flood ended the run`);
+
+      for (let t = 0; t < LIGHT_COOLDOWN + 200 && !game.lampReady; t += FRAME) game.updateLight(FRAME);
+      assert.equal(game.lampReady, true, `width ${width}: the lamp never came back`);
+      assert.equal(game.enterLight(), true, `width ${width}: the lamp refused to reopen`);
+      assert.ok(game.chamber.piece, `width ${width}: the reopened chamber dealt nothing`);
+    }
+  });
+
+  check('light never hangs in mid-air with nothing under it', () => {
+    // Reported from play: "sometimes it rests on the bottom and sometimes not
+    // even with nothing below."
+    //
+    // The invariant is about CLUMPS, not columns. A tetromino that locks half
+    // over a gap is a legitimate overhang and has to stay one - asserting that
+    // every cell has something directly beneath it would outlaw four of the
+    // seven pieces. What must never happen is a connected clump of light with
+    // nothing under any of it.
+    const unsupported = (chamber) => {
+      const held = new Set(chamber.cellsOf().map(({ x, y }) => chamber.index(x, y)));
+      return chamber.clumps().filter((clump) => {
+        // The piece in hand is allowed to be in the air. That is falling.
+        if (clump.some(({ x, y }) => held.has(chamber.index(x, y)))) return false;
+        const own = new Set(clump.map(({ x, y }) => chamber.index(x, y)));
+        return !clump.some(({ x, y }) => {
+          if (y + 1 >= chamber.height) return true;
+          const below = chamber.index(x, y + 1);
+          return chamber.grid[below] !== null && !own.has(below);
+        });
+      });
+    };
+
+    for (const width of [LIGHT_WIDTH_NARROW, BOARD_WIDTH]) {
+      for (let seed = 0; seed < 6; seed += 1) {
+        const chamber = new LightChamber(width, BOARD_HEIGHT, createRng(seed));
+        for (let t = 0; t < 40000; t += FRAME) {
+          if (chamber.piece && t % 240 === 0) chamber.move(seed % 2 ? 1 : -1);
+          if (chamber.piece && t % 400 === 0) chamber.rotate(1);
+          chamber.update(FRAME);
+          chamber.drainLit();
+          const floating = unsupported(chamber);
+          assert.equal(
+            floating.length, 0,
+            `width ${width} seed ${seed}: ${floating.length} clump(s) hanging at t=${t}`,
+          );
+          if (chamber.saturated) break;
+        }
+      }
     }
   });
 

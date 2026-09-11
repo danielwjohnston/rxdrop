@@ -233,29 +233,39 @@ export class AudioEngine {
         this.noise({ start: 0.04, duration: 0.2, gain: 0.1, frequency: 700 });
         break;
       }
-      case 'blackout': {
-        // The lights going: a long fall with nothing at the bottom of it.
-        this.tone(noteToFreq('A3'), {
-          duration: 0.5,
-          gain: 0.2,
-          type: 'triangle',
-          slide: noteToFreq('D2'),
-        });
-        break;
-      }
-      case 'lightsUp': {
-        this.tone(noteToFreq('D4'), {
-          duration: 0.3,
-          gain: 0.16,
+      case 'lightOn': {
+        // The lamp striking: a rise, because going to it is a thing you chose.
+        this.tone(noteToFreq('D3'), {
+          duration: 0.28,
+          gain: 0.18,
           type: 'triangle',
           slide: noteToFreq('A4'),
         });
+        this.noise({ duration: 0.06, gain: 0.08, frequency: 2600 });
         break;
       }
-      case 'lightOut': {
-        // The reservoir running dry mid-blackout. Short, dry, and bad news.
-        this.noise({ duration: 0.07, gain: 0.14, frequency: 500 });
-        this.tone(noteToFreq('E3'), { duration: 0.1, gain: 0.14, type: 'square' });
+      case 'lightOff': {
+        // Coming back to the medicine. The same interval, downward.
+        this.tone(noteToFreq('A4'), {
+          duration: 0.22,
+          gain: 0.14,
+          type: 'triangle',
+          slide: noteToFreq('D3'),
+        });
+        break;
+      }
+      case 'lit': {
+        // A line of light landing on the patient. Brighter the more rows it
+        // reached, so stacking for a bigger clear SOUNDS like the better play.
+        const rows = Math.min(4, Math.max(1, event?.rows ?? 1));
+        for (let i = 0; i < rows; i += 1) {
+          this.tone(noteToFreq(['D5', 'F5', 'A5', 'D6'][i]), {
+            start: i * 0.05,
+            duration: 0.18,
+            gain: 0.15,
+            type: 'triangle',
+          });
+        }
         break;
       }
       case 'sealed': {

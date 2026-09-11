@@ -119,6 +119,18 @@ export const DISCOVERIES = Object.freeze([
     }),
   }),
   Object.freeze({
+    id: 'phototherapy',
+    title: 'Light, delivered',
+    what: 'Made a line in the chamber and lit a row of the patient with it.',
+    notes: Object.freeze({
+      protomedicine: 'I carried the fire closer and the shape of the sickness showed itself.',
+      apothecary: 'Sunlight through the good glass, held on the affected part. The clouding drew back.',
+      patent: 'Sold it as a lamp cure and it embarrasses me that the lamp cure worked.',
+      pharmaceutical: 'Photodynamic. The film over them is not armour against light the way it is against a dose.',
+      genetic: 'Biofilm disrupted optically. What the drug could not reach, the wavelength did.',
+    }),
+  }),
+  Object.freeze({
     id: 'washed',
     title: 'The bad batch, carried off',
     what: 'An inert half washed out with a clear it was touching.',
@@ -164,7 +176,9 @@ export function discoveriesIn(event) {
       if (event.cured > 0) found.push('cure');
       if (event.washed > 0) found.push('washed');
       if (event.inTheDark) found.push('dark');
-
+      break;
+    case 'lit':
+      found.push('phototherapy');
       break;
     case 'resist':
       found.push('tolerance');

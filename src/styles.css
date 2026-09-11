@@ -677,6 +677,16 @@ kbd {
   opacity: 0.45;
 }
 
+/* The lamp resting between sessions. Dimmed and unpressable, and the label
+   counts down - a control that silently does nothing reads as broken. */
+#light-button.is-resting {
+  opacity: 0.5;
+  color: var(--ink);
+  background: var(--panel);
+  border-color: var(--panel-edge);
+  font-variant-numeric: tabular-nums;
+}
+
 .touchpad button {
   touch-action: manipulation;
   padding: 16px 0;
@@ -1193,6 +1203,10 @@ body.is-versus .apothecary {
 
 .meter.is-lit .meter__track {
   box-shadow: 0 0 0 1px rgba(255, 214, 102, 0.55);
+}
+
+.meter.is-resting .meter__fill--light {
+  background: linear-gradient(90deg, #4b5570, #6a748e);
 }
 
 .meter__hint {

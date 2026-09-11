@@ -44,6 +44,8 @@ const dom = {
   resistanceFill: el('resistance-fill'),
   resistanceToggle: el('resistance'),
   modifiers: el('modifiers'),
+  lightVariants: el('light-variants'),
+  lightVariantsNote: el('light-variants-note'),
   howToPlay: el('how-to-play'),
   howControls: el('how-controls'),
   howDiagram: el('how-diagram'),
@@ -148,6 +150,10 @@ function loadSettings() {
     /** False until the first game is started, which is what opens the rules. */
     hasPlayed: false,
     modifiers: [],
+    /** Phototherapy variants, all three unsettled and all three toggleable. */
+    lightWidth: 5,
+    lightExit: 'manual',
+    lightView: 'switch',
     mode: 'solo',
     music: true,
   };
@@ -169,6 +175,9 @@ function loadSettings() {
   if (params.has('seed')) merged.seed = Number(params.get('seed')) >>> 0;
   if (params.has('resistance')) merged.resistance = params.get('resistance') !== '0';
   if (params.has('mods')) merged.modifiers = params.get('mods').split(',');
+  if (params.has('lightWidth')) merged.lightWidth = Number(params.get('lightWidth')) || 5;
+  if (params.has('lightExit')) merged.lightExit = params.get('lightExit');
+  if (params.has('lightView')) merged.lightView = params.get('lightView');
   merged.modifiers = normaliseModifiers(merged.modifiers);
   if (params.has('instantDrop')) merged.instantDrop = params.get('instantDrop') !== '0';
   if (params.has('music')) merged.music = params.get('music') !== '0';
@@ -196,6 +205,9 @@ function saveSettings() {
         instantDrop: settings.instantDrop,
         hasPlayed: settings.hasPlayed,
         modifiers: settings.modifiers,
+        lightWidth: settings.lightWidth,
+        lightExit: settings.lightExit,
+        lightView: settings.lightView,
         music: settings.music,
         mode,
       }),
@@ -375,7 +387,7 @@ function refreshDailyNote() {
   const setup = dailySetup(settings.dailyKey ?? dailyKey());
   const bits = [`Level ${setup.level}`, SPEEDS[setup.speed].name];
   if (setup.resistance) bits.push('Resistance');
-  // The day's modifiers belong on the card. Walking into a blackout you were
+  // The day's modifiers belong on the card. Walking into a silted-up bottle you were
   // never told about is a surprise, not a challenge.
   if (setup.modifiers?.length) bits.push(describeModifiers(setup.modifiers));
   const previous = loadDailyResult();
@@ -395,7 +407,14 @@ function startGame(options = {}) {
   let setup;
   if (mode === 'daily') {
     const daily = dailySetup(settings.dailyKey ?? dailyKey());
-    setup = { ...daily, ...options };
+    // The day fixes the bottle; the variants stay the player's, because they
+    // are an open question rather than part of the puzzle.
+    setup = {
+      ...daily,
+      lightWidth: settings.lightWidth,
+      lightExit: settings.lightExit,
+      ...options,
+    };
     settings.activeDaily = daily;
   } else {
     const seed = options.seed ?? settings.seed ?? (Math.random() * 0xffffffff) >>> 0;
@@ -405,6 +424,8 @@ function startGame(options = {}) {
       speed: options.speed ?? settings.speed,
       resistance: options.resistance ?? settings.resistance,
       modifiers: options.modifiers ?? settings.modifiers,
+      lightWidth: settings.lightWidth,
+      lightExit: settings.lightExit,
       seed,
     };
     settings.activeDaily = null;
@@ -571,18 +592,28 @@ function syncHud(force = false) {
       dom.hudMods.append(chip);
     }
   }
-  const blackout = Boolean(shown?.has?.('blackout'));
-  dom.lightMeter.hidden = !blackout;
-  // The touch control only exists while a run is actually playing with
-  // blackout. A dead button on the pad the rest of the time would be worse than
-  // no button at all.
-  dom.lightButton.hidden = !(blackout && game);
-  if (blackout) {
-    dom.lightFill.style.width = `${Math.round((shown.lightCharge ?? 0) * 100)}%`;
-    dom.lightMeter.classList.toggle('is-spent', Boolean(shown.lightSpent));
-    dom.lightMeter.classList.toggle('is-lit', Boolean(shown.spendingLight));
-    dom.lightButton.classList.toggle('is-lit', Boolean(shown.spendingLight));
-    dom.lightButton.classList.toggle('is-spent', Boolean(shown.lightSpent));
+  const photo = Boolean(shown?.has?.('phototherapy'));
+  dom.lightMeter.hidden = !photo;
+  // The touch control only exists while a run is actually playing with it. A
+  // dead button on the pad the rest of the time would be worse than no button.
+  dom.lightButton.hidden = !(photo && game);
+  if (photo) {
+    // The meter reads as clarity, not fog: full is good.
+    const clarity = 1 - (shown.worstFog ?? 0);
+    dom.lightFill.style.width = `${Math.round(clarity * 100)}%`;
+    dom.lightMeter.classList.toggle('is-spent', clarity < 0.35);
+    dom.lightMeter.classList.toggle('is-lit', Boolean(shown.inLight));
+    dom.lightButton.classList.toggle('is-lit', Boolean(shown.inLight));
+    // The lamp rests between sessions, and the pad has to SAY so - a button
+    // that silently does nothing reads as a broken button, which is the one
+    // reading that is worse than the truth.
+    const resting = !shown.inLight && (shown.lampCooldown ?? 0) > 0;
+    dom.lightButton.classList.toggle('is-resting', resting);
+    dom.lightButton.disabled = resting;
+    dom.lightMeter.classList.toggle('is-resting', resting);
+    if (shown.inLight) dom.lightButton.textContent = 'BACK TO THE BOTTLE';
+    else if (resting) dom.lightButton.textContent = `LAMP ${Math.ceil(shown.lampCooldown / 1000)}s`;
+    else dom.lightButton.textContent = 'LIGHT THERAPY';
   }
   if (force || game) drawPillPreview(dom.next, game ? game.nextColors : null, era);
 }
@@ -657,15 +688,15 @@ function handleGameEvents() {
         renderers[0].addShake(3);
         react('worry');
         break;
-      case 'blackout':
-        audio.play('blackout', event);
-        react('worry');
+      case 'lightOn':
+        audio.play('lightOn', event);
         break;
-      case 'lightsUp':
-        audio.play('lightsUp', event);
+      case 'lightOff':
+        audio.play('lightOff', event);
         break;
-      case 'lightOut':
-        audio.play('lightOut', event);
+      case 'lit':
+        audio.play('lit', event);
+        react('cheer');
         break;
       case 'sealed':
         audio.play('sealed', event);
@@ -869,7 +900,7 @@ function handlePress(action, meta = {}) {
   if (match) {
     if (action === 'softDrop') match.command(player, 'softDropOn');
     else if (action === 'hardDrop' && !settings.instantDrop) match.command(player, 'softDropOn');
-    else if (action === 'light') match.command(player, 'lightOn');
+    else if (action === 'light') match.command(player, 'light');
     else match.command(player, action);
     handleMatchEvents();
     syncHud();
@@ -901,7 +932,7 @@ function handlePress(action, meta = {}) {
       else game.setSoftDrop(true);
       break;
     case 'light':
-      game.setLight(true);
+      game.toggleLight();
       break;
     case 'restart':
       startGame({ level: game.level, speed: game.speedName });
@@ -914,11 +945,10 @@ function handlePress(action, meta = {}) {
 }
 
 function handleRelease(action, meta = {}) {
-  if (action === 'light') {
-    if (match) match.command(meta.player ?? 0, 'lightOff');
-    else if (game) game.setLight(false);
-    return;
-  }
+  // The lamp is a toggle: entering the chamber is a decision you commit to, and
+  // what you are committing is the capsule you stop steering. Releasing the key
+  // must not undo it.
+  if (action === 'light') return;
   const hurrying = action === 'softDrop' || (action === 'hardDrop' && !settings.instantDrop);
   if (!hurrying) return;
   if (match) match.command(meta.player ?? 0, 'softDropOff');
@@ -1202,6 +1232,54 @@ function buildModifierPicker() {
   syncModifiers();
 }
 
+/**
+ * The phototherapy variants. Shown only when the modifier is on, because three
+ * more controls on a screen two testers already called a wall would be a poor
+ * way to repay them.
+ */
+function syncLightVariants() {
+  const on = settings.modifiers.includes('phototherapy');
+  dom.lightVariants.hidden = !on;
+  if (!on) return;
+  for (const [attr, value] of [
+    ['data-light-width', String(settings.lightWidth)],
+    ['data-light-exit', settings.lightExit],
+    ['data-light-view', settings.lightView],
+  ]) {
+    for (const button of dom.lightVariants.querySelectorAll(`[${attr}]`)) {
+      button.classList.toggle('is-selected', button.getAttribute(attr) === value);
+    }
+  }
+  const width = settings.lightWidth === 5
+    ? 'A narrow chamber: fewer cells to a line, so each one is worth something.'
+    : 'The full bottle: lines are rare and big.';
+  const exit = settings.lightExit === 'manual'
+    ? 'You leave when you say - a straight trade.'
+    : 'A timer ends the session - a commitment you can regret.';
+  const view = settings.lightView === 'both'
+    ? 'Both at once: you watch what the lamp is costing you.'
+    : 'Switching: the chamber takes the front, the stack recedes.';
+  dom.lightVariantsNote.textContent = `${width} ${exit} ${view}`;
+}
+
+for (const [attr, key] of [
+  ['data-light-width', 'lightWidth'],
+  ['data-light-exit', 'lightExit'],
+  ['data-light-view', 'lightView'],
+]) {
+  document.addEventListener('click', (event) => {
+    const button = event.target.closest?.(`[${attr}]`);
+    if (!button) return;
+    const raw = button.getAttribute(attr);
+    settings[key] = key === 'lightWidth' ? Number(raw) : raw;
+    saveSettings();
+    if (key === 'lightView') for (const r of renderers) r.setLightView(raw);
+    syncLightVariants();
+    demo = null;
+    syncHud(true);
+  });
+}
+
 function syncModifiers() {
   const on = new Set(settings.modifiers);
   for (const button of dom.modifiers.querySelectorAll('[data-mod]')) {
@@ -1213,6 +1291,7 @@ function syncModifiers() {
   dom.modifiersNote.textContent = chosen.length === 0
     ? 'None. One bottle, the plain rules.'
     : chosen.map((m) => `${m.name}: ${m.blurb}`).join(' ');
+  syncLightVariants();
 }
 
 dom.openFormulary.addEventListener('click', () => {
@@ -1376,6 +1455,7 @@ dom.musicToggle.checked = settings.music;
 audio.setMusicEnabled(settings.music, { resume: false });
 dom.resistanceToggle.checked = settings.resistance;
 syncDropStyle();
+for (const r of renderers) r.setLightView(settings.lightView);
 buildModifierPicker();
 buildControlsHelp();
 syncFormularyCount();

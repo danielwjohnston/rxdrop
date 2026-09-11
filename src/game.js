@@ -25,29 +25,31 @@ import {
   SPAWN_Y,
   SPEEDS,
   VIRUS,
-  BLACKOUT_EVERY,
-  BLACKOUT_FADE,
-  BLACKOUT_FLOOR,
-  BLACKOUT_LASTS,
   CONTAMINATION_EVERY,
-  DARK_AT,
-  LIGHT_ARM,
-  LIGHT_CAPACITY,
-  LIGHT_REFILL,
-  LIGHT_RESTORE,
+  FOGGED_AT,
+  FOG_HYBRID,
+  FOG_MAX,
+  FOG_RATE,
+  FOG_RELIEF,
+  FOG_SHRUG,
+  LIGHT_COOLDOWN,
+  LIGHT_SESSION,
+  LIGHT_WIDTH_NARROW,
   OUTBREAK_INTERVAL,
   OUTBREAK_MAX,
   QUARANTINE_INTERVAL,
   QUARANTINE_MAX,
 } from './constants.js';
-import { Board, cell, generateLevel, virusTopRow } from './board.js';
+import { Board, cell, generateLevel, isHybrid, virusTopRow } from './board.js';
 import {
+  lightSpill,
   normaliseModifiers,
   outbreakCeiling,
   outbreakTargets,
   quarantineColumn,
   rationedOut,
 } from './modifiers.js';
+import { LightChamber } from './light.js';
 import {
   createPill,
   fits,
@@ -83,7 +85,16 @@ export class Game {
     height = BOARD_HEIGHT,
     resistance = false,
     modifiers = [],
+    lightWidth = LIGHT_WIDTH_NARROW,
+    lightExit = 'manual',
   } = {}) {
+    /**
+     * The two phototherapy variants that are rules rather than presentation.
+     * Both ship as toggles because which one plays better is a question for a
+     * hand, not an argument - see docs/ideas.md.
+     */
+    this.lightWidth = Math.max(2, Math.min(width, lightWidth));
+    this.lightExit = lightExit === 'timer' ? 'timer' : 'manual';
     /** Antibiotic resistance: surviving viruses mutate. Off in classic play. */
     this.resistance = Boolean(resistance);
     /** Run modifiers, in declaration order. See src/modifiers.js. */
@@ -141,15 +152,19 @@ export class Game {
     this.outbreakCap = outbreakCeiling(this.startingViruses);
     this.outbreakTickedAt = -1;
     this.spreading = [];
-    /** Blackout: what the bottle can be seen by, and what is left to spend. */
-    this.light = 1;
-    this.lightCharge = 1;
-    this.lighting = false;
-    /** True once the reservoir has run dry, until it re-arms. See LIGHT_ARM. */
-    this.lightSpent = false;
-    /** Counts up to the next blackout, then counts one down. */
-    this.blackoutTimer = 0;
-    this.blackoutFor = 0;
+    /**
+     * Phototherapy. Fog is PER ROW - the bottle silts up worst where the
+     * disease is worst, which turns the dark from noise into information.
+     */
+    this.fog = new Array(this.height).fill(0);
+    /** The light chamber, while you are in it. Null the rest of the time. */
+    this.chamber = null;
+    this.lightTimer = 0;
+    /** Counts down after a session. You cannot go straight back to the lamp. */
+    this.lampCooldown = 0;
+    this.rowsLit = 0;
+    /** A deal that fell due while the player was at the lamp. */
+    this.dealHeld = false;
     this.darkClears = 0;
     /** Quarantine: the sealed column and when it was sealed. */
     this.board.sealed = undefined;
@@ -182,15 +197,42 @@ export class Game {
     return this.resistance || this.has('rationing');
   }
 
-  /** True when the bottle is dark enough for a clear to be worth a badge. */
-  get isDark() {
-    return this.has('blackout') && this.light <= DARK_AT;
+  /** True while the player is at the lamp rather than at the bottle. */
+  get inLight() {
+    return this.chamber !== null;
   }
 
-  /** True while the light is actually drawing on the reservoir. */
-  get spendingLight() {
-    return this.has('blackout') && this.blackoutFor > 0 && this.lighting
-      && !this.lightSpent && this.lightCharge > 0;
+  /** How well a row can be seen, 0..1. */
+  visibilityAt(y) {
+    if (!this.has('phototherapy')) return 1;
+    return 1 - (this.fog[y] ?? 0);
+  }
+
+  /** The worst row in the bottle, which is what the meter shows. */
+  get worstFog() {
+    if (!this.has('phototherapy')) return 0;
+    return Math.max(...this.fog);
+  }
+
+  /**
+   * True when the row the capsule is falling through has silted up. This is the
+   * live reading, for the HUD and for how it feels in the hand.
+   *
+   * The BADGE cannot use this: by the time a clear resolves the capsule has
+   * locked and gone, so it would always read false. What counts for the badge
+   * is whether the run you cleared was in a row you could not see - see
+   * `clearedInTheDark`.
+   */
+  get isDark() {
+    if (!this.has('phototherapy') || !this.pill) return false;
+    return (this.fog[this.pill.y] ?? 0) >= FOGGED_AT;
+  }
+
+  /** True if any virus in this outcome died in a row that was fogged over. */
+  clearedInTheDark(outcome) {
+    if (!this.has('phototherapy') || !outcome) return false;
+    return outcome.cleared.some(({ y, type }) =>
+      type === VIRUS && (this.fog[y] ?? 0) >= FOGGED_AT);
   }
 
   get virusesLeft() {
@@ -294,6 +336,18 @@ export class Game {
   }
 
   spawnPill() {
+    // The deal waits while you are at the lamp. You pay for the visit with the
+    // capsule you abandoned in flight and with the seconds, which is a cost you
+    // chose; dealing fresh capsules into an unsteered bottle is a different and
+    // much worse cost, because every one of them lands in the spawn column and
+    // tops the bottle out in a handful of visits. Measured: eight capsules to a
+    // lost run.
+    if (this.inLight) {
+      this.dealHeld = true;
+      this.pill = null;
+      this.phase = PHASE.FALLING;
+      return;
+    }
     const colors = this.queue.shift();
     this.queue.push(this.drawColors());
     const inert = this.contaminatedHalf(this.pillsPlaced);
@@ -327,6 +381,7 @@ export class Game {
   // ---- player input -------------------------------------------------------
 
   move(dx) {
+    if (this.inLight) return this.chamber.move(dx);
     if (!this.canControl()) return false;
     const next = tryMove(this.board, this.pill, dx, 0);
     if (!next) return false;
@@ -337,6 +392,7 @@ export class Game {
   }
 
   rotate(direction = 1) {
+    if (this.inLight) return this.chamber.rotate(direction);
     if (!this.canControl()) return false;
     const next = tryRotate(this.board, this.pill, direction);
     if (!next) return false;
@@ -347,6 +403,10 @@ export class Game {
   }
 
   setSoftDrop(active) {
+    if (this.inLight) {
+      this.chamber.setHurry(active);
+      return;
+    }
     const next = Boolean(active) && this.canControl();
     if (next === this.softDropping) return;
     this.softDropping = next;
@@ -377,6 +437,12 @@ export class Game {
   }
 
   hardDrop() {
+    // In the chamber the drop control hurries the light, same as it hurries a
+    // capsule: one control, one meaning, wherever you are.
+    if (this.inLight) {
+      this.chamber.setHurry(true);
+      return true;
+    }
     if (!this.canControl()) return false;
     const landed = hardDropPosition(this.board, this.pill);
     const distance = landed.y - this.pill.y;
@@ -441,59 +507,127 @@ export class Game {
   }
 
   /**
-   * Light therapy. The bottle fades on its own; holding the light brings it
-   * back and spends a reservoir that refills whenever the light is off.
-   *
-   * The refill is the guardrail: however badly the light is spent, waiting
-   * always gets it back, so the bottle can never be left permanently dark. And
-   * the floor means dark is dim, not blind - a run cleared down there is a hard
-   * thing done, not a guess.
+   * The light-therapy control. A TOGGLE now, not a held key: entering the
+   * chamber is a decision you commit to, and the thing you are committing is
+   * the capsule you stop steering.
    */
-  updateLight(dt) {
-    if (!this.has('blackout')) return;
-    const wasDark = this.isDark;
-
-    // The blackout clock. A blackout always ends on this timer, whatever the
-    // reservoir is doing - that bound is what keeps the bottle answerable.
-    if (this.blackoutFor > 0) {
-      this.blackoutFor = Math.max(0, this.blackoutFor - dt);
-      if (this.blackoutFor === 0) this.emit('lightsUp');
-    } else {
-      this.blackoutTimer += dt;
-      if (this.blackoutTimer >= BLACKOUT_EVERY) {
-        this.blackoutTimer = 0;
-        this.blackoutFor = BLACKOUT_LASTS;
-        this.emit('blackout', { ms: BLACKOUT_LASTS });
-      }
-    }
-
-    if (this.lightSpent && this.lightCharge >= LIGHT_ARM) this.lightSpent = false;
-    const spending = this.spendingLight;
-    if (spending) {
-      this.lightCharge = Math.max(0, this.lightCharge - dt / LIGHT_CAPACITY);
-      if (this.lightCharge === 0) {
-        this.lightSpent = true;
-        this.emit('lightOut');
-      }
-    } else if (this.blackoutFor === 0) {
-      // The reservoir only refills while the lights are on, so the gap between
-      // blackouts is what pays for the next one.
-      this.lightCharge = Math.min(1, this.lightCharge + dt / LIGHT_REFILL);
-    }
-
-    const target = this.blackoutFor > 0 && !spending ? BLACKOUT_FLOOR : 1;
-    if (this.light < target) this.light = Math.min(target, this.light + dt / LIGHT_RESTORE);
-    else if (this.light > target) this.light = Math.max(target, this.light - dt / BLACKOUT_FADE);
-
-    if (this.isDark !== wasDark) this.emit(this.isDark ? 'dark' : 'lit');
+  setLight(on) {
+    const want = Boolean(on) && this.has('phototherapy');
+    if (want === this.inLight) return;
+    if (want) this.enterLight();
+    else this.leaveLight('released');
   }
 
-  /** The light-therapy control. Held, never toggled - see docs/ideas.md. */
-  setLight(on) {
-    const next = Boolean(on) && this.has('blackout');
-    if (next === this.lighting) return;
-    this.lighting = next;
-    this.emit('light', { on: next });
+  /** Toggles the chamber, which is what a single key press or tap does. */
+  toggleLight() {
+    this.setLight(!this.inLight);
+  }
+
+  /** True when the lamp is available: the modifier is on and it is not resting. */
+  get lampReady() {
+    return this.has('phototherapy') && !this.inLight && this.lampCooldown <= 0;
+  }
+
+  enterLight() {
+    if (!this.has('phototherapy') || this.inLight) return false;
+    if (this.isOver || this.paused) return false;
+    // The lamp rests between sessions. Without this the case for going is
+    // always true once the fog is at its ceiling, and a lamp you would be a
+    // fool to ever leave is a room rather than a decision.
+    if (this.lampCooldown > 0) return false;
+    // Going to the lamp COMMITS the capsule in your hand where you last left
+    // it. That is the cost, and it is the right one: a player who plans places
+    // the dose first and then goes; a player who panics dumps it.
+    //
+    // Letting it fall unsteered instead was much worse - every abandoned
+    // capsule lands in the spawn column, and a tower there tops the bottle out
+    // in a handful of visits. Measured: eight capsules to a lost run.
+    // The chamber opens FIRST, so that the lock below - which resolves and asks
+    // for the next capsule - finds the lamp already lit and holds the deal. The
+    // other order deals a fresh capsule into an unsteered bottle, which is the
+    // thing this is written to avoid.
+    this.chamber = new LightChamber(this.lightWidth, this.height, this.rng);
+    if (this.pill && this.phase === PHASE.FALLING) {
+      this.pill = hardDropPosition(this.board, this.pill);
+      this.lockCurrentPill();
+    }
+    this.lightTimer = this.lightExit === 'timer' ? LIGHT_SESSION : 0;
+    this.emit('lightOn', { width: this.lightWidth, exit: this.lightExit });
+    return true;
+  }
+
+  leaveLight(reason = 'released') {
+    if (!this.inLight) return false;
+    this.chamber = null;
+    this.lightTimer = 0;
+    this.lampCooldown = LIGHT_COOLDOWN;
+    this.emit('lightOff', { reason });
+    // Whatever was waiting on you comes now.
+    if (this.dealHeld) {
+      this.dealHeld = false;
+      if (!this.isOver) this.spawnPill();
+    }
+    return true;
+  }
+
+  /**
+   * The lamp. Light falls, lines light rows of the patient, and the bottle
+   * waits for you - the dose you were holding was committed on the way in.
+   *
+   * Called from update(), so the fog fouls and the lamp rests whether or not
+   * anyone is at the chamber. Do not call it beside update() as well; that
+   * ticks the chamber twice and was quietly halving the light's fall time in
+   * two checks before it was noticed.
+   */
+  updateLight(dt) {
+    if (!this.has('phototherapy')) return;
+    this.foulAir(dt);
+    if (!this.inLight) {
+      if (this.lampCooldown > 0) {
+        this.lampCooldown = Math.max(0, this.lampCooldown - dt);
+        if (this.lampCooldown === 0) this.emit('lampReady');
+      }
+      return;
+    }
+    this.chamber.update(dt);
+    const lit = this.chamber.drainLit();
+    if (lit.length > 0) this.lightRows(lit);
+    if (this.lightExit === 'timer') {
+      this.lightTimer -= dt;
+      if (this.lightTimer <= 0) this.leaveLight('expired');
+    }
+  }
+
+  /**
+   * The fog itself. Every virus clouds its own row; a hybrid clouds hardest,
+   * because it is the colony that has most thoroughly dug in.
+   *
+   * It PLATEAUS at FOG_MAX rather than compounding toward zero, which is the
+   * bound: ignore the lamp for a whole run and the bottle is hard to read,
+   * never unplayable.
+   */
+  foulAir(dt) {
+    const weight = new Array(this.height).fill(0);
+    this.board.forEachCell((c, x, y) => {
+      if (c.type !== VIRUS) return;
+      weight[y] += isHybrid(c) ? FOG_HYBRID : 1;
+    });
+    for (let y = 0; y < this.height; y += 1) {
+      if (weight[y] === 0) continue;
+      this.fog[y] = Math.min(FOG_MAX, this.fog[y] + dt * FOG_RATE * weight[y]);
+    }
+  }
+
+  /** Lines completed in the chamber, spilling into the rows either side. */
+  lightRows(rows) {
+    const before = this.worstFog;
+    for (const row of rows) {
+      for (const { row: y, clears } of lightSpill(row, rows.length, this.height)) {
+        this.fog[y] = Math.max(0, this.fog[y] - clears);
+      }
+    }
+    this.rowsLit += rows.length;
+    this.emit('lit', { rows: rows.length, lifted: before - this.worstFog });
   }
 
   updateFalling(dt) {
@@ -608,7 +742,23 @@ export class Game {
       && this.outcome.cleared.some(({ x }) => Math.abs(x - sealed) === 1)) {
       this.breakSeal('cleared');
     }
-    const inTheDark = this.isDark && killed > 0;
+    // Read the dark BEFORE the relief below lifts it, or clearing a virus would
+    // brighten the row and then be judged against the brightened row.
+    const inTheDark = this.clearedInTheDark(this.outcome);
+    // Treating the patient clears the air. Killing a virus lifts the fog in its
+    // row; a clear it SHRUGS OFF fouls that row instead, because the colony has
+    // just proved it is shielded. Medicine and light are the same argument.
+    if (this.has('phototherapy')) {
+      for (const { y, type } of this.outcome.cleared) {
+        if (type === VIRUS) this.fog[y] = Math.max(0, this.fog[y] - FOG_RELIEF);
+      }
+      for (const { y } of this.outcome.collateral) {
+        this.fog[y] = Math.max(0, this.fog[y] - FOG_RELIEF);
+      }
+      for (const { y } of this.resistedCells) {
+        this.fog[y] = Math.min(FOG_MAX, this.fog[y] + FOG_SHRUG);
+      }
+    }
     if (inTheDark) this.darkClears += 1;
     this.emit('clear', {
       viruses: killed,
@@ -621,6 +771,7 @@ export class Game {
       antibodies,
       washed: this.outcome.washed?.length ?? 0,
       inTheDark,
+      inLight: this.inLight,
     });
     if (antibodies > 0) this.emit('antibody', { count: antibodies });
     if (inTheDark) this.emit('darkClear', { viruses: killed, total: this.darkClears });

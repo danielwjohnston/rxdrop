@@ -115,11 +115,8 @@ export class VersusMatch {
         return true;
       case 'hardDrop':
         return player.hardDrop();
-      case 'lightOn':
-        player.setLight(true);
-        return true;
-      case 'lightOff':
-        player.setLight(false);
+      case 'light':
+        player.toggleLight();
         return true;
       default:
         return false;

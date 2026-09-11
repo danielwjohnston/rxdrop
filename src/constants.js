@@ -192,51 +192,103 @@ export const OUTBREAK_MAX = 2;
 export const OUTBREAK_CEILING = 1.6;
 
 /**
- * Blackout, and light therapy.
+ * Phototherapy: the fog, and the light you make to cut it.
  *
- * The bottle is lit normally. Every BLACKOUT_EVERY milliseconds the lights go
- * out for BLACKOUT_LASTS, fading over BLACKOUT_FADE to BLACKOUT_FLOOR - dim
- * enough to be hard, never fully black. Holding the light-therapy control
- * brings the bottle back over LIGHT_RESTORE and spends a reservoir good for
- * LIGHT_CAPACITY milliseconds of holding, which refills over LIGHT_REFILL while
- * the lights are on.
+ * The bottle does not "go dark" on a timer any more. It SILTS UP, row by row,
+ * worst where the disease is worst - colonies shield themselves behind a
+ * matrix, which is both why the fog exists and why it protects them. Cutting
+ * it is a second treatment you deliver rather than a switch you flip: you enter
+ * a light chamber, tetromino-shaped light falls, and a completed line lights
+ * that ROW of the patient.
  *
- * The numbers are chosen so the reservoir refills to roughly full in the gap
- * between blackouts and covers about two thirds of one - so every blackout is a
- * decision about WHEN to spend the light, and some of it is always played in
- * the dark. That is where the badge comes from.
+ * The cost is the dose in your hand: going to the lamp commits the capsule
+ * where it stands and holds the next deal until you come back. That is the
+ * decision the old blackout never asked - is it worth the placement you are
+ * holding to see the bottom of the bottle again. (Letting the capsule fall on
+ * unsteered was tried first and was much worse: every abandoned one lands in
+ * the spawn column, and eight visits top the bottle out.)
  *
- * Two bounds, and they are the reason this is a mechanic rather than a
- * punishment: a blackout always ends on its own timer whatever the reservoir is
- * doing, and the bottle never fades past BLACKOUT_FLOOR. Nothing a player can
- * spend takes either of those away.
- *
- * This is the second design. The first faded the light continuously and refilled
- * it continuously, which cannot produce "mostly lit, briefly dark" at all: a
- * linear system like that drifts to one end or the other, and the playtest
- * showed it sitting at whichever end the tuning favoured - either free light or
- * half the run unreadable.
+ * Three of these are deliberately variants rather than settled numbers. Which
+ * one plays best is a question for a hand, not for an argument, so all three
+ * ship behind toggles and get cut or kept on evidence.
  */
-export const BLACKOUT_EVERY = 14000;
-export const BLACKOUT_LASTS = 5000;
-export const BLACKOUT_FADE = 900;
-export const BLACKOUT_FLOOR = 0.06;
-export const LIGHT_RESTORE = 500;
-export const LIGHT_CAPACITY = 3400;
-export const LIGHT_REFILL = 9000;
+
+/** How wide the light chamber is. Narrow makes each line cost something. */
+export const LIGHT_WIDTH_NARROW = 5;
+export const LIGHT_WIDTH_FULL = BOARD_WIDTH;
+
 /**
- * Once the reservoir is empty the light will not come on again until it has
- * climbed back to this much of a charge.
+ * Milliseconds per row a light piece falls, and the hurried version.
  *
- * Without that latch the reservoir oscillates on its own floor - it empties,
- * refills by one frame's worth, powers one more frame of light, empties again -
- * and the light is effectively free. That is not a hypothetical: it is how the
- * first version behaved, and holding the light forever kept the bottle at full
- * brightness the whole run.
+ * Much faster than a capsule. You are in the chamber for seconds, not minutes,
+ * and a session that only lands five pieces buys one line - which is a terrible
+ * exchange for the capsules you are not steering while you are in there.
  */
-export const LIGHT_ARM = 0.35;
-/** Below this the bottle counts as dark, which is what a badge is worth. */
-export const DARK_AT = 0.35;
+export const LIGHT_FALL = 190;
+export const LIGHT_FALL_FAST = 55;
+
+/**
+ * Light spills. A completed line clears the fog from its own row outright and
+ * halves it this many rows either side, because light scatters and because one
+ * row out of seventeen per visit is not worth the capsules a visit costs.
+ */
+export const LIGHT_SPILL = 1;
+
+/**
+ * Clearing several lines at once is worth more than clearing them one at a
+ * time, the same way a cascade is: this is the multiplier on how far the spill
+ * reaches, indexed by lines cleared together. Four at once floods the bottle.
+ */
+export const LIGHT_SPILL_BY_LINES = Object.freeze([0, 1, 2, 4, 99]);
+
+/**
+ * How long a locked light cell lasts before it fades.
+ *
+ * Light that does not become a line dissipates, so the chamber is never a safe
+ * room to hide in when the bottle gets frightening: you make lines or you lose
+ * what you put in.
+ */
+export const LIGHT_DECAY = 7000;
+
+/** With the timer variant, how long one session in the chamber lasts. */
+export const LIGHT_SESSION = 6000;
+
+/**
+ * How long after leaving the lamp before you can go back to it.
+ *
+ * This is the answer to the only real abuse the mechanic has: with the fog at
+ * its ceiling the case for going to the lamp is ALWAYS true, so without a
+ * cooldown the lamp is not a decision, it is a room - the playtest bot lived
+ * in it 95% of the run and placed a fifth of the capsules it otherwise would.
+ * A fixed cooldown makes the lamp a rhythm: work, go, work.
+ *
+ * It always expires, and it is never running at the start of a run, so the
+ * lamp can never be taken away - only made to wait.
+ */
+export const LIGHT_COOLDOWN = 9000;
+
+/**
+ * The fog. Rate is per millisecond per virus in the row, so a row holding three
+ * colonies silts three times as fast as one holding a single virus.
+ */
+export const FOG_RATE = 0.000022;
+/** A clear a virus shrugs off: it has just proved it is shielded. */
+export const FOG_SHRUG = 0.18;
+/** A hybrid is the worst of them, and fogs whether or not you touch it. */
+export const FOG_HYBRID = 2.5;
+/** Killing a virus clears the air in its row. */
+export const FOG_RELIEF = 0.22;
+/**
+ * The ceiling on fog, and the floor on what you can see through it.
+ *
+ * The fog PLATEAUS rather than compounding toward zero: ignore the lamp for a
+ * whole run and the bottle is hard to read, never unplayable. And the falling
+ * capsule is drawn over the fog rather than under it, so the dark costs you
+ * information about the stack, never the ability to act.
+ */
+export const FOG_MAX = 0.82;
+/** Above this a row counts as fogged, which is what a badge is worth. */
+export const FOGGED_AT = 0.5;
 
 /**
  * Rationing: only two of the three medicines are dealt at a time. Every

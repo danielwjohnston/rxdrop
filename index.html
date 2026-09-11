@@ -170,6 +170,35 @@
                     </span>
                   </label>
 
+                  <!-- Phototherapy is new and unsettled. All three axes ship as
+                       toggles so they can be played against each other and kept,
+                       cut or tweaked on evidence rather than argument. -->
+                  <div class="chooser chooser--stack" id="light-variants" hidden>
+                    <span class="chooser__label">Phototherapy</span>
+                    <div class="chooser">
+                      <span class="chooser__label chooser__label--sub">Chamber</span>
+                      <div class="segmented" role="group" aria-label="Light chamber width">
+                        <button type="button" data-light-width="5" class="is-selected">Narrow</button>
+                        <button type="button" data-light-width="8">Full</button>
+                      </div>
+                    </div>
+                    <div class="chooser">
+                      <span class="chooser__label chooser__label--sub">Leave</span>
+                      <div class="segmented" role="group" aria-label="How a light session ends">
+                        <button type="button" data-light-exit="manual" class="is-selected">When you say</button>
+                        <button type="button" data-light-exit="timer">On a timer</button>
+                      </div>
+                    </div>
+                    <div class="chooser">
+                      <span class="chooser__label chooser__label--sub">View</span>
+                      <div class="segmented" role="group" aria-label="How the chamber is shown">
+                        <button type="button" data-light-view="switch" class="is-selected">Switch</button>
+                        <button type="button" data-light-view="both">Both at once</button>
+                      </div>
+                    </div>
+                    <small class="mods__note" id="light-variants-note"></small>
+                  </div>
+
                   <button class="button button--ghost" id="open-formulary" type="button">
                     The formulary <span class="pill-count" id="formulary-count">0/10</span>
                   </button>
@@ -251,7 +280,7 @@
           <div class="meter" id="light-meter" hidden>
             <span class="readout__label">Light therapy</span>
             <div class="meter__track"><div class="meter__fill meter__fill--light" id="light-fill"></div></div>
-            <small class="meter__hint">Hold Shift, L, or the pad button</small>
+            <small class="meter__hint">Clarity. Press Shift, L, or the pad to go to the lamp</small>
           </div>
           <div class="mods mods--hud" id="hud-mods" hidden aria-label="Run modifiers"></div>
           <canvas id="virus-tally" class="tally" height="70" aria-hidden="true"></canvas>
@@ -293,18 +322,18 @@
         <button type="button" data-action="rotateCCW" aria-label="Rotate counter-clockwise">&#8630;</button>
         <button type="button" data-action="hardDrop" id="drop-button" aria-label="Hurry the capsule down">HURRY</button>
         <button type="button" data-action="rotateCW" aria-label="Rotate clockwise">&#8631;</button>
-        <!-- Light therapy is a held control, so on a touch device it needs a
-             button of its own: without one, blackout is a modifier a phone
-             player can turn on and then has no way to answer. Shown only when
-             the run is actually playing with it. -->
+        <!-- Going to the lamp is a control of its own, so on a touch device it
+             needs a button of its own: without one, phototherapy is a modifier
+             a phone player can turn on and then has no way to answer. Shown
+             only when the run is actually playing with it. -->
         <button
           type="button"
           data-action="light"
           id="light-button"
           class="touchpad__wide"
-          aria-label="Hold for light therapy"
+          aria-label="Go to the light chamber"
           hidden
-        >HOLD FOR LIGHT</button>
+        >LIGHT THERAPY</button>
       </nav>
 
       <footer class="colophon">

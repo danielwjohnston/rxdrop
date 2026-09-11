@@ -36,17 +36,17 @@ import {
   MATCH_LENGTH,
   MAX_LEVEL,
   PILL,
+  BOARD_HEIGHT,
+  BOARD_WIDTH,
   DEAL_DELAY,
+  LIGHT_COOLDOWN,
+  FOG_MAX,
   PILLS_PER_SPEED_UP,
   RESISTANCE_INTERVAL,
   RESISTANCE_MAX,
   SPEEDS,
   TOLERANCE_AT,
   VIRUS,
-  BLACKOUT_EVERY,
-  BLACKOUT_FLOOR,
-  BLACKOUT_LASTS,
-  DARK_AT,
   QUARANTINE_MAX,
   RATION_SPELL,
   SPAWN_X,
@@ -56,7 +56,7 @@ import { Game, PHASE } from '../src/game.js';
 import { MODIFIERS, MODIFIER_IDS, normaliseModifiers } from '../src/modifiers.js';
 import { DISCOVERY_IDS, Formulary, discoveriesIn } from '../src/formulary.js';
 import { createPill, fits, pillCells, tryMove, tryRotate } from '../src/pill.js';
-import { FRAME, plan, steer } from './bot.mjs';
+import { FRAME, plan, steer, steerLight, workTheLamp } from './bot.mjs';
 import { VersusMatch } from '../src/versus.js';
 import { dailySetup } from '../src/daily.js';
 import { createRng } from '../src/rng.js';
@@ -692,50 +692,153 @@ stage('modifiers', 'A modifier may change a run, never end it', (check) => {
     }
   });
 
-  check('a blackout always ends on its own, whatever the light is doing', () => {
-    // The bound that makes blackout a mechanic rather than a lost run. Spend
-    // the reservoir to nothing, never touch the light again, and the bottle
-    // still has to come back.
-    const game = new Game({ level: 3, speed: 'LOW', seed: 6, modifiers: ['blackout'] });
-    for (let round = 0; round < 6; round += 1) {
-      game.updateLight(BLACKOUT_EVERY);
-      game.lightCharge = 0;
-      game.lightSpent = true;
-      game.setLight(false);
-      let dark = 0;
-      for (let t = 0; t < BLACKOUT_LASTS * 3; t += 16) {
-        game.updateLight(16);
-        if (game.isDark) dark += 16;
+  check('the fog plateaus and never takes a row to black', () => {
+    // The bound that makes phototherapy a mechanic rather than a slow loss:
+    // ignore the lamp for an entire run and the bottle is hard to read, never
+    // unplayable.
+    for (let seed = 0; seed < 20; seed += 1) {
+      const game = new Game({ level: 14, speed: 'LOW', seed, modifiers: ['phototherapy'] });
+      for (let t = 0; t < 900000; t += 250) {
+        game.updateLight(250);
+        for (let y = 0; y < game.height; y += 1) {
+          assert.ok(
+            game.fog[y] <= FOG_MAX + 1e-9,
+            `seed ${seed}: row ${y} fogged to ${game.fog[y].toFixed(3)}, past the ceiling`,
+          );
+          assert.ok(
+            game.visibilityAt(y) >= 1 - FOG_MAX - 1e-9,
+            `seed ${seed}: row ${y} went black`,
+          );
+        }
       }
-      assert.equal(game.blackoutFor, 0, `round ${round} never ended`);
-      assert.ok(game.light > DARK_AT, `round ${round} left the bottle dark`);
-      assert.ok(dark <= BLACKOUT_LASTS + 2000, `round ${round} was dark for ${dark}ms`);
     }
   });
 
-  check('the bottle never fades to fully black', () => {
-    const game = new Game({ level: 3, speed: 'LOW', seed: 7, modifiers: ['blackout'] });
-    for (let t = 0; t < 120000; t += 16) {
-      game.updateLight(16);
-      assert.ok(game.light >= BLACKOUT_FLOOR, `light fell to ${game.light}`);
+  check('only rows with disease in them cloud', () => {
+    // The fog is information: it silts up where the colonies are. A row that
+    // clouds with nothing in it would be noise, and would teach nothing.
+    for (let seed = 0; seed < 20; seed += 1) {
+      const game = new Game({ level: 8, speed: 'LOW', seed, modifiers: ['phototherapy'] });
+      for (let t = 0; t < 30000; t += 100) game.updateLight(100);
+      for (let y = 0; y < game.height; y += 1) {
+        let viruses = 0;
+        for (let x = 0; x < game.width; x += 1) {
+          if (game.board.get(x, y)?.type === VIRUS) viruses += 1;
+        }
+        if (viruses === 0) {
+          assert.equal(game.fog[y], 0, `seed ${seed}: row ${y} clouded with nothing in it`);
+        }
+      }
     }
   });
 
-  check('the light is never free, and never spent into a corner', () => {
-    // Holding it for every millisecond of every blackout is the most anyone
-    // can have. That has to still leave some dark - otherwise the reservoir
-    // is not a constraint and the modifier is a nuisance rather than a
-    // decision, which is exactly how the first tuning behaved.
-    const game = new Game({ level: 3, speed: 'LOW', seed: 8, modifiers: ['blackout'] });
-    let dark = 0;
-    const span = 120000;
-    for (let t = 0; t < span; t += 16) {
-      game.setLight(true);
-      game.updateLight(16);
-      if (game.isDark) dark += 16;
+  check('the chamber always deals, and never becomes a dead end', () => {
+    // Light decays, so however badly the chamber is stacked it clears itself.
+    // It costs the session, never the run.
+    for (const width of [5, BOARD_WIDTH]) {
+      const game = new Game({ level: 4, speed: 'LOW', seed: 3, modifiers: ['phototherapy'], lightWidth: width });
+      assert.equal(game.enterLight(), true, `width ${width}: the lamp refused to open`);
+      assert.equal(game.chamber.width, width);
+      assert.ok(game.chamber.piece, `width ${width}: the chamber dealt nothing`);
+      // Pack it solid, then watch it recover on its own.
+      for (let i = 0; i < game.chamber.grid.length; i += 1) game.chamber.grid[i] = { life: 800 };
+      game.chamber.piece = null;
+      assert.equal(game.chamber.saturated, true);
+      for (let t = 0; t < 4000 && game.chamber.saturated; t += 16) game.updateLight(16);
+      assert.equal(game.chamber.saturated, false, `width ${width}: the chamber never recovered`);
     }
-    assert.ok(dark > span * 0.02, 'holding the light always never goes dark: the light is free');
-    assert.ok(dark < span * 0.5, `holding the light always is still dark ${dark}ms of ${span}ms`);
+  });
+
+  check('a line always lights its own row, at every width and every row', () => {
+    for (const width of [5, BOARD_WIDTH]) {
+      for (let row = 0; row < BOARD_HEIGHT; row += 1) {
+        const game = new Game({
+          level: 4, speed: 'LOW', seed: 7, modifiers: ['phototherapy'], lightWidth: width,
+        });
+        game.fog = game.fog.map(() => FOG_MAX);
+        game.lightRows([row]);
+        assert.equal(game.fog[row], 0, `width ${width}: lighting row ${row} did not clear it`);
+        // And the spill never reaches the whole bottle off a single line.
+        const untouched = game.fog.filter((f) => f === FOG_MAX).length;
+        assert.ok(untouched > 0, `width ${width}: one line at row ${row} flooded the bottle`);
+      }
+    }
+  });
+
+  check('going to the lamp commits the dose in your hand and holds the next', () => {
+    // The cost, and the reason this is a decision rather than a chore: you
+    // finish the dose or you lose the placement, and nothing new is dealt until
+    // you come back. Letting capsules keep dealing into an unsteered bottle was
+    // far worse - every one lands in the spawn column, and six of them top the
+    // bottle out.
+    const game = new Game({ level: 4, speed: 'LOW', seed: 5, modifiers: ['phototherapy'] });
+    game.update(DEAL_DELAY + 20);
+    const placed = game.pillsPlaced;
+    assert.ok(game.pill, 'there should be a capsule in hand to commit');
+
+    game.enterLight();
+    assert.equal(game.inLight, true);
+    assert.equal(game.pillsPlaced, placed + 1, 'the capsule in hand should have been committed');
+    assert.equal(game.pill, null, 'and nothing new dealt while the lamp is lit');
+
+    // It stays that way however long you stand there.
+    for (let t = 0; t < 8000; t += 16) {
+      game.update(16);
+    }
+    assert.equal(game.pill, null, 'a capsule was dealt into an unsteered bottle');
+    assert.equal(game.dealHeld, true, 'the deal should be waiting on you');
+
+    // And it arrives the moment you come back.
+    game.leaveLight('done');
+    assert.ok(game.pill, 'leaving the lamp should deal the capsule that was waiting');
+    assert.equal(game.dealHeld, false);
+  });
+
+  check('the lamp rests between sessions, and always comes back', () => {
+    // The abuse this closes, measured before it was closed: with the fog at its
+    // ceiling the case for going to the lamp is ALWAYS true, so the playtest bot
+    // lived in the chamber 95% of the run and placed a fifth of the capsules.
+    // A lamp you would be a fool to ever leave is a room, not a decision.
+    //
+    // The bound on the bound: the cooldown is fixed, it is never running at the
+    // start of a run, and it always expires - so the lamp can be made to wait
+    // and can never be taken away.
+    const game = new Game({ level: 4, speed: 'LOW', seed: 21, modifiers: ['phototherapy'] });
+    assert.equal(game.lampReady, true, 'the lamp should be available from the first frame');
+    assert.equal(game.enterLight(), true);
+    game.leaveLight('done');
+    assert.equal(game.lampReady, false, 'the lamp should be resting');
+    assert.equal(game.enterLight(), false, 'and refuse to open while it rests');
+
+    // It comes back on its own, without the player doing anything at all.
+    let waited = 0;
+    for (; waited < LIGHT_COOLDOWN * 3 && !game.lampReady; waited += 16) game.updateLight(16);
+    assert.ok(game.lampReady, 'the lamp never came back');
+    assert.ok(waited <= LIGHT_COOLDOWN + 32, `the lamp took ${waited}ms to come back`);
+    assert.equal(game.enterLight(), true, 'and opens again once it has');
+
+    // Nothing about the cooldown may touch a run without the modifier.
+    const plain = new Game({ level: 4, speed: 'LOW', seed: 21 });
+    assert.equal(plain.lampReady, false, 'there is no lamp without the modifier');
+    assert.equal(plain.enterLight(), false);
+  });
+
+  check('a run can be won without ever touching the lamp', () => {
+    // Phototherapy is an aid, not a gate.
+    const game = new Game({ level: 0, speed: 'LOW', seed: 11, modifiers: ['phototherapy'] });
+    game.board.forEachCell((c, x, y) => game.board.set(x, y, null));
+    game.startingViruses = 1;
+    game.virusesClearedThisLevel = 0;
+    const floor = game.board.height - 1;
+    game.board.set(3, floor, virus(0));
+    for (const x of [4, 5, 6, 7]) game.board.set(x, floor, cell(0, PILL, null));
+    game.board.set(2, floor, cell(0, PILL, null));
+    game.beginResolution();
+    for (let t = 0; t < 3000 && game.phase !== PHASE.WON; t += 16) {
+      game.update(16);
+    }
+    assert.equal(game.inLight, false, 'the run should never have needed the chamber');
+    assert.equal(game.phase, PHASE.WON, 'a level should be winnable with the lamp untouched');
   });
 
   check('rationing brings every colour back inside one spell', () => {
@@ -894,11 +997,21 @@ stage('modifiers', 'A modifier may change a run, never end it', (check) => {
         // hard-dropper loses a level-4 bottle in ten capsules without clearing
         // anything, which would say nothing about the modifier under test.
         let target = plan(game);
+        const lampState = {};
         let cleared = 0;
         let capsules = 0;
         for (let f = 0; f < 90000 && !game.isOver; f += 1) {
-          if (game.has('blackout')) game.setLight(game.light < 0.5);
-          if (game.phase === PHASE.FALLING) game.setSoftDrop(!steer(game, target));
+          // While you are at the lamp the controls drive the LIGHT, so a bot
+          // that goes on steering the capsule is really steering the light by
+          // accident - and would report the modifier unplayable for a reason
+          // that is about the bot.
+          // Steer first, then decide about the lamp: a capsule that is where
+          // you want it can be committed for free, and one mid-flight cannot.
+          const settled = !game.inLight && game.phase === PHASE.FALLING
+            ? !steer(game, target) : false;
+          if (!game.inLight && game.phase === PHASE.FALLING) game.setSoftDrop(settled);
+          const lamp = workTheLamp(game, lampState, { ready: settled });
+          if (game.inLight) steerLight(game, lamp);
           game.update(FRAME);
           for (const e of game.drainEvents()) {
             if (e.type === 'clear') cleared += e.cells;
@@ -913,7 +1026,14 @@ stage('modifiers', 'A modifier may change a run, never end it', (check) => {
             }
           }
         }
-        assert.ok(capsules > 30, `${name} seed ${seed} only dealt ${capsules} capsules`);
+        // A stack of five legitimately shortens a run, and phototherapy
+        // compounds with outbreak in particular: more viruses means more fog
+        // means more time at the lamp means fewer capsules placed. The floor
+        // here is "playable", not "as long as a plain bottle" - it is set to
+        // catch a wedge or an instant death, not to encode an expectation
+        // about how hard five modifiers at once ought to be.
+        const floor = normaliseModifiers(modifiers).length >= 4 ? 15 : 30;
+        assert.ok(capsules > floor, `${name} seed ${seed} only dealt ${capsules} capsules`);
         assert.ok(cleared > 20, `${name} seed ${seed} only cleared ${cleared} cells`);
         assert.ok(game.isOver || game.phase === PHASE.FALLING, `${name} seed ${seed} wedged`);
       }
@@ -934,21 +1054,25 @@ stage('modifiers', 'A modifier may change a run, never end it', (check) => {
     const setups = [
       { resistance: true, modifiers: MODIFIER_IDS },
       { resistance: true, modifiers: [] },
-      { resistance: true, modifiers: ['outbreak', 'blackout'] },
+      { resistance: true, modifiers: ['outbreak', 'phototherapy'] },
     ];
     for (let seed = 0; seed < 18; seed += 1) {
       const game = new Game({
         level: 6, speed: 'LOW', seed, ...setups[seed % setups.length],
       });
       let target = plan(game);
-      // Half the runs work the light and half never touch it. Both are real
+      // Half the runs work the lamp and half never touch it. Both are real
       // players, and only the second kind ever clears a run in the dark - a bot
-      // that always spends the light can never earn that badge, which is a fact
-      // about the bot rather than about the game.
+      // that always keeps the bottle clear can never earn that badge, which is
+      // a fact about the bot rather than about the game.
       const worksTheLight = seed % 2 === 0;
+      const lampState = {};
       for (let f = 0; f < 250000 && !game.isOver; f += 1) {
-        game.setLight(worksTheLight && game.light < 0.5);
-        if (game.phase === PHASE.FALLING) game.setSoftDrop(!steer(game, target));
+        const settled = !game.inLight && game.phase === PHASE.FALLING
+          ? !steer(game, target) : false;
+        if (!game.inLight && game.phase === PHASE.FALLING) game.setSoftDrop(settled);
+        const lamp = worksTheLight ? workTheLamp(game, lampState, { ready: settled }) : null;
+        if (game.inLight) steerLight(game, lamp);
         game.update(FRAME);
         for (const event of game.drainEvents()) {
           for (const id of discoveriesIn(event)) book.record(id, 'pharmaceutical');

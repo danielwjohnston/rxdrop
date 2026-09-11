@@ -18,9 +18,9 @@ import { performance } from 'node:perf_hooks';
 import { Game, PHASE } from '../src/game.js';
 import { createRng } from '../src/rng.js';
 import { tryMove } from '../src/pill.js';
-import { FRAME, plan, steer } from './bot.mjs';
+import { FRAME, plan, steer, steerLight, workTheLamp } from './bot.mjs';
 import { MODIFIER_IDS, describeModifiers } from '../src/modifiers.js';
-import { BOARD_HEIGHT, LOCK_RESETS } from '../src/constants.js';
+import { BOARD_HEIGHT, FOG_MAX, LOCK_RESETS } from '../src/constants.js';
 
 const args = process.argv.slice(2);
 const flag = (name, fallback) => {
@@ -69,8 +69,11 @@ function playOne({ level, speed, resistance, seed, modifiers = [] }) {
     spread: 0,
     seals: 0,
     sealsCleared: 0,
-    darkFrames: 0,
+    lampFrames: 0,
+    lampVisits: 0,
+    rowsLit: 0,
     darkClears: 0,
+    fog: [],
     inert: 0,
     washed: 0,
     levelsCleared: 0,
@@ -81,18 +84,25 @@ function playOne({ level, speed, resistance, seed, modifiers = [] }) {
   let target = plan(game);
   let hurrying = false;
   let grounded = false;
+  const lamp = {};
 
   for (let frame = 0; frame < 90000; frame += 1) {
     stats.frames += 1;
-    // Light therapy the way a player works it: spend the light once the bottle
-    // has gone dim, hold until it is bright again, then let it refill. That is
-    // the "when do I spend it" decision the mechanic is supposed to be about.
-    if (game.has('blackout')) {
-      if (game.light <= 0.45 && game.lightCharge > 0.2) game.setLight(true);
-      else if (game.light >= 0.9 || game.lightCharge <= 0.02) game.setLight(false);
-      if (game.isDark) stats.darkFrames += 1;
+    // Phototherapy the way a player works it: place the dose you are holding,
+    // then go to the lamp once the bottle has silted up, win a couple of lines
+    // and come back. Going mid-capsule dumps it, so the bot only leaves when
+    // its capsule is already where it wants to be.
+    if (game.has('phototherapy')) {
+      const wasIn = game.inLight;
+      const lightPlan = workTheLamp(game, lamp, { ready: hurrying || game.pill === null });
+      if (game.inLight) {
+        if (!wasIn) stats.lampVisits += 1;
+        stats.lampFrames += 1;
+        steerLight(game, lightPlan);
+      }
+      if (frame % 60 === 0) stats.fog.push(game.worstFog);
     }
-    if (game.phase === PHASE.FALLING) {
+    if (!game.inLight && game.phase === PHASE.FALLING) {
       const settled = !steer(game, target);
       // Once it is where it wants to be, hold the hurry - which is exactly the
       // input a player uses, and the one the drop-style change is about.
@@ -128,6 +138,8 @@ function playOne({ level, speed, resistance, seed, modifiers = [] }) {
         stats.antibodies += event.antibodies ?? 0;
         stats.washed += event.washed ?? 0;
         if (event.inTheDark) stats.darkClears += 1;
+      } else if (event.type === 'lit') {
+        stats.rowsLit += event.rows ?? 0;
       } else if (event.type === 'spread') {
         stats.spread += event.count;
       } else if (event.type === 'sealed') {
@@ -152,56 +164,70 @@ function playOne({ level, speed, resistance, seed, modifiers = [] }) {
 }
 
 /**
- * The light economy under blackout: how much of the time a given policy keeps
- * the bottle out of the dark, and whether the light always comes back.
+ * What a session at the lamp actually buys, and what it costs.
  *
- * A bot cannot be made to suffer for a dark bottle - it reads the board, not
- * the pixels - so the play numbers for blackout are identical to a plain run by
- * construction. What CAN be measured is the thing the mechanic actually rests
- * on: that the light is scarce enough to be a decision, and that it can never
- * be spent into a corner you cannot get out of.
+ * A bot cannot be made to suffer for a foggy bottle - it reads the board, not
+ * the pixels - so the play numbers under phototherapy would be identical to a
+ * plain run by construction. What CAN be measured is the exchange rate, which
+ * is the whole design: a visit wins you rows of light and costs you capsules
+ * you did not place. If a visit wins nothing the modifier is a tax; if it costs
+ * nothing it is a free button and the fog is decoration.
+ *
+ * The first tuning measured one row per six-second visit. That is a bad trade
+ * and the numbers said so before a player had to.
  */
-function lightEconomy(policy) {
-  const game = new Game({ level: 4, speed: 'LOW', seed: 3, modifiers: ['blackout'] });
-  let lit = 0;
-  let dark = 0;
-  let held = 0;
-  let run = 0;
-  let worst = 0;
-  const frames = 3600;
-  // Driving the light clock directly rather than through update(): a game left
-  // to itself for a minute loses, and update() stops once it is over, so the
-  // whole measurement would silently be of a parked page.
+function lampExchange({ width = 5, lines = 2, maxMs = 5000, seed = 3, go = true } = {}) {
+  const game = new Game({
+    level: 4, speed: 'LOW', seed, modifiers: ['phototherapy'], lightWidth: width,
+  });
+  const lamp = {};
+  let target = plan(game);
+  let hurrying = false;
+  let visits = 0;
+  let lampFrames = 0;
+  let capsules = 0;
+  let peakFog = 0;
+  const frames = 8000;
+
   for (let f = 0; f < frames; f += 1) {
-    game.setLight(policy(game));
-    if (game.spendingLight) held += 1;
-    game.updateLight(FRAME);
-    if (game.isDark) { dark += 1; run += 1; worst = Math.max(worst, run); } else {
-      run = 0;
-      if (game.light > 0.7) lit += 1;
+    const wasIn = game.inLight;
+    const lightPlan = go
+      ? workTheLamp(game, lamp, { lines, maxMs, ready: hurrying || game.pill === null })
+      : null;
+    if (game.inLight) {
+      if (!wasIn) visits += 1;
+      lampFrames += 1;
+      steerLight(game, lightPlan);
+    } else if (game.phase === PHASE.FALLING) {
+      const settled = !steer(game, target);
+      if (settled !== hurrying) {
+        hurrying = settled;
+        game.setSoftDrop(settled);
+      }
     }
-  }
-  // The bound: a blackout ends on its own timer whatever the reservoir is
-  // doing. Drop the bottle into a fresh blackout with the reservoir spent and
-  // hands off the light entirely - the worst case a player can arrange - and it
-  // still has to come back on its own.
-  game.blackoutFor = 5000;
-  game.lightCharge = 0;
-  game.lightSpent = true;
-  game.light = 0.06;
-  let recovery = 0;
-  for (; recovery < 4000; recovery += 1) {
-    game.setLight(false);
-    game.updateLight(FRAME);
-    if (game.light >= 0.9) break;
+    game.update(FRAME);
+    peakFog = Math.max(peakFog, game.worstFog);
+    for (const event of game.drainEvents()) {
+      if (event.type === 'spawn') {
+        capsules += 1;
+        target = plan(game);
+        hurrying = false;
+        game.setSoftDrop(false);
+      } else if (event.type === 'levelComplete') {
+        game.advanceLevel();
+        target = plan(game);
+      }
+    }
+    if (game.phase === PHASE.LOST) break;
   }
   return {
-    held: held / frames,
-    lit: lit / frames,
-    dark: dark / frames,
-    worstDarkMs: worst * FRAME,
-    recovered: game.light >= 0.9,
-    recoveryMs: recovery * FRAME,
+    visits,
+    rowsLit: game.rowsLit,
+    rowsPerVisit: visits ? game.rowsLit / visits : 0,
+    lampShare: lampFrames / frames,
+    capsules,
+    peakFog,
+    fog: game.worstFog,
   };
 }
 
@@ -286,7 +312,7 @@ const setups = [
 const modified = [
   { level: 4, speed: 'LOW', resistance: true, modifiers: [] },
   { level: 4, speed: 'LOW', resistance: true, modifiers: ['outbreak'] },
-  { level: 4, speed: 'LOW', resistance: true, modifiers: ['blackout'] },
+  { level: 4, speed: 'LOW', resistance: true, modifiers: ['phototherapy'] },
   { level: 4, speed: 'LOW', resistance: true, modifiers: ['rationing'] },
   { level: 4, speed: 'LOW', resistance: true, modifiers: ['contaminated'] },
   { level: 4, speed: 'LOW', resistance: true, modifiers: ['quarantine'] },
@@ -378,9 +404,12 @@ for (const setup of modified) {
   if (total('spread') > 0) notes.push(`spread ${total('spread')}`);
   if (total('seals') > 0) notes.push(`seals ${total('seals')}/${total('sealsCleared')} cleared`);
   if (total('inert') > 0) notes.push(`inert ${total('inert')}/${total('washed')} washed`);
-  if (total('darkFrames') > 0) {
-    const share = total('darkFrames') / Math.max(1, runs.reduce((n, r) => n + r.frames, 0));
-    notes.push(`dark ${(share * 100).toFixed(0)}% of the time, ${total('darkClears')} clears in it`);
+  if (total('lampVisits') > 0) {
+    const share = total('lampFrames') / Math.max(1, runs.reduce((n, r) => n + r.frames, 0));
+    notes.push(
+      `lamp ${total('lampVisits')} visits, ${(share * 100).toFixed(0)}% of the time,`
+      + ` ${total('rowsLit')} rows lit, ${total('darkClears')} clears in the fog`,
+    );
   }
   // Viruses per hundred capsules is the number that matters. Survival alone is
   // misleading: a modifier can make the bottle easier to keep alive while making
@@ -401,46 +430,57 @@ for (const setup of modified) {
   }
 }
 
-console.log('\nLight therapy: what the blackout light actually costs');
+console.log('\nPhototherapy: what a session at the lamp buys, and what it costs');
 {
-  const policies = [
-    ['never touch it', () => false],
-    ['hold it always', () => true],
-    ['spend it early', (g) => g.blackoutFor > 1600],
+  const sessions = [
+    ['narrow chamber (5)', { width: 5 }],
+    ['full-width chamber', { width: 8 }],
+    ['take one line and go', { width: 5, lines: 1 }],
+    ['stay for four', { width: 5, lines: 4, maxMs: 9000 }],
   ];
-  for (const [name, policy] of policies) {
-    const e = lightEconomy(policy);
+  for (const [name, options] of sessions) {
+    const e = lampExchange(options);
     console.log(
-      `  ${name.padEnd(18)}`
-      + ` held ${(e.held * 100).toFixed(0).padStart(3)}%`
-      + ` | bright ${(e.lit * 100).toFixed(0).padStart(3)}%`
-      + ` | dark ${(e.dark * 100).toFixed(0).padStart(3)}%`
-      + ` | longest dark ${String(e.worstDarkMs).padStart(5)}ms`
-      + `  ${e.recovered ? `hands off, back up in ${e.recoveryMs}ms` : 'NEVER RECOVERS'}`,
+      `  ${name.padEnd(22)}`
+      + ` visits ${String(e.visits).padStart(3)}`
+      + ` | rows lit ${String(e.rowsLit).padStart(3)}`
+      + ` (${e.rowsPerVisit.toFixed(1)}/visit)`
+      + ` | at the lamp ${(e.lampShare * 100).toFixed(0).padStart(3)}%`
+      + ` | capsules ${String(e.capsules).padStart(3)}`
+      + ` | peak fog ${e.peakFog.toFixed(2)}`,
     );
-    if (!e.recovered) {
+    // A visit has to win something. One row for a whole session was the first
+    // tuning of this, and it was a trade nobody would take twice.
+    if (e.visits > 0 && e.rowsPerVisit < 1) {
       failures += 1;
-      console.log(`      "${name}" can spend the light into a corner`);
+      console.log(`      "${name}" buys less than a row a visit - the lamp is a tax`);
     }
-    // A blackout lasts five seconds. Anything much past that, hands off or not,
-    // means a dark stretch has run into the next one.
-    if (e.worstDarkMs > 7000) {
+    // The other way it goes wrong, and the one that actually happened: with the
+    // fog at its ceiling the case for going is always true, so without a
+    // cooldown the bot lived at the lamp 95% of the run. A lamp you would be a
+    // fool to ever leave is a room, not a decision.
+    if (e.lampShare > 0.6) {
       failures += 1;
-      console.log(`      "${name}" leaves the bottle dark for ${e.worstDarkMs}ms at a stretch`);
+      console.log(`      "${name}" spends ${(e.lampShare * 100).toFixed(0)}% of the run at the lamp`);
     }
   }
-  // Holding it always is the most light anyone can have. If that keeps the
-  // bottle bright the whole time, the reservoir is not a constraint and the
-  // modifier is a nuisance rather than a decision - which is exactly how the
-  // first tuning of this shipped.
-  // Holding the light for every second of every blackout is the most anyone can
-  // have. If that never leaves the bottle dark, the reservoir is not a
-  // constraint and the modifier is a nuisance rather than a decision - which is
-  // exactly how the first tuning of this behaved.
-  const flat = lightEconomy(() => true);
-  if (flat.dark < 0.04) {
+  // The bound, measured rather than asserted: leave the lamp alone entirely and
+  // the bottle silts up to a ceiling and stays there. It never goes black, and
+  // a player who ignores phototherapy is playing a harder game, not a lost one.
+  const ignored = lampExchange({ go: false });
+  console.log(
+    `  ${'never go at all'.padEnd(22)}`
+    + ` visits   0 | rows lit   0 (0.0/visit) | at the lamp   0%`
+    + ` | capsules ${String(ignored.capsules).padStart(3)}`
+    + ` | fog settles at ${ignored.peakFog.toFixed(2)}`,
+  );
+  if (ignored.peakFog > FOG_MAX + 0.001) {
     failures += 1;
-    console.log('      the light is free: holding it always never goes dark');
+    console.log(`      the fog went past its ceiling (${ignored.peakFog.toFixed(3)})`);
+  }
+  if (ignored.capsules < 20) {
+    failures += 1;
+    console.log('      ignoring the lamp is not survivable, so it is not optional');
   }
 }
 

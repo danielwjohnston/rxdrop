@@ -52,6 +52,7 @@ function withAlpha(hex, alpha) {
 /** Draws the bottle, the stack and the pill in play onto a 2D canvas. */
 export class Renderer {
   constructor(canvas) {
+    this.lightView = 'switch';
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.dpr = 1;
@@ -67,6 +68,11 @@ export class Renderer {
   }
 
   /** Convenience for callers that only know the level. */
+  /** 'switch' or 'both' - see docs/ideas.md. Presentation only. */
+  setLightView(view) {
+    this.lightView = view === 'both' ? 'both' : 'switch';
+  }
+
   setLevel(level) {
     this.setEra(eraFor(level));
   }
@@ -129,16 +135,19 @@ export class Renderer {
 
     this.drawBottle(layout, game);
     this.drawStack(game, layout, now);
-    this.drawFallingPill(game, layout);
     this.drawClearing(game, layout);
     this.drawResisted(game, layout);
     this.drawAntibodies(game, layout);
     this.drawMutations(game, layout, now);
     this.drawSpread(game, layout);
     this.drawSeal(game, layout);
-    // Last, so it dims everything: the veil is the light, and anything drawn
-    // after it would be visible in the dark and would be a lie.
-    this.drawDark(game, layout);
+    // The fog goes over the stack, then the falling capsule and the chamber go
+    // over the fog. That ordering is the bound: the dark costs you information
+    // about what you have already placed, never the ability to see the capsule
+    // in your hand or the column it is going to land in.
+    this.drawFog(game, layout);
+    this.drawFallingPill(game, layout);
+    this.drawChamber(game, layout, this.lightView);
     ctx.restore();
   }
 
@@ -438,28 +447,96 @@ export class Renderer {
   }
 
   /**
-   * Blackout: everything drawn so far, dimmed. Painting one veil over the
-   * finished bottle rather than dimming each piece keeps the light a single
-   * number and means nothing can forget to honour it.
+   * The fog, drawn a row at a time.
+   *
+   * Per row rather than as one veil, because that is the mechanic: the bottle
+   * silts up worst where the disease is worst, and a player should be able to
+   * read which band of the patient they have lost sight of. Clipped to the
+   * vessel so it reads as the bottle clouding rather than a box laid over it.
    */
-  drawDark(game, layout) {
-    if (!game.has?.('blackout')) return;
-    const light = game.light ?? 1;
-    if (light >= 1) return;
+  drawFog(game, layout) {
+    if (!game.has?.('phototherapy')) return;
     const { ctx } = this;
-    // Clipped to the vessel, not laid over it as a rectangle. A black box with
-    // visible corners reads as a bug; the bottle itself going dark reads as the
-    // lights going out, which is what happened.
     const shape = bottleShape(layout, this.era.vessel);
     ctx.save();
     tracePath(ctx, shape);
     ctx.clip();
-    ctx.globalAlpha = 1 - light;
-    ctx.fillStyle = '#05070d';
-    // From the spout down, so the neck goes dark with the rest of the vessel.
-    const top = Math.min(shape.neckTop, shape.top) - 8;
-    ctx.fillRect(shape.left - 8, top, shape.right - shape.left + 16, shape.bottom - top + 16);
+    for (let y = 0; y < game.height; y += 1) {
+      const fog = game.fog?.[y] ?? 0;
+      if (fog <= 0.001) continue;
+      const top = layout.originY + y * layout.cell;
+      // A soft edge, so bands of fog blend into each other instead of banding.
+      const veil = ctx.createLinearGradient(0, top, 0, top + layout.cell);
+      const above = game.fog?.[y - 1] ?? fog;
+      const below = game.fog?.[y + 1] ?? fog;
+      veil.addColorStop(0, `rgba(9, 13, 24, ${(fog + above) / 2})`);
+      veil.addColorStop(0.5, `rgba(9, 13, 24, ${fog})`);
+      veil.addColorStop(1, `rgba(9, 13, 24, ${(fog + below) / 2})`);
+      ctx.fillStyle = veil;
+      ctx.fillRect(shape.left - 8, top, shape.right - shape.left + 16, layout.cell + 1);
+    }
     ctx.restore();
+  }
+
+  /**
+   * The light chamber: falling light, and the light already standing in it.
+   *
+   * Drawn inside the same bottle because that is where the treatment happens.
+   * With the `both` view it sits over the medicine at low opacity so you can
+   * watch what your neglect is costing; with `switch` it takes the foreground
+   * and the stack recedes behind it.
+   */
+  drawChamber(game, layout, view = 'switch') {
+    const chamber = game.chamber;
+    if (!chamber) return;
+    const { ctx } = this;
+    const cell = layout.cell;
+    const left = layout.originX + ((game.width - chamber.width) / 2) * cell;
+    const strength = view === 'both' ? 0.55 : 1;
+
+    ctx.save();
+    // The chamber's own walls, so it reads as a place rather than an overlay.
+    ctx.globalAlpha = 0.35 * strength;
+    ctx.fillStyle = '#0a1430';
+    ctx.fillRect(left, layout.originY, chamber.width * cell, layout.fieldH);
+    ctx.globalAlpha = 0.7 * strength;
+    ctx.strokeStyle = 'rgba(255, 236, 160, 0.5)';
+    ctx.lineWidth = Math.max(1, cell * 0.05);
+    ctx.strokeRect(left, layout.originY, chamber.width * cell, layout.fieldH);
+    ctx.restore();
+
+    const lamp = (x, y, alpha) => {
+      const px = left + x * cell;
+      const py = layout.originY + y * cell;
+      const inset = cell * 0.1;
+      ctx.save();
+      ctx.globalAlpha = alpha * strength;
+      const glow = ctx.createRadialGradient(
+        px + cell / 2, py + cell / 2, cell * 0.1,
+        px + cell / 2, py + cell / 2, cell * 0.7,
+      );
+      glow.addColorStop(0, 'rgba(255, 249, 214, 0.95)');
+      glow.addColorStop(1, 'rgba(255, 214, 102, 0.12)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(px - cell * 0.2, py - cell * 0.2, cell * 1.4, cell * 1.4);
+      ctx.fillStyle = 'rgba(255, 243, 196, 0.9)';
+      roundRectVariable(ctx, px + inset, py + inset, cell - inset * 2, cell - inset * 2, {
+        tl: cell * 0.22, tr: cell * 0.22, br: cell * 0.22, bl: cell * 0.22,
+      });
+      ctx.fill();
+      ctx.restore();
+    };
+
+    for (let y = 0; y < chamber.height; y += 1) {
+      for (let x = 0; x < chamber.width; x += 1) {
+        const held = chamber.at(x, y);
+        if (!held) continue;
+        // Light that is about to dissipate fades, so you can see what you are
+        // about to lose rather than having it vanish from under you.
+        lamp(x, y, Math.max(0.25, Math.min(1, held.life / 1200)));
+      }
+    }
+    for (const { x, y } of chamber.cellsOf()) lamp(x, y, 1);
   }
 
   /**

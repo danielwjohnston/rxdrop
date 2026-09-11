@@ -145,7 +145,7 @@ hurry is floored at, so "twice as fast" never becomes "unplaceable".
 Take the generation cap out and the gauntlet's playability check goes red: the
 bot stops being able to keep up at all.
 
-### Blackout, and light therapy - `shipped`
+### Blackout, and light therapy - `shipped`, and superseded by Phototherapy below
 
 The bottle goes dark. A light-therapy switch brings it back for a few seconds,
 so you are playing and re-lighting at the same time. Clearing a run while the
@@ -179,6 +179,123 @@ forever kept the bottle at full brightness for a whole run. The playtest caught
 it as a row of numbers identical to a plain game. The fix is a latch: once
 spent, the light will not come on again until the reservoir has climbed back to
 a third.
+
+### Phototherapy - `proposed`, and meant to replace the blackout above
+
+*The complaint that started this:* "It just goes dark and comes back. I'm
+supposed to be treating the patient."
+
+That is correct and it is not a tuning problem. What shipped is **weather**.
+The bottle dims on a timer and you hold a key to make it stop dimming; nothing
+you do during a blackout is treatment, and the decision it asks for is about the
+interface rather than about the patient. The light is a resource you spend, not
+a therapy you administer. Two goes at the numbers made it work; neither could
+make it *mean* anything, because the shape was wrong from the start.
+
+#### The reframe
+
+**Light is a second medicine, and you have to deliver it.**
+
+Not a switch. A treatment, given inside the same bottle, costing the same things
+everything else costs: the board, your hands, and time you do not have.
+
+#### Why the bottle clouds
+
+The fiction in the original note was "gases emitted by the viruses". The real
+thing is better and it is sitting right there in the theme: **biofilm.**
+Colonies secrete a matrix that both hides them and shields them from what you
+are dosing them with, and it is why chronic infections resist treatment long
+after the right drug has been chosen. Antimicrobial **photodynamic therapy** is
+a genuine line of work against exactly that.
+
+So the bottle does not "go dark". It **silts up**, worst where the disease is
+worst - which turns the fog from noise into information. And it explains why the
+fog protects them, which the blackout never did.
+
+#### The mechanic
+
+**1. Visibility is per row, not global.** Every row of the bottle has its own
+clarity. A row holding viruses clouds faster; a row you have just cleared stays
+clear longer. The bottle silts from the colonies outward rather than dimming all
+at once.
+
+**2. Light therapy is a mode, not a button.** Toggle it and the bottle becomes
+the light chamber. **Tetromino-shaped light falls**, and your controls drive the
+light piece instead of the capsule.
+
+**3. A line of light is a row of the patient.** Complete a horizontal line and
+*that row is illuminated*. Four lines at once lights a band. The mapping is
+one-to-one and literal: what you clear in the light chamber is what you can see
+in the bottle. This is the part that makes the whole idea work - light has a
+**target**, so "which part of the patient do I need to see" becomes a question
+worth answering.
+
+**4. Light does not collide with medicine.** Light pieces fall *through* the
+capsule stack - they are photons, not matter - and settle on the floor among
+themselves. Light therapy must never make the medicine side harder; it is an
+aid, and an aid that sabotages you is a trap.
+
+**5. Unused light dissipates.** A light piece that does not complete a line
+fades after a few seconds. You cannot build a tower of light and bank it. Make
+lines or lose it - which is what stops the light chamber being a safe room to
+hide in when the bottle gets frightening.
+
+**6. The cost is time, and the capsule does not wait.** While you are working
+the lamp, the capsule *keeps falling* - under gravity, unsteered, locking
+wherever it lands. You chose to look away.
+
+That is the whole decision, and it is triage: **is it worth two badly-placed
+capsules to see the bottom of the bottle again?** The shipped version asks "did
+you remember to press the key". This one asks a question about the patient.
+
+**7. It gets dirty again from play, not from a clock.** Each virus fogs its own
+row over time. A clear a virus *shrugs off* fogs harder - the colony has just
+proved it is shielded. A hybrid fogs hardest of all. So the mechanics already in
+the bottle feed the fog, which is the recurring-but-novel property this whole
+page is aimed at rather than another rule sitting beside the others.
+
+#### The bounds
+
+Nothing here may make a virus unanswerable, so:
+
+- **The fog never hides the falling capsule or the column it will land in.** You
+  can always choose to place blind. The dark costs you information, never the
+  ability to act.
+- **A row never goes fully black**, and the fog **plateaus** rather than
+  compounding toward zero. Ignore light therapy for a whole run and the bottle
+  gets hard to read, not unplayable.
+- **Light mode always deals a piece and always accepts a line.** There is no
+  state where the lamp refuses to work.
+- **You can win without ever entering the light chamber.** It is an aid, not a
+  gate.
+
+#### What it is worth
+
+The in-the-dark clear stays as a badge. But there is a better one available
+now: **clear a run in a row you lit yourself**, in the same breath - the light
+and the medicine landing together, which is the thing this mechanic is actually
+about.
+
+#### Forks worth deciding before building
+
+Three, and they change the feel enough that guessing would be wrong:
+
+1. **How wide is the light chamber?** The bottle is 8 wide, which is very wide
+   for tetrominoes - lines would come easily and light would be cheap. A
+   narrower chamber (4-5) inside the bottle makes each line worth something.
+   Or full-width lines stay deliberately hard and rare.
+2. **Do you leave the light chamber when you want, or on a timer?** Leaving when
+   you want makes it a pure trade; a timer makes it a commitment.
+3. **One bottle or two views?** The light piece and the capsule on screen at
+   once is the most demanding and the most honest - you can see what your
+   neglect is costing in real time. Switching the bottle's view is clearer and
+   much easier to read.
+
+*What it would cost to build:* a second piece type and a second falling-piece
+controller, per-row visibility in the renderer, the fog model, the mode switch,
+and a gauntlet stage for the bounds above. The board and renderer are already
+cleanly separated, so this is a real piece of work but not a rewrite - the
+awkward part is that `Game` currently owns exactly one falling piece.
 
 ### Rationing - `shipped`
 
@@ -291,9 +408,12 @@ which is a fact about the bot, not about the game.
 | Versus | Two bottles on one keyboard, trading garbage. |
 | Offline play | Installs as a PWA and plays with the network off. |
 
-## Nothing here is `proposed` any more
+## What is open
 
-Every idea on this page is built. That is not a finish line - it is an empty
+**Phototherapy** is proposed and not built - see above. It is meant to replace
+the shipped blackout, which works and does not mean anything.
+
+Everything else on this page is built. That is not a finish line - it is an empty
 inbox, and the whole point of the page is that anyone can fill it again.
 
 ### What is knowingly not done

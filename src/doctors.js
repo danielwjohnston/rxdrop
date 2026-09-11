@@ -1,4 +1,5 @@
 import './runtime-overhaul.js';
+import './overhaul-ui.js';
 
 /**
  * Lightweight procedural fallbacks for the authored practitioner atlas.
@@ -37,7 +38,6 @@ export function drawDoctor(ctx, { x = 0, y = 0, size, era, pose = 'idle', now = 
   ctx.rotate(state.lean + Math.sin(now / 1300) * 0.012);
   ctx.scale(size / 100, size / 100);
 
-  // Shoulders.
   ctx.fillStyle = style.coat;
   ctx.beginPath();
   ctx.moveTo(-38, 8);
@@ -51,7 +51,6 @@ export function drawDoctor(ctx, { x = 0, y = 0, size, era, pose = 'idle', now = 
   ctx.stroke();
   ctx.globalAlpha = 1;
 
-  // Head / mask.
   ctx.fillStyle = style.skin;
   ctx.beginPath();
   ctx.ellipse(0, -55, 20, 23, 0, 0, Math.PI * 2);
@@ -112,7 +111,6 @@ export function drawDoctor(ctx, { x = 0, y = 0, size, era, pose = 'idle', now = 
   }
 
   if (style.head !== 'beak' && style.head !== 'visor') {
-    // Eyes and expression.
     const blink = Math.sin(now / 1200) > 0.965;
     ctx.fillStyle = '#fff';
     for (const dx of [-8, 8]) {

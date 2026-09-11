@@ -444,6 +444,35 @@ console.log('\nLight therapy: what the blackout light actually costs');
   }
 }
 
+// The complaint this measures: "sometimes hurry is hurry and sometimes it will
+// still snap". A press must change the SPEED and never the position, wherever in
+// the gravity cycle it lands.
+console.log('\nHurry: what pressing it does at each point in a cell');
+for (const speed of ['LOW', 'MEDIUM', 'HIGH']) {
+  let worstRows = 0;
+  let worstJump = 0;
+  for (let share = 0.05; share < 1; share += 0.05) {
+    const game = new Game({ level: 0, speed, seed: 11 });
+    game.board.forEachCell((c, x, y) => game.board.set(x, y, null));
+    game.spawnPill();
+    game.update(200);
+    game.dropTimer = 0;
+    game.update(game.dropInterval * share);
+    const row = game.pill.y;
+    const drawn = game.dropProgress;
+    game.setSoftDrop(true);
+    worstJump = Math.max(worstJump, Math.abs(game.dropProgress - drawn));
+    game.update(16);
+    worstRows = Math.max(worstRows, game.pill.y - row);
+  }
+  const verdict = worstRows <= 1 && worstJump < 0.02 ? 'a speed, not a move' : 'STILL SNAPS';
+  if (worstRows > 1 || worstJump >= 0.02) failures += 1;
+  console.log(
+    `  ${speed.padEnd(7)} worst ${worstRows} row(s) in the frame after the press`
+    + ` | worst on-screen jump ${worstJump.toFixed(3)} of a cell  ${verdict}`,
+  );
+}
+
 console.log('\nThreading: steering a capsule down a one-wide zigzag corridor');
 for (const speed of ['LOW', 'MEDIUM', 'HIGH']) {
   for (const hurry of [false, true]) {

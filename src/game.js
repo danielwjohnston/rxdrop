@@ -115,6 +115,8 @@ export class Game {
     this.pillsPlaced = 0;
     this.softDropping = false;
     this.dropTimer = 0;
+    /** The interval `dropTimer` was banked against. See rescaleDropTimer. */
+    this.lastFallInterval = 0;
     this.lockTimer = 0;
     this.lockResets = 0;
     this.phaseTimer = 0;
@@ -304,6 +306,7 @@ export class Game {
     }
     this.pill = pill;
     this.dropTimer = 0;
+    this.lastFallInterval = 0;
     this.lockTimer = 0;
     this.lockResets = 0;
     this.dealTimer = DEAL_DELAY;
@@ -344,7 +347,33 @@ export class Game {
   }
 
   setSoftDrop(active) {
-    this.softDropping = Boolean(active) && this.canControl();
+    const next = Boolean(active) && this.canControl();
+    if (next === this.softDropping) return;
+    this.softDropping = next;
+    this.rescaleDropTimer();
+  }
+
+  /**
+   * Keeps the banked fall progress meaningful when the interval underneath it
+   * changes - pressing or releasing hurry, or gravity stepping up a tier.
+   *
+   * `dropTimer` banks milliseconds toward the next row, but what it MEANS is a
+   * fraction of a cell. Bank 695ms of a 700ms cell, press hurry so the interval
+   * becomes 100ms, and that 695ms is suddenly worth almost seven rows - so the
+   * capsule fell seven rows in a single frame. That is the "hurry sometimes
+   * snaps" this is written against: how far it snapped depended on where in the
+   * gravity cycle you happened to press, which is why it felt random.
+   *
+   * Rescaling holds the fraction fixed instead, so pressing hurry never moves
+   * the capsule on its own - it only changes how fast the rest of the cell
+   * takes.
+   */
+  rescaleDropTimer() {
+    const interval = this.fallInterval;
+    if (this.lastFallInterval > 0 && interval !== this.lastFallInterval) {
+      this.dropTimer *= interval / this.lastFallInterval;
+    }
+    this.lastFallInterval = interval;
   }
 
   hardDrop() {
@@ -480,6 +509,9 @@ export class Game {
       this.dealTimer = 0;
     }
     if (!this.pill) return;
+    // Gravity steps up every few capsules, so the interval can change without
+    // anyone touching a key. Same rescale, same reason.
+    this.rescaleDropTimer();
     const interval = this.fallInterval;
 
     this.dropTimer += dt;

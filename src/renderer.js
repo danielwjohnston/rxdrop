@@ -20,6 +20,14 @@ import { isTolerant } from './board.js';
 export const PALETTE = paletteFor(ERAS[3]);
 
 /**
+ * How much of the way the drawn fall offset closes toward the true one each
+ * frame when the true one RISES. See Renderer.fallOffset - about four frames to
+ * settle, which is long enough to read as the capsule coming to rest and short
+ * enough that it is never where you are not looking for it.
+ */
+const OFFSET_EASE = 0.45;
+
+/**
  * How each era's vessel takes the light. Glass is lit and transparent, clay is
  * matte and swallows it, cryo is frosted and lit from below.
  */
@@ -340,9 +348,39 @@ export class Renderer {
     });
   }
 
+  /**
+   * How far below its own row the capsule is drawn, in cells.
+   *
+   * The true value is `dropProgress`, which drops to zero the instant the
+   * capsule has nowhere to fall. Reading it raw means that walking a capsule
+   * sideways over a ledge makes it jump most of a cell UPWARD on screen -
+   * reported from play as a spring-back, and the reason it reads as a glitch
+   * rather than an event is that the logical row never moved at all.
+   *
+   * So the drawn offset eases toward the true one instead of snapping to it.
+   * Falling, the target moves smoothly and the ease is imperceptible; when the
+   * target jumps up, the capsule settles over a few frames. Purely a drawing
+   * concern - nothing here touches a rule, and the capsule locks where the
+   * board says it does whatever this is mid-way through showing.
+   */
+  fallOffset(game) {
+    const target = game.dropProgress;
+    if (this.offsetPill !== game.pill) {
+      // A new capsule: no history to ease from.
+      this.offsetPill = game.pill;
+      this.drawnOffset = target;
+      return target;
+    }
+    const previous = this.drawnOffset ?? target;
+    // Down is the ordinary fall and is drawn exactly; only a rise is eased.
+    this.drawnOffset = target >= previous ? target : previous + (target - previous) * OFFSET_EASE;
+    if (Math.abs(this.drawnOffset - target) < 0.01) this.drawnOffset = target;
+    return this.drawnOffset;
+  }
+
   drawFallingPill(game, layout) {
     if (!game.pill || game.phase !== PHASE.FALLING) return;
-    const offset = game.dropProgress * layout.cell;
+    const offset = this.fallOffset(game) * layout.cell;
     // Ghost showing where the pill will land.
     const ghost = landingCells(game);
     for (const { x, y, link } of ghost) {

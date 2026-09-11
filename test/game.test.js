@@ -563,3 +563,92 @@ describe('hurrying a capsule down', () => {
     );
   });
 });
+
+describe('hurrying is a speed, never a move', () => {
+  const empty = (speed, tier = 0) => {
+    const game = new Game({ level: 0, speed, seed: 5 });
+    game.board.forEachCell((c, x, y) => game.board.set(x, y, null));
+    game.pillsPlaced = tier * 10;
+    game.spawnPill();
+    game.update(200);
+    game.dropTimer = 0;
+    return game;
+  };
+
+  it('never drops more than one row in a frame, wherever in the cycle you press', () => {
+    // Reported from play: "sometimes hurry is hurry and sometimes it will still
+    // snap". The timer banked milliseconds toward the next row against an
+    // interval that pressing hurry could shrink sevenfold - so a nearly-full
+    // cell was suddenly worth seven rows, cashed in on the next frame. How far
+    // it snapped depended on where in the gravity cycle you happened to press,
+    // which is exactly why it felt random.
+    for (const speed of ['LOW', 'MEDIUM', 'HIGH']) {
+      for (const tier of [0, 6, 12]) {
+        for (const share of [0.1, 0.5, 0.9, 0.99]) {
+          const game = empty(speed, tier);
+          game.update(game.dropInterval * share);
+          const before = game.pill.y;
+          game.setSoftDrop(true);
+          game.update(16);
+          assert.ok(
+            game.pill.y - before <= 1,
+            `${speed} tier ${tier}: pressing hurry at ${share} of a cell`
+            + ` dropped ${game.pill.y - before} rows in one frame`,
+          );
+        }
+      }
+    }
+  });
+
+  it('does not move the capsule at all on the press itself', () => {
+    for (const speed of ['LOW', 'MEDIUM', 'HIGH']) {
+      const game = empty(speed);
+      game.update(game.dropInterval * 0.95);
+      const before = game.pill.y;
+      game.setSoftDrop(true);
+      assert.equal(game.pill.y, before, 'pressing hurry moved the capsule by itself');
+      game.setSoftDrop(false);
+      assert.equal(game.pill.y, before, 'releasing hurry moved the capsule by itself');
+    }
+  });
+
+  it('keeps the drawn position continuous across a press and a release', () => {
+    // The same defect seen from the screen: the capsule leapt most of a cell
+    // the instant the key went down.
+    for (const speed of ['LOW', 'MEDIUM', 'HIGH']) {
+      for (const share of [0.25, 0.6, 0.9]) {
+        const game = empty(speed);
+        game.update(game.dropInterval * share);
+        const before = game.dropProgress;
+        game.setSoftDrop(true);
+        assert.ok(
+          Math.abs(game.dropProgress - before) < 0.02,
+          `${speed}: pressing hurry at ${share} jumped the capsule`
+          + ` from ${before.toFixed(2)} to ${game.dropProgress.toFixed(2)} of a cell`,
+        );
+        const held = game.dropProgress;
+        game.setSoftDrop(false);
+        assert.ok(
+          Math.abs(game.dropProgress - held) < 0.02,
+          `${speed}: releasing hurry at ${share} jumped the capsule`,
+        );
+      }
+    }
+  });
+
+  it('still actually hurries - the point of the control', () => {
+    for (const speed of ['LOW', 'MEDIUM', 'HIGH']) {
+      const plain = empty(speed);
+      const rushed = empty(speed);
+      rushed.setSoftDrop(true);
+      for (let t = 0; t < 600; t += 16) {
+        plain.update(16);
+        rushed.update(16);
+      }
+      assert.ok(
+        rushed.pill.y > plain.pill.y,
+        `${speed}: hurrying got no further than gravity`,
+      );
+    }
+  });
+});

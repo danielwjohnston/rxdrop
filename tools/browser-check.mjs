@@ -69,6 +69,20 @@ const browser = await chromium.launch({
   ],
 });
 const checks = [];
+/**
+ * Opens the title card's Options fold. Everything that is not "start a game"
+ * is folded away, so any check that drives a setting has to open it first.
+ */
+async function openOptions(page) {
+  const open = await page.evaluate(() => {
+    const fold = document.getElementById('options-fold');
+    if (!fold || fold.open) return true;
+    fold.open = true;
+    return false;
+  });
+  if (!open) await page.waitForTimeout(120);
+}
+
 const errors = [];
 
 try {
@@ -85,6 +99,10 @@ try {
   });
 
   await check('level and speed can be chosen', async () => {
+    // Level, speed and the rest live behind the Options fold now: Play is the
+    // first control on the card, because a tester could not find it at all
+    // among the twelve that used to come before it.
+    await openOptions(page);
     await page.click('[data-adjust="level"][data-delta="1"]');
     await page.click('[data-speed="MEDIUM"]');
     assert.equal((await page.textContent('#choose-level')).trim(), '1');
@@ -1005,6 +1023,131 @@ try {
     assert.ok(fits.share > 0.4, `the bottle fell to ${(fits.share * 100).toFixed(0)}% of the screen`);
   });
 
+  await check('Play is reachable and tappable on every phone worth caring about', async () => {
+    // The bug this exists for was not subtle: a tester opened the game on an
+    // iPhone and could not see the start button at all. The title card was
+    // 662px inside a 547px overlay that clipped rather than scrolled, so the
+    // button was simply not on the page - and the game was unstartable for
+    // anyone whose browser chrome ate some height.
+    //
+    // Sizes below are real phones with a real browser's chrome subtracted, not
+    // the marketing viewport - which is what made this invisible in testing.
+    const sizes = [
+      ['iPhone SE + chrome', 375, 553],
+      ['iPhone 13 mini + chrome', 375, 629],
+      ['iPhone 15/16e + Safari chrome', 393, 664],
+      ['iPhone 15 Pro Max + chrome', 430, 739],
+      ['installed, no chrome', 393, 852],
+    ];
+    for (const [name, width, height] of sizes) {
+      for (const returning of [false, true]) {
+        const phone = await browser.newPage({ viewport: { width, height }, isMobile: true, hasTouch: true });
+        phone.on('pageerror', (error) => errors.push(`start pageerror: ${error.message}`));
+        await phone.goto(BASE, { waitUntil: 'networkidle' });
+        if (returning) {
+          // A returning player has the rules folded away; a first visit does
+          // not. Both have to fit.
+          await phone.evaluate(() => localStorage.setItem(
+            'rxdrop.settings.v1',
+            JSON.stringify({ hasPlayed: true }),
+          ));
+          await phone.reload({ waitUntil: 'networkidle' });
+        }
+        await phone.waitForTimeout(250);
+
+        const where = returning ? 'returning' : 'first visit';
+        const seen = await phone.evaluate(() => {
+          const btn = document.querySelector('[data-start]');
+          const b = btn.getBoundingClientRect();
+          const o = document.getElementById('overlay').getBoundingClientRect();
+          return {
+            onScreen: b.top >= 0 && b.bottom <= innerHeight && b.width > 0 && b.height > 0,
+            insideOverlay: b.bottom <= o.bottom + 1 && b.top >= o.top - 1,
+            tall: b.height,
+            // What is actually painted at the middle of the button? If the card
+            // is clipped, the hit test lands on something else.
+            onTop: document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2) === btn
+              || btn.contains(document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2)),
+          };
+        });
+        assert.ok(seen.onScreen, `${name}, ${where}: Play is off screen`);
+        assert.ok(seen.insideOverlay, `${name}, ${where}: Play is clipped by the overlay`);
+        assert.ok(seen.onTop, `${name}, ${where}: Play is covered by something else`);
+        assert.ok(seen.tall >= 40, `${name}, ${where}: Play is only ${Math.round(seen.tall)}px tall to tap`);
+
+        // And it has to actually start a game when tapped.
+        await phone.tap('[data-start]');
+        await phone.waitForTimeout(300);
+        assert.equal(
+          await phone.evaluate(() => window.rxdrop.screen),
+          'playing',
+          `${name}, ${where}: tapping Play did not start a game`,
+        );
+        await phone.close();
+      }
+    }
+  });
+
+  await check('a first visit says what the game is before asking anything of you', async () => {
+    // The other half of the report: "the initial thought when I opened it was
+    // wtf is this". Twelve controls and no statement of what the game was.
+    const phone = await browser.newPage({ viewport: { width: 393, height: 664 }, isMobile: true, hasTouch: true });
+    phone.on('pageerror', (error) => errors.push(`onboarding pageerror: ${error.message}`));
+    await phone.goto(BASE, { waitUntil: 'networkidle' });
+    await phone.waitForTimeout(300);
+    const first = await phone.evaluate(() => {
+      const card = document.getElementById('screen-title');
+      const how = document.getElementById('how-to-play');
+      const options = document.getElementById('options-fold');
+      const btn = document.querySelector('[data-start]');
+      const blurb = document.getElementById('mode-blurb');
+      return {
+        rulesOpen: how.open,
+        optionsOpen: options.open,
+        // The goal has to be above the fold, not behind a disclosure.
+        goalOnScreen: how.querySelector('.how__goal').getBoundingClientRect().top < innerHeight,
+        blurbBeforeButton: blurb.compareDocumentPosition(btn) & Node.DOCUMENT_POSITION_FOLLOWING,
+        controls: how.querySelectorAll('#how-controls dt').length,
+        diagramPainted: (() => {
+          const c = document.getElementById('how-diagram');
+          const ctx = c.getContext('2d');
+          const d = ctx.getImageData(0, 0, c.width, c.height).data;
+          let painted = 0;
+          for (let i = 3; i < d.length; i += 4) if (d[i] > 12) painted += 1;
+          return painted;
+        })(),
+        controlsMentionTouch: how.textContent.toLowerCase().includes('swipe'),
+        card: Math.round(card.getBoundingClientRect().height),
+      };
+    });
+    assert.equal(first.rulesOpen, true, 'a first visit should have the rules open');
+    assert.equal(first.optionsOpen, false, 'options should stay folded away');
+    assert.ok(first.goalOnScreen, 'the goal is not on screen');
+    assert.ok(first.blurbBeforeButton, 'the game should say what it is before offering Play');
+    assert.ok(first.controls >= 3, `only ${first.controls} controls are explained`);
+    assert.ok(first.diagramPainted > 500, 'the match-rule diagram did not draw');
+    assert.equal(first.controlsMentionTouch, true, 'a phone was told about keyboard keys');
+
+    // Having played once, the rules fold away and do not come back.
+    await phone.tap('[data-start]');
+    await phone.waitForTimeout(300);
+    await phone.evaluate(() => window.rxdrop.quit());
+    await phone.waitForTimeout(200);
+    assert.equal(
+      await phone.evaluate(() => document.getElementById('how-to-play').open),
+      false,
+      'the rules should fold away once you have played',
+    );
+    await phone.reload({ waitUntil: 'networkidle' });
+    await phone.waitForTimeout(300);
+    assert.equal(
+      await phone.evaluate(() => document.getElementById('how-to-play').open),
+      false,
+      'the rules came back for a returning player',
+    );
+    await phone.close();
+  });
+
   await check('the bottle never reaches the touchpad, however much is switched on', async () => {
     // The bug this exists for: the mobile layout had a `min-height: 50vh` floor
     // on the bottle with no matching ceiling on the panels. Switch on enough
@@ -1105,7 +1248,8 @@ try {
     await music.goto(`${BASE}/?instantDrop=1`, { waitUntil: 'networkidle' });
     await music.waitForTimeout(200);
 
-    assert.equal(await music.isVisible('label[for="music"]'), true, 'the toggle is on the title card');
+    await openOptions(music);
+    assert.equal(await music.isVisible('label[for="music"]'), true, 'the toggle is in the options fold');
     assert.equal(await music.isChecked('#music'), true, 'music is on by default');
 
     await music.click('label[for="music"]');
@@ -1127,6 +1271,7 @@ try {
     // And the choice survives a reload.
     await music.reload({ waitUntil: 'networkidle' });
     await music.waitForTimeout(250);
+    await openOptions(music);
     assert.equal(await music.isChecked('#music'), false, 'the setting should persist');
     await music.click('label[for="music"]');
     await music.click('[data-start]');

@@ -899,6 +899,62 @@ export function drawPillPreview(canvas, colors, era = ERAS[3]) {
 }
 
 /** Draws the remaining viruses per colour, with their counts, in a panel. */
+/**
+ * The match rule, drawn: three capsule halves and a virus of one colour in a
+ * row, with the burst that takes them.
+ *
+ * Drawn with the same `drawHalf` and `drawVirus` the bottle uses, so the thing
+ * someone is taught is by construction the thing they will see. A hand-drawn
+ * diagram would be free to drift; this one cannot.
+ */
+export function drawMatchDiagram(canvas, era = ERAS[3], now = 0) {
+  const ctx = canvas.getContext('2d');
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  const rect = canvas.getBoundingClientRect();
+  if (rect.width === 0) return;
+  canvas.width = Math.max(1, Math.round(rect.width * dpr));
+  canvas.height = Math.max(1, Math.round(rect.height * dpr));
+  ctx.save();
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, rect.width, rect.height);
+
+  const palette = paletteFor(era);
+  const renderer = { ctx, era, palette };
+  const colour = 1; // Yellow reads on every era's backdrop.
+  const cell = Math.min(rect.height * 0.72, rect.width / 5.6);
+  const gap = cell * 0.12;
+  const run = cell * 4 + gap * 3;
+  const left = (rect.width - run) / 2;
+  const top = (rect.height - cell) / 2;
+
+  // A flash behind the run, so it reads as "these four go".
+  ctx.save();
+  ctx.globalAlpha = 0.16;
+  ctx.fillStyle = '#ffffff';
+  roundRectVariable(
+    ctx,
+    left - gap,
+    top - gap,
+    run + gap * 2,
+    cell + gap * 2,
+    { tl: cell * 0.3, tr: cell * 0.3, br: cell * 0.3, bl: cell * 0.3 },
+  );
+  ctx.fill();
+  ctx.restore();
+
+  for (let i = 0; i < 4; i += 1) {
+    const x = left + i * (cell + gap);
+    if (i === 3) {
+      // The fourth is a virus, which is the half of the rule people miss.
+      Renderer.prototype.drawVirus.call(renderer, x, top, cell, colour, now, i, 0, 0, false, false);
+    } else {
+      const link = i === 0 ? LINK.RIGHT : (i === 1 ? LINK.LEFT : null);
+      Renderer.prototype.drawHalf.call(renderer, x, top, cell, colour, link);
+    }
+  }
+  ctx.restore();
+}
+
 export function drawVirusTally(canvas, counts, now, era = ERAS[3]) {
   const ctx = canvas.getContext('2d');
   const dpr = Math.min(window.devicePixelRatio || 1, 3);

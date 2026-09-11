@@ -61,7 +61,7 @@ Run them all with `node tools/gauntlet.mjs`, or a few with
 | 10 | `versus` | Two games in one page stay separate. Asserts every attack sent is an attack received, that a match always resolves to exactly one winner, and that one player's input cannot touch the other's board. |
 | 11 | `playtest` | The game is playable, not merely legal. Asserts a hurried capsule never falls faster than a hand can place a lateral into it, and that a capsule always lands with time to be steered. `npm run playtest` runs the full version: a bot plays whole games and reports reaction budgets, juggling room, hybrid cures, what pressing hurry does at each point of a cell, and how far it gets. |
 | 12 | `performance` | The rules are cheap. Measures worst-case and average `update()` cost at level 20 with resistance on against the 16.7 ms frame budget. |
-| 13 | `browser` | It works in a browser, not just in Node. Runs the Playwright checks: menus, gamepad, touch gestures, versus, the daily, offline play, and a page with neither Web Audio nor localStorage. Skips cleanly if Playwright is not installed. |
+| 13 | `browser` | It works in a browser, not just in Node - and is reachable: Play is on screen and tappable at real phone sizes with browser chrome subtracted, on a first visit and a returning one. Runs the Playwright checks: menus, gamepad, touch gestures, versus, the daily, offline play, and a page with neither Web Audio nor localStorage. Skips cleanly if Playwright is not installed. |
 
 ## What it has caught
 
@@ -118,6 +118,13 @@ The stages are not ceremony. Building this set surfaced real defects:
   capsule up with a notch and turning it could hop it on top of the thing it was
   meant to slot beside. Both checks sweep every speed, every gravity tier and
   every point of the fall rather than sampling one.
+- **`browser`** now checks that **Play is reachable on a phone**, because it was
+  not. The title card was 662px tall inside a 547px overlay that clipped rather
+  than scrolled, so on an iPhone with the browser's own chrome the start button
+  was simply not on the page - the game was unstartable, and two months of
+  checks had not noticed because they all ran at marketing viewport sizes with
+  no browser chrome subtracted. The check now uses real phone heights, tries a
+  first visit and a returning one, and taps the button to confirm a game starts.
 - **`boundaries`** codifies the virus-ceiling rule after viruses were found
   spawning two rows below the neck by level 6.
 - **`browser`** caught three checks that had hard-coded row 15 as the floor of

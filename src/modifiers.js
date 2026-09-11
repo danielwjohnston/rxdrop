@@ -1,17 +1,6 @@
 /**
- * Run modifiers: the axis that makes one run different from the next.
- *
- * A modifier is a small, declarative description - a name, a line of copy, and
- * the rule it bends. The Game owns all the state they touch, because a mechanic
- * that keeps state outside the game object is a mechanic that breaks replays,
- * and a seed reproducing a game exactly is the first stage of the gauntlet.
- *
- * What is here is the description and the pure helpers. What is in game.js is
- * the four or five places a modifier is consulted.
- *
- * Every modifier carries a `bound`: the sentence that says why it cannot leave
- * a virus unanswerable. If you cannot write that sentence for a new modifier,
- * the modifier is not ready, whatever it does for variety.
+ * Run modifiers. Each modifier bends an existing rule and carries a written
+ * bound explaining why it cannot make a virus unanswerable.
  */
 import {
   BOARD_WIDTH,
@@ -27,111 +16,76 @@ export const MODIFIERS = Object.freeze([
   Object.freeze({
     id: 'outbreak',
     name: 'Outbreak',
-    // Icons are drawn, not typed. A glyph is a bet on the reader's font
-    // having it, and that bet loses: the first version of the picker showed
-    // quarantine as a tofu box on a phone. These are paths in a 24x24 box.
-    icon: 'M12 4a3 3 0 1 1 0 6 3 3 0 0 1 0-6M5 15a3 3 0 1 1 0 6 3 3 0 0 1 0-6'
-      + 'M19 15a3 3 0 1 1 0 6 3 3 0 0 1 0-6M12 10v4M12 14l-5 2M12 14l5 2',
+    icon: 'M12 4a3 3 0 1 1 0 6 3 3 0 0 1 0-6M5 15a3 3 0 1 1 0 6 3 3 0 0 1 0-6M19 15a3 3 0 1 1 0 6 3 3 0 0 1 0-6M12 10v4M12 14l-5 2M12 14l5 2',
     blurb: 'Viruses replicate. Capsules come twice as fast.',
-    detail: 'Every few capsules a virus spreads into an empty cell beside it. '
-      + 'Gravity halves to pay for it, so you place roughly twice as many '
-      + 'capsules in the same minute. The empty space you were saving is now a '
-      + 'liability.',
-    bound: 'A virus replicates once and never again, never above the virus '
-      + 'ceiling, and never past 1.6 times the viruses the level started with.',
+    detail: 'Every few capsules a virus spreads into an empty cell beside it. Gravity halves to pay for it, so the empty space you were saving becomes a liability.',
+    bound: 'A virus replicates once and never again, never above the virus ceiling, and never past 1.6 times the viruses the level started with.',
   }),
   Object.freeze({
+    // Keep the durable id for old URLs and stored settings; the old timed
+    // blackout mechanic itself is gone.
     id: 'blackout',
-    name: 'Blackout',
-    icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 3v18a9 9 0 0 1 0-18z',
-    blurb: 'The bottle goes dark. Hold the light to bring it back.',
-    detail: 'Light drains away and the bottle fades. The light-therapy control '
-      + 'is held, not pressed, and it spends a reservoir that refills while you '
-      + 'play - so the question is when to spend it, never whether you '
-      + 'remembered it. Clear a run while the bottle is dark for the badge.',
-    bound: 'The reservoir always refills, so light is always available given '
-      + 'time, and the bottle never fades to fully black.',
+    name: 'Biofilm + Phototherapy',
+    icon: 'M4 15c4-7 12-7 16 0M5 18h14M7 11c2-3 8-3 10 0M12 4v4',
+    blurb: 'Colonies cloud their rows. Project light lines to clear the culture.',
+    detail: 'Surviving organisms build biofilm instead of an arbitrary blackout timer. Each row has its own clarity. Shift or L toggles Phototherapy: projected four-cell light structures fall through the medication stack, and a completed horizontal light line treats that same row. Medication continues under gravity while your attention is on the lamp.',
+    bound: 'Biofilm plateaus at a readable clarity floor, the active capsule is redrawn above the haze, light pieces never collide with medicine, and the level remains winnable without entering Phototherapy.',
+  }),
+  Object.freeze({
+    id: 'sonic',
+    name: 'Sonic Therapy',
+    icon: 'M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4',
+    blurb: 'Match the acoustic sequence to open resistant membranes for treatment.',
+    detail: 'Press K to enter the rhythm chamber. Four falling acoustic cues map to left, down, up and right. Accurate hits build resonance; a full phrase sends a focused ultrasound pulse into the most entrenched infected rows. Sonoporation temporarily opens organisms to drug penetration, strips a resistance step, and primes hybrid strains for their next parent medicine.',
+    bound: 'A missed rhythm only delays the acoustic pulse; it never removes medication access, never creates extra blockers, and Sonic Therapy is optional rather than a gate to finishing the bottle.',
   }),
   Object.freeze({
     id: 'rationing',
     name: 'Rationing',
     icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M6 6l12 12',
     blurb: 'Only two medicines are in stock at a time.',
-    detail: 'One colour is out of stock for a spell, and the disease you cannot '
-      + 'reach is the disease that gets worse: while a medicine is out of stock, '
-      + 'viruses of that colour build tolerance every capsule. Two colours make '
-      + 'runs easier to build, so without that the modifier would be a relief '
-      + 'rather than a challenge - the playtest measured exactly that.',
-    bound: `The withheld colour rotates every ${RATION_SPELL} capsules, so no `
-      + 'colour is ever out of stock for longer than that, and tolerance always '
-      + 'has an answer in the medicine it never built a defence against.',
+    detail: 'One colour is out of stock for a spell, and the disease you cannot reach is the disease that gets worse: while a medicine is out of stock, viruses of that colour build tolerance every capsule.',
+    bound: `The withheld colour rotates every ${RATION_SPELL} capsules, so no colour is ever out of stock for longer than that, and tolerance always retains an answer.`,
   }),
   Object.freeze({
     id: 'contaminated',
     name: 'Contaminated batch',
     icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M8 8l8 8M16 8l-8 8',
     blurb: 'Some capsule halves are inert. They clear nothing.',
-    detail: 'A bad batch stacks and falls like any other capsule but belongs to '
-      + 'no run. Dumping it somewhere harmless is a skill of its own - and '
-      + 'somewhere harmless turns out to be somewhere you plan to clear.',
-    bound: 'An inert half washes out with any clear it is touching, so a bad '
-      + 'batch is never permanent weight in the bottle.',
+    detail: 'A bad batch stacks and falls like any other capsule but belongs to no run. Dumping it somewhere harmless is a skill of its own — and somewhere harmless turns out to be somewhere you plan to clear.',
+    bound: 'An inert half washes out with any clear it is touching, so a bad batch is never permanent weight in the bottle.',
   }),
   Object.freeze({
     id: 'quarantine',
     name: 'Quarantine',
     icon: 'M8 3v18M16 3v18M8 7l8-4M8 13l8-4M8 19l8-4',
     blurb: 'A column is sealed off until you clear beside it.',
-    detail: 'The bottle gets narrower and the shape of the board becomes the '
-      + 'puzzle. Clear a cell in either neighbouring column to break the seal.',
-    bound: `A seal lifts on its own after ${QUARANTINE_MAX} capsules and never `
-      + 'takes a spawn column, so it can neither be permanent nor block the deal.',
+    detail: 'The bottle gets narrower and the shape of the board becomes the puzzle. Clear a cell in either neighbouring column to break the seal.',
+    bound: `A seal lifts on its own after ${QUARANTINE_MAX} capsules and never takes a spawn column, so it can neither be permanent nor block the deal.`,
   }),
 ]);
 
 export const MODIFIER_IDS = Object.freeze(MODIFIERS.map((m) => m.id));
-
-/** The modifier with this id, or undefined. */
 export const modifierFor = (id) => MODIFIERS.find((m) => m.id === id);
 
-/**
- * Normalises whatever the caller passed - an array, a Set, a single id, junk -
- * into a frozen array of known ids in declaration order, with no duplicates.
- * Order matters only so that two runs with the same modifiers describe
- * themselves the same way.
- */
 export function normaliseModifiers(input) {
   if (!input) return Object.freeze([]);
   const wanted = new Set(typeof input === 'string' ? [input] : input);
   return Object.freeze(MODIFIER_IDS.filter((id) => wanted.has(id)));
 }
 
-/** A short label for a set of modifiers, for the HUD and for share links. */
 export function describeModifiers(ids) {
   const list = normaliseModifiers(ids);
   if (list.length === 0) return 'Standard';
   return list.map((id) => modifierFor(id).name).join(' + ');
 }
 
-// ---- outbreak -------------------------------------------------------------
-
-/**
- * Picks the cells a replication tick would fill.
- *
- * A virus may replicate once in its life and only into an empty cell at or
- * below `topRow` - the same ceiling the level generator obeys - so an outbreak
- * can never seed the neck it would take the run away with. The caller enforces
- * the population ceiling.
- */
 export function outbreakTargets(board, rng, limit, topRow) {
   const parents = [];
-  board.forEachCell((c, x, y) => {
-    if (c.type !== VIRUS || c.spread) return;
+  board.forEachCell((cell, x, y) => {
+    if (cell.type !== VIRUS || cell.spread) return;
     parents.push({ x, y });
   });
-  if (parents.length === 0) return [];
-  // Shuffle so the outbreak is not always in the same corner of the bottle,
-  // and so the choice is seeded like everything else.
   for (let i = parents.length - 1; i > 0; i -= 1) {
     const j = rng.int(i + 1);
     [parents[i], parents[j]] = [parents[j], parents[i]];
@@ -156,27 +110,10 @@ export function outbreakTargets(board, rng, limit, topRow) {
   return picks;
 }
 
-/** The most viruses an outbreak may grow a level to. */
-export const outbreakCeiling = (startingViruses) =>
-  Math.ceil(startingViruses * OUTBREAK_CEILING);
+export const outbreakCeiling = (startingViruses) => Math.ceil(startingViruses * OUTBREAK_CEILING);
 
-// ---- rationing ------------------------------------------------------------
+export const rationedOut = (pillsPlaced) => Math.floor(pillsPlaced / RATION_SPELL) % COLOR_COUNT;
 
-/**
- * Which colour is out of stock after this many capsules. Rotating rather than
- * re-rolling is deliberate: it makes the wait for the colour you need
- * predictable, which turns "the game is withholding it" into "three more
- * capsules and it is back".
- */
-export const rationedOut = (pillsPlaced) =>
-  Math.floor(pillsPlaced / RATION_SPELL) % COLOR_COUNT;
-
-// ---- quarantine -----------------------------------------------------------
-
-/**
- * Which column to seal next. Never a spawn column, and never the column the
- * last seal was in, so the bottle does not narrow in the same place twice.
- */
 export function quarantineColumn(board, rng, previous = -1) {
   const spawn = new Set([SPAWN_X, SPAWN_X + 1]);
   const options = [];

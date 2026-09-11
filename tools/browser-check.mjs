@@ -12,6 +12,7 @@ import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { DISCOVERIES } from '../src/formulary.js';
 
 const require = createRequire(import.meta.url);
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -559,8 +560,10 @@ try {
       };
     });
     assert.equal(picker.count, 5, 'every modifier should have a chip');
-    // The link carried two, so the picker has to have read them.
-    assert.deepEqual(picker.on, ['blackout', 'quarantine']);
+    // The link carried two, and it carried the OLD id for phototherapy - a
+    // link someone shared before the rename still has to open the thing they
+    // meant, which is why normaliseModifiers keeps a rename table.
+    assert.deepEqual(picker.on, ['phototherapy', 'quarantine']);
     assert.ok(picker.note.length > 30, 'the note should say what they do');
 
     await modPage.click('[data-start]');
@@ -570,49 +573,111 @@ try {
       hud: [...document.querySelectorAll('#hud-mods .mods__chip')].length,
       lightMeter: !document.getElementById('light-meter').hidden,
     }));
-    assert.deepEqual(running.modifiers, ['blackout', 'quarantine']);
+    assert.deepEqual(running.modifiers, ['phototherapy', 'quarantine']);
     assert.equal(running.hud, 2, 'the HUD should name what is running');
-    assert.equal(running.lightMeter, true, 'blackout should show the light reservoir');
+    assert.equal(running.lightMeter, true, 'phototherapy should show the clarity meter');
   });
 
-  await check('the light-therapy key lifts a blackout and spends the reservoir', async () => {
-    // Fast-forward to a blackout rather than waiting fourteen seconds for one.
-    await modPage.evaluate(() => {
+  await check('the lamp is a chamber you play, and it costs you the dose in hand', async () => {
+    // The whole point of the rewrite. The old blackout was weather: it dimmed
+    // on a timer and you held a key to stop it. This is a treatment you go and
+    // deliver, and what it costs you is the capsule you were holding.
+    const before = await modPage.evaluate(() => {
       const g = window.rxdrop.game;
-      g.blackoutFor = 5000;
-      g.light = 0.1;
-      g.lightCharge = 1;
-      g.lightSpent = false;
+      // Silt the bottle up so there is something to treat.
+      g.fog = g.fog.map(() => 0.7);
+      return { worst: g.worstFog, inLight: g.inLight, column: g.pill?.x ?? null };
     });
-    const dark = await modPage.evaluate(() => window.rxdrop.game.light);
-    assert.ok(dark < 0.35, 'the bottle should be dark to start with');
-    await modPage.keyboard.down('Shift');
-    await modPage.waitForTimeout(450);
-    const lit = await modPage.evaluate(() => ({
-      light: window.rxdrop.game.light,
-      charge: window.rxdrop.game.lightCharge,
-      lighting: window.rxdrop.game.lighting,
-    }));
-    await modPage.keyboard.up('Shift');
-    assert.equal(lit.lighting, true, 'holding Shift should arm the light');
-    assert.ok(lit.light > dark, `the bottle should brighten, went ${dark} to ${lit.light}`);
-    assert.ok(lit.charge < 1, 'and it should cost the reservoir');
+    assert.ok(before.worst > 0.5, 'the bottle should be fogged to start with');
+    assert.equal(before.inLight, false);
 
-    // Released, it fades again - the control is held, never toggled.
-    await modPage.waitForTimeout(450);
-    const after = await modPage.evaluate(() => ({
-      light: window.rxdrop.game.light,
-      lighting: window.rxdrop.game.lighting,
+    await modPage.keyboard.press('KeyL');
+    await modPage.waitForTimeout(150);
+    const entered = await modPage.evaluate(() => {
+      const g = window.rxdrop.game;
+      return {
+        inLight: g.inLight,
+        width: g.chamber?.width ?? 0,
+        piece: Boolean(g.chamber?.piece),
+        column: g.pill?.x ?? null,
+      };
+    });
+    assert.equal(entered.inLight, true, 'the lamp key should open the chamber');
+    assert.ok(entered.piece, 'the chamber should deal light to steer');
+    assert.equal(entered.width, 5, 'and take the chosen chamber width');
+
+    // Going commits the dose in hand and holds the next one.
+    assert.equal(entered.column, null, 'the capsule in hand should have been committed');
+
+    // Steering now drives the light, not the medicine.
+    const wasAt = await modPage.evaluate(() => window.rxdrop.game.chamber.piece.x);
+    await modPage.keyboard.press('ArrowLeft');
+    await modPage.waitForTimeout(100);
+    const steered = await modPage.evaluate(() => ({
+      capsule: window.rxdrop.game.pill?.x ?? null,
+      light: window.rxdrop.game.chamber?.piece?.x ?? null,
     }));
-    assert.equal(after.lighting, false, 'releasing Shift should drop the light');
-    assert.ok(after.light < lit.light, 'and the bottle should start fading again');
+    assert.equal(steered.capsule, null, 'no capsule should be falling while you are at the lamp');
+    assert.ok(steered.light <= wasAt, 'left should have driven the light');
+
+    // A completed line lights that row of the patient, and spills either side.
+    const lit = await modPage.evaluate(() => {
+      const g = window.rxdrop.game;
+      const was = [...g.fog];
+      g.lightRows([9]);
+      return { row: g.fog[9], above: g.fog[8], below: g.fog[10], far: g.fog[3], wasFar: was[3] };
+    });
+    assert.equal(lit.row, 0, 'the lit row should clear outright');
+    assert.ok(lit.above < 0.7 && lit.above > 0, 'and spill into the row above');
+    assert.ok(lit.below < 0.7 && lit.below > 0, 'and the row below');
+    assert.equal(lit.far, lit.wasFar, 'but not reach across the whole bottle');
+
+    // The key is a TOGGLE: releasing it must not dump you out of the chamber.
+    await modPage.keyboard.up('KeyL');
+    await modPage.waitForTimeout(100);
+    assert.equal(
+      await modPage.evaluate(() => window.rxdrop.game.inLight),
+      true,
+      'letting go of the key should not end the session',
+    );
+    await modPage.keyboard.press('KeyL');
+    await modPage.waitForTimeout(150);
+    assert.equal(
+      await modPage.evaluate(() => window.rxdrop.game.inLight),
+      false,
+      'pressing it again should leave the chamber',
+    );
+
+    // And the lamp rests. A control that silently refuses reads as a broken
+    // control, so the pad button has to say so rather than just not work.
+    const resting = await modPage.evaluate(() => {
+      const button = document.getElementById('light-button');
+      return {
+        cooldown: window.rxdrop.game.lampCooldown,
+        ready: window.rxdrop.game.lampReady,
+        label: button.textContent.trim(),
+        disabled: button.disabled,
+      };
+    });
+    assert.ok(resting.cooldown > 0, 'the lamp should be resting after a session');
+    assert.equal(resting.ready, false);
+    assert.equal(resting.disabled, true, 'the pad button should be unpressable while it rests');
+    assert.match(resting.label, /^LAMP \d+s$/, `the pad should count down, got "${resting.label}"`);
+
+    await modPage.keyboard.press('KeyL');
+    await modPage.waitForTimeout(120);
+    assert.equal(
+      await modPage.evaluate(() => window.rxdrop.game.inLight),
+      false,
+      'the lamp should refuse to open while it rests',
+    );
   });
 
   await check('a sealed column refuses capsules and breaks when you clear beside it', async () => {
     const sealed = await modPage.evaluate(() => {
       const g = window.rxdrop.game;
-      g.blackoutFor = 0;
-      g.light = 1;
+      g.fog = g.fog.map(() => 0);
+      g.leaveLight();
       g.board.forEachCell((c, x, y) => g.board.set(x, y, null));
       const floor = g.board.height - 1;
       g.board.set(0, floor, { color: 0, type: 'virus', link: null });
@@ -660,8 +725,10 @@ try {
       };
     });
     assert.equal(blank.screen, false, 'the formulary should open');
-    assert.equal(blank.entries, 10, 'every discovery should have a page');
-    assert.equal(blank.blanks, 10, 'and all of them blank to start with');
+    // Counted from the source rather than written down, so adding a discovery
+    // does not quietly leave this check asserting the old number.
+    assert.equal(blank.entries, DISCOVERIES.length, 'every discovery should have a page');
+    assert.equal(blank.blanks, DISCOVERIES.length, 'and all of them blank to start with');
     assert.ok(!/antibody|hybrid|quarantine/i.test(blank.text), 'a blank page gave the answer away');
 
     // Trigger one for real, through the events the game actually emits.
@@ -684,7 +751,11 @@ try {
         toastText: document.getElementById('toast-text').textContent,
       };
     });
-    assert.match(written.count, /^[1-9]\d*\/10$/, `nothing was written up: ${written.count}`);
+    assert.match(
+      written.count,
+      new RegExp(`^[1-9]\\d*/${DISCOVERIES.length}$`),
+      `nothing was written up: ${written.count}`,
+    );
     assert.equal(written.toast, false, 'a first discovery should announce itself');
     assert.ok(written.toastText.length > 3, 'and say what it was');
 
@@ -707,7 +778,11 @@ try {
     // It has to survive a reload, or it is not a notebook.
     await modPage.reload({ waitUntil: 'networkidle' });
     const kept = await modPage.evaluate(() => document.getElementById('formulary-count').textContent);
-    assert.match(kept, /^[1-9]\d*\/10$/, `the notebook forgot: ${kept}`);
+    assert.match(
+      kept,
+      new RegExp(`^[1-9]\\d*/${DISCOVERIES.length}$`),
+      `the notebook forgot: ${kept}`,
+    );
   });
 
   await modPage.close();
@@ -957,9 +1032,9 @@ try {
   });
 
   await check('a phone can actually work the light, and the icons are not tofu', async () => {
-    // Blackout is a modifier a phone player can switch on. Without a control
-    // on the pad they can switch it on and then have no way to answer it - the
-    // light is a HELD key, and a phone has no keys.
+    // Phototherapy is a modifier a phone player can switch on. Without a
+    // control on the pad they can switch it on and then have no way to answer
+    // it - the lamp is a key, and a phone has no keys.
     await mobile.goto(`${BASE}/?level=2&speed=LOW&seed=8&mods=blackout,quarantine`, {
       waitUntil: 'networkidle',
     });
@@ -986,32 +1061,49 @@ try {
 
     await mobile.evaluate(() => {
       const g = window.rxdrop.game;
-      g.blackoutFor = 5000;
-      g.light = 0.1;
-      g.lightCharge = 1;
-      g.lightSpent = false;
+      g.fog = g.fog.map(() => 0.7);
     });
-    const dark = await mobile.evaluate(() => window.rxdrop.game.light);
-    assert.ok(dark < 0.35, 'the bottle should be dark to start with');
+    assert.ok(
+      await mobile.evaluate(() => window.rxdrop.game.worstFog) > 0.5,
+      'the bottle should be fogged to start with',
+    );
 
+    // A tap opens the chamber, and letting go does NOT close it - the lamp is a
+    // toggle, because entering it is a decision you commit to.
     const button = await mobile.locator('#light-button').boundingBox();
     await mobile.touchscreen.tap(button.x + button.width / 2, button.y + button.height / 2);
-    // A tap is a press and a release, so hold it properly instead.
-    await mobile.dispatchEvent('#light-button', 'pointerdown');
-    await mobile.waitForTimeout(400);
-    const lit = await mobile.evaluate(() => ({
-      light: window.rxdrop.game.light,
-      lighting: window.rxdrop.game.lighting,
+    await mobile.waitForTimeout(250);
+    const entered = await mobile.evaluate(() => ({
+      inLight: window.rxdrop.game.inLight,
+      piece: Boolean(window.rxdrop.game.chamber?.piece),
+      label: document.getElementById('light-button').textContent,
     }));
-    await mobile.dispatchEvent('#light-button', 'pointerup');
-    assert.equal(lit.lighting, true, 'holding the pad button should arm the light');
-    assert.ok(lit.light > dark, `the bottle should brighten, went ${dark} to ${lit.light}`);
+    assert.equal(entered.inLight, true, 'tapping the pad button should open the chamber');
+    assert.ok(entered.piece, 'and deal light to steer');
+    assert.match(entered.label, /BOTTLE/, 'the button should now offer the way back');
 
+    await mobile.touchscreen.tap(button.x + button.width / 2, button.y + button.height / 2);
+    await mobile.waitForTimeout(250);
+    assert.equal(
+      await mobile.evaluate(() => window.rxdrop.game.inLight),
+      false,
+      'tapping it again should leave the chamber',
+    );
+
+    // The lamp then rests, and the pad says so rather than going quiet. A tap
+    // on a resting lamp must do nothing at all.
+    const rested = await mobile.evaluate(() => ({
+      label: document.getElementById('light-button').textContent.trim(),
+      disabled: document.getElementById('light-button').disabled,
+    }));
+    assert.match(rested.label, /^LAMP \d+s$/, `the pad should count down, got "${rested.label}"`);
+    assert.equal(rested.disabled, true);
+    await mobile.touchscreen.tap(button.x + button.width / 2, button.y + button.height / 2);
     await mobile.waitForTimeout(200);
     assert.equal(
-      await mobile.evaluate(() => window.rxdrop.game.lighting),
+      await mobile.evaluate(() => window.rxdrop.game.inLight),
       false,
-      'letting go should drop the light',
+      'a tap on a resting lamp must not open it',
     );
 
     // And the pad must still fit: a sixth control cannot cost the bottle.
@@ -1158,7 +1250,7 @@ try {
     // A size check alone never caught it: the canvas WAS tall. What was wrong
     // was where it ended up, so this measures the gap between the two rather
     // than the height of either.
-    const everything = 'outbreak,blackout,rationing,contaminated,quarantine';
+    const everything = 'outbreak,phototherapy,rationing,contaminated,quarantine';
     for (const size of [{ width: 360, height: 640 }, { width: 390, height: 780 }]) {
       const phone = await browser.newPage({ viewport: size, isMobile: true, hasTouch: true });
       phone.on('pageerror', (error) => errors.push(`overlap pageerror: ${error.message}`));
@@ -1352,7 +1444,7 @@ try {
     await day.waitForTimeout(200);
     assert.equal(await day.evaluate(() => window.rxdrop.mode), 'daily');
     assert.equal(await day.isVisible('#daily-note'), true);
-    // The day's modifiers have to be on the card. Walking into a blackout you
+    // The day's modifiers have to be on the card. Walking into a fogged bottle you
     // were never told about is a surprise, not a challenge.
     //
     // 2026-09-11 is pinned because it is a day the date happens to draw a PAIR

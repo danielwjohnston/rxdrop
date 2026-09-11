@@ -14,15 +14,13 @@ import { Board, cell } from '../src/board.js';
 import { Game, PHASE } from '../src/game.js';
 import { dailyModifiers, dailySeed, dailySetup } from '../src/daily.js';
 import { createRng } from '../src/rng.js';
-import { fits, createPill, pillCells } from '../src/pill.js';
+import { fits, createPill, hardDropPosition, pillCells } from '../src/pill.js';
 import {
-  BLACKOUT_EVERY,
-  BLACKOUT_FLOOR,
-  BLACKOUT_LASTS,
   COLORS,
   COLOR_COUNT,
   CONTAMINATION_EVERY,
-  DARK_AT,
+  FOG_MAX,
+  LIGHT_SESSION,
   PILL,
   QUARANTINE_MAX,
   RATION_SPELL,
@@ -127,65 +125,156 @@ describe('outbreak', () => {
   });
 });
 
-describe('blackout and light therapy', () => {
-  const dim = () => new Game({ level: 2, speed: 'LOW', seed: 9, modifiers: ['blackout'] });
-
-  it('starts lit and goes dark on its own timer', () => {
-    const game = dim();
-    assert.equal(game.light, 1);
-    assert.equal(game.isDark, false);
-    game.updateLight(BLACKOUT_EVERY);
-    assert.ok(game.blackoutFor > 0, 'a blackout should have started');
-    for (let t = 0; t < 2000; t += 16) game.updateLight(16);
-    assert.equal(game.isDark, true, 'the bottle should be dark by now');
-    assert.ok(game.light >= BLACKOUT_FLOOR, 'and never fully black');
+describe('phototherapy: the fog, and the light you make to cut it', () => {
+  const foggy = (options = {}) => new Game({
+    level: 6, speed: 'LOW', seed: 9, modifiers: ['phototherapy'], ...options,
   });
 
-  it('comes back on its own with the light untouched', () => {
-    // The bound. A player who never presses anything still gets the bottle back.
-    const game = dim();
-    game.updateLight(BLACKOUT_EVERY);
-    for (let t = 0; t < BLACKOUT_LASTS + 2000; t += 16) game.updateLight(16);
-    assert.equal(game.blackoutFor, 0, 'the blackout should have ended');
-    assert.ok(game.light > DARK_AT, 'and the bottle should be readable again');
+  it('silts up row by row, worst where the disease is', () => {
+    // Not a global dimmer. The bottle clouds where the colonies are, which is
+    // what turns the dark from noise into information.
+    const game = foggy();
+    for (let t = 0; t < 20000; t += 16) game.updateLight(16);
+    const withViruses = [];
+    const without = [];
+    for (let y = 0; y < game.height; y += 1) {
+      let viruses = 0;
+      for (let x = 0; x < game.width; x += 1) {
+        if (game.board.get(x, y)?.type === VIRUS) viruses += 1;
+      }
+      (viruses > 0 ? withViruses : without).push(game.fog[y]);
+    }
+    assert.ok(withViruses.some((f) => f > 0.1), 'rows with viruses should have clouded');
+    assert.ok(without.every((f) => f === 0), 'a row with no disease in it should stay clear');
   });
 
-  it('holding the light lifts the bottle and spends the reservoir', () => {
-    const game = dim();
-    game.updateLight(BLACKOUT_EVERY);
-    for (let t = 0; t < 1200; t += 16) game.updateLight(16);
-    const dark = game.light;
-    const charge = game.lightCharge;
-    game.setLight(true);
-    for (let t = 0; t < 800; t += 16) game.updateLight(16);
-    assert.ok(game.light > dark, 'holding the light should brighten the bottle');
-    assert.ok(game.lightCharge < charge, 'and cost the reservoir');
-  });
-
-  it('the reservoir runs out, and stays out until it re-arms', () => {
-    // Without the latch the reservoir oscillates on empty and the light is
-    // free, which is exactly how the first version of this behaved.
-    const game = dim();
-    game.updateLight(BLACKOUT_EVERY);
-    game.setLight(true);
-    game.lightCharge = 0.001;
-    game.updateLight(100);
-    assert.equal(game.lightSpent, true, 'the reservoir should be spent');
-    const spent = game.light;
-    game.updateLight(200);
-    assert.ok(game.light <= spent, 'a spent light must not keep working');
+  it('plateaus rather than compounding to nothing', () => {
+    // The bound. Ignore the lamp for a whole run and the bottle is hard to
+    // read, never unplayable.
+    const game = foggy();
+    for (let t = 0; t < 600000; t += 100) game.updateLight(100);
+    assert.ok(Math.max(...game.fog) <= FOG_MAX, 'the fog went past its ceiling');
+    assert.ok(game.visibilityAt(game.height - 1) >= 1 - FOG_MAX, 'a row went fully black');
   });
 
   it('does nothing at all when the modifier is off', () => {
-    const game = new Game({ level: 2, speed: 'LOW', seed: 9 });
-    game.setLight(true);
-    game.updateLight(60000);
-    assert.equal(game.light, 1);
-    assert.equal(game.isDark, false);
-    assert.equal(game.lighting, false, 'the light should not even arm');
+    const plain = new Game({ level: 6, speed: 'LOW', seed: 9 });
+    for (let t = 0; t < 30000; t += 16) plain.updateLight(16);
+    assert.ok(plain.fog.every((f) => f === 0));
+    assert.equal(plain.visibilityAt(5), 1);
+    assert.equal(plain.enterLight(), false, 'there is no chamber without the modifier');
+  });
+
+  it('going to the lamp commits the dose in your hand and holds the next', () => {
+    // The cost, and the whole decision. An earlier build let the capsule go on
+    // falling unsteered while you worked the lamp; every abandoned capsule
+    // landed in the spawn column and a tower there topped the bottle out in
+    // eight visits. So entering places the dose where you last left it, and
+    // nothing new is dealt until you come back.
+    const game = foggy();
+    game.update(200);
+    const placed = game.pillsPlaced;
+    const landing = hardDropPosition(game.board, game.pill);
+    assert.equal(game.enterLight(), true);
+    assert.equal(game.pillsPlaced, placed + 1, 'the dose in hand should have been placed');
+    assert.ok(game.chamber.piece, 'the chamber should deal a piece');
+    assert.equal(game.pill, null, 'and nothing new should be dealt while you are at the lamp');
+    assert.ok(
+      game.board.get(landing.x, landing.y)?.type != null,
+      'the dose should have gone where a hard drop would have put it',
+    );
+
+    // Steering now drives the light, not the medicine.
+    const lightColumn = game.chamber.piece.x;
+    const moved = game.move(-1);
+    assert.equal(game.chamber.piece.x, moved ? lightColumn - 1 : lightColumn,
+      'left should have driven the light, or nothing at all');
+    assert.equal(game.pill, null, 'and still no capsule to move');
+
+    for (let t = 0; t < 3000; t += 16) {
+      game.update(16);
+    }
+    assert.equal(game.pill, null, 'the bottle stays as you left it until you come back');
+    assert.ok(game.dealHeld, 'the next capsule is waiting, not falling');
+    assert.equal(game.pillsPlaced, placed + 1, 'no capsule fell unsteered while you worked');
+
+    game.leaveLight('done');
+    game.update(16);
+    assert.ok(game.pill, 'leaving deals the capsule that was waiting');
+    assert.equal(game.dealHeld, false);
+  });
+
+  it('a completed line lights that row of the patient, and spills either side', () => {
+    const game = foggy();
+    game.fog = game.fog.map(() => 0.8);
+    game.enterLight();
+    game.lightRows([8]);
+    assert.equal(game.fog[8], 0, 'the line should clear its own row outright');
+    assert.ok(game.fog[7] < 0.8 && game.fog[7] > 0, 'and half-clear the row above');
+    assert.ok(game.fog[9] < 0.8 && game.fog[9] > 0, 'and the row below');
+    assert.equal(game.fog[12], 0.8, 'but not reach across the whole bottle');
+  });
+
+  it('four lines at once floods the bottle', () => {
+    const game = foggy();
+    game.fog = game.fog.map(() => 0.8);
+    game.enterLight();
+    game.lightRows([6, 7, 8, 9]);
+    assert.ok(game.fog.every((f) => f < 0.8), 'a flood should reach every row');
+  });
+
+  it('treating the patient clears the air; a shrug fouls it', () => {
+    const game = foggy();
+    const floor = game.height - 1;
+    game.fog[floor] = 0.5;
+    game.outcome = { cleared: [{ x: 3, y: floor, type: VIRUS }], collateral: [] };
+    game.resistedCells = [];
+    game.board.forEachCell((c, x, y) => game.board.set(x, y, null));
+    const relieved = Math.max(0, 0.5 - 0.22);
+    for (const { y, type } of game.outcome.cleared) {
+      if (type === VIRUS) game.fog[y] = Math.max(0, game.fog[y] - 0.22);
+    }
+    assert.ok(Math.abs(game.fog[floor] - relieved) < 1e-9, 'a kill should clear its row');
+  });
+
+  it('the chamber is never a dead end, however badly it is stacked', () => {
+    // Light decays, so a saturated chamber clears itself. It costs the session,
+    // never the run.
+    const game = foggy();
+    game.enterLight();
+    for (let i = 0; i < game.chamber.grid.length; i += 1) {
+      game.chamber.grid[i] = { life: 500 };
+    }
+    game.chamber.piece = null;
+    assert.equal(game.chamber.saturated, true);
+    for (let t = 0; t < 2000; t += 16) game.updateLight(16);
+    assert.equal(game.chamber.saturated, false, 'the chamber should have cleared itself');
+  });
+
+  it('leaves on its own with the timer variant, and waits with the manual one', () => {
+    const timed = foggy({ lightExit: 'timer' });
+    timed.enterLight();
+    for (let t = 0; t < LIGHT_SESSION + 500; t += 16) timed.updateLight(16);
+    assert.equal(timed.inLight, false, 'the timer variant should end the session');
+
+    const manual = foggy({ lightExit: 'manual' });
+    manual.enterLight();
+    for (let t = 0; t < LIGHT_SESSION * 3; t += 16) manual.updateLight(16);
+    assert.equal(manual.inLight, true, 'the manual variant should wait to be told');
+    manual.toggleLight();
+    assert.equal(manual.inLight, false);
+  });
+
+  it('takes the chamber width it is given', () => {
+    assert.equal(foggy({ lightWidth: 5 }).enterLight() && 5, 5);
+    const wide = foggy({ lightWidth: 8 });
+    wide.enterLight();
+    assert.equal(wide.chamber.width, 8);
+    const narrow = foggy({ lightWidth: 5 });
+    narrow.enterLight();
+    assert.equal(narrow.chamber.width, 5);
   });
 });
-
 describe('rationing', () => {
   it('withholds one colour at a time, and moves on', () => {
     const seen = new Set();
@@ -414,7 +503,9 @@ describe('modifiers and the rest of the game', () => {
     const plain = new Game({ level: 4, speed: 'LOW', seed: 88 });
     assert.deepEqual(plain.modifiers, []);
     assert.equal(plain.board.sealed, undefined);
-    assert.equal(plain.light, 1);
+    assert.ok(plain.fog.every((f) => f === 0), 'an unmodified bottle never clouds');
+    assert.equal(plain.visibilityAt(8), 1);
+    assert.equal(plain.inLight, false);
     step(plain, 4000);
     assert.equal(plain.has('outbreak'), false);
     assert.ok(plain.phase !== PHASE.SPREADING);

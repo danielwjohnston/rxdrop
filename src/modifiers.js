@@ -16,6 +16,8 @@
 import {
   BOARD_WIDTH,
   COLOR_COUNT,
+  LIGHT_SPILL,
+  LIGHT_SPILL_BY_LINES,
   OUTBREAK_CEILING,
   QUARANTINE_MAX,
   RATION_SPELL,
@@ -41,16 +43,22 @@ export const MODIFIERS = Object.freeze([
       + 'ceiling, and never past 1.6 times the viruses the level started with.',
   }),
   Object.freeze({
-    id: 'blackout',
-    name: 'Blackout',
-    icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 3v18a9 9 0 0 1 0-18z',
-    blurb: 'The bottle goes dark. Hold the light to bring it back.',
-    detail: 'Light drains away and the bottle fades. The light-therapy control '
-      + 'is held, not pressed, and it spends a reservoir that refills while you '
-      + 'play - so the question is when to spend it, never whether you '
-      + 'remembered it. Clear a run while the bottle is dark for the badge.',
-    bound: 'The reservoir always refills, so light is always available given '
-      + 'time, and the bottle never fades to fully black.',
+    id: 'phototherapy',
+    name: 'Phototherapy',
+    icon: 'M12 3v3M12 18v3M4.2 7.5l2.6 1.5M17.2 15l2.6 1.5M4.2 16.5l2.6-1.5'
+      + 'M17.2 9l2.6-1.5M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8',
+    blurb: 'The bottle silts up. Go make light to cut it.',
+    detail: 'Colonies shield themselves behind a matrix, so the bottle clouds '
+      + 'row by row, worst where the disease is worst. Cutting it is a second '
+      + 'treatment you deliver rather than a switch you flip: enter the light '
+      + 'chamber and tetromino-shaped light falls, and a completed line lights '
+      + 'that ROW of the patient. The cost is the dose in your hand - going to '
+      + 'the lamp places it where it would have landed, and the next capsule '
+      + 'waits until you come back.',
+    bound: 'The fog never hides the falling capsule or the column it will land '
+      + 'in, a row never goes fully black, the fog plateaus rather than '
+      + 'compounding, the lamp always comes back after its cooldown, and a run '
+      + 'can be won without ever entering the chamber.',
   }),
   Object.freeze({
     id: 'rationing',
@@ -100,9 +108,16 @@ export const modifierFor = (id) => MODIFIERS.find((m) => m.id === id);
  * Order matters only so that two runs with the same modifiers describe
  * themselves the same way.
  */
+/**
+ * Ids that have been renamed, so a link someone shared before the rename still
+ * opens the thing they meant.
+ */
+const RENAMED = Object.freeze({ blackout: 'phototherapy' });
+
 export function normaliseModifiers(input) {
   if (!input) return Object.freeze([]);
-  const wanted = new Set(typeof input === 'string' ? [input] : input);
+  const raw = typeof input === 'string' ? [input] : [...input];
+  const wanted = new Set(raw.map((id) => RENAMED[id] ?? id));
   return Object.freeze(MODIFIER_IDS.filter((id) => wanted.has(id)));
 }
 
@@ -170,6 +185,26 @@ export const outbreakCeiling = (startingViruses) =>
  */
 export const rationedOut = (pillsPlaced) =>
   Math.floor(pillsPlaced / RATION_SPELL) % COLOR_COUNT;
+
+// ---- phototherapy ---------------------------------------------------------
+
+/**
+ * How much the fog lifts around a lit row.
+ *
+ * The row itself clears outright. Light scatters, so rows either side clear by
+ * half as much again for each step out, and clearing several lines at once
+ * reaches further than clearing them one at a time - the same shape as a
+ * cascade, and the reason to stack rather than take every single line.
+ */
+export function lightSpill(row, lines, height) {
+  const reach = LIGHT_SPILL_BY_LINES[Math.min(lines, LIGHT_SPILL_BY_LINES.length - 1)] * LIGHT_SPILL;
+  const lifted = [];
+  for (let y = Math.max(0, row - reach); y <= Math.min(height - 1, row + reach); y += 1) {
+    const distance = Math.abs(y - row);
+    lifted.push({ row: y, clears: distance === 0 ? 1 : 1 / (distance + 1) });
+  }
+  return lifted;
+}
 
 // ---- quarantine -----------------------------------------------------------
 

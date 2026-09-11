@@ -145,7 +145,7 @@ hurry is floored at, so "twice as fast" never becomes "unplaceable".
 Take the generation cap out and the gauntlet's playability check goes red: the
 bot stops being able to keep up at all.
 
-### Blackout, and light therapy - `shipped`, and superseded by Phototherapy below
+### Blackout, and light therapy - `cut`, and replaced by Phototherapy below
 
 The bottle goes dark. A light-therapy switch brings it back for a few seconds,
 so you are playing and re-lighting at the same time. Clearing a run while the
@@ -180,7 +180,7 @@ it as a row of numbers identical to a plain game. The fix is a latch: once
 spent, the light will not come on again until the reservoir has climbed back to
 a third.
 
-### Phototherapy - `proposed`, and meant to replace the blackout above
+### Phototherapy - `shipped`, and it replaced the blackout above
 
 *The complaint that started this:* "It just goes dark and comes back. I'm
 supposed to be treating the patient."
@@ -240,13 +240,19 @@ fades after a few seconds. You cannot build a tower of light and bank it. Make
 lines or lose it - which is what stops the light chamber being a safe room to
 hide in when the bottle gets frightening.
 
-**6. The cost is time, and the capsule does not wait.** While you are working
-the lamp, the capsule *keeps falling* - under gravity, unsteered, locking
-wherever it lands. You chose to look away.
+**6. The cost is the dose in your hand.** *Changed during the build.* The design
+said the capsule keeps falling, unsteered, while you work the lamp. It was
+measured and it was much worse than it sounds: every abandoned capsule lands in
+the **spawn column**, so eight visits build a tower in the neck and top the
+bottle out. That is not a cost, it is a trap with a delay on it.
 
-That is the whole decision, and it is triage: **is it worth two badly-placed
-capsules to see the bottom of the bottle again?** The shipped version asks "did
-you remember to press the key". This one asks a question about the patient.
+What ships instead: going to the lamp **commits the capsule where it stands** -
+exactly where a hard drop would have put it - and **holds the next deal** until
+you come back. Same triage question, and it rewards the same thing: **is it
+worth the placement you are holding to see the bottom of the bottle again?** A
+player who plans places the dose first and then goes. A player who panics dumps
+it. The shipped blackout asked "did you remember to press the key". This asks a
+question about the patient.
 
 **7. It gets dirty again from play, not from a clock.** Each virus fogs its own
 row over time. A clear a virus *shrugs off* fogs harder - the colony has just
@@ -266,36 +272,72 @@ Nothing here may make a virus unanswerable, so:
   gets hard to read, not unplayable.
 - **Light mode always deals a piece and always accepts a line.** There is no
   state where the lamp refuses to work.
+- **The lamp rests between sessions and always comes back.** *Added during the
+  build*, and the only real abuse the mechanic had: with the fog at its ceiling
+  the case for going to the lamp is *always* true, so the playtest bot lived in
+  the chamber 95% of the run and placed a fifth of the capsules it otherwise
+  would. A lamp you would be a fool to ever leave is a room, not a decision. A
+  fixed cooldown makes it a rhythm - work, go, work - and because it is fixed,
+  never running at the start of a run, and always expires, the lamp can be made
+  to wait and can never be taken away.
 - **You can win without ever entering the light chamber.** It is an aid, not a
   gate.
 
 #### What it is worth
 
-The in-the-dark clear stays as a badge. But there is a better one available
-now: **clear a run in a row you lit yourself**, in the same breath - the light
-and the medicine landing together, which is the thing this mechanic is actually
+The in-the-dark clear stays as a badge, and the formulary gained a page beside
+it: **Light, delivered** - made a line in the chamber and lit a row of the
+patient with it. Like every other page it is written by the event the game
+already emits, so it is evidence that you did it rather than something you read
 about.
 
-#### Forks worth deciding before building
+#### The three forks, shipped as toggles
 
-Three, and they change the feel enough that guessing would be wrong:
+Three questions changed the feel enough that guessing would have been wrong, and
+the answer was that a hand has to decide them, not an argument. All three ship
+behind segmented controls in Options (and as `lightWidth`, `lightExit` and
+`lightView` on the URL), to be kept, cut or tuned on evidence:
 
 1. **How wide is the light chamber?** The bottle is 8 wide, which is very wide
-   for tetrominoes - lines would come easily and light would be cheap. A
-   narrower chamber (4-5) inside the bottle makes each line worth something.
-   Or full-width lines stay deliberately hard and rare.
-2. **Do you leave the light chamber when you want, or on a timer?** Leaving when
-   you want makes it a pure trade; a timer makes it a commitment.
-3. **One bottle or two views?** The light piece and the capsule on screen at
-   once is the most demanding and the most honest - you can see what your
-   neglect is costing in real time. Switching the bottle's view is clearer and
-   much easier to read.
+   for tetrominoes - lines come easily and light is cheap. Narrow (5) makes each
+   line worth something. *Measured:* narrow buys ~1.9 rows a visit, full-width
+   ~1.3, for the same time spent.
+2. **Do you leave when you want, or on a timer?** Leaving when you want is a
+   pure trade; a timer is a commitment.
+3. **One bottle or two views?** Both at once is the most demanding and the most
+   honest - you see what your neglect is costing in real time. Switching the
+   view is much easier to read.
 
-*What it would cost to build:* a second piece type and a second falling-piece
-controller, per-row visibility in the renderer, the fog model, the mode switch,
-and a gauntlet stage for the bounds above. The board and renderer are already
-cleanly separated, so this is a real piece of work but not a rewrite - the
-awkward part is that `Game` currently owns exactly one falling piece.
+#### What the build actually taught
+
+Worth writing down, because none of it was visible from the design:
+
+- **Dumb play wins no lines at all.** The first measurement of reachability used
+  a bot that dropped light in a random column; it never completed a line, which
+  said nothing about the mechanic. Verifying an aid is reachable needs a player
+  who can use it, so `tools/bot.mjs` grew a greedy light planner and the gate
+  and the report now ask about the same player.
+- **One line a session is a bad exchange rate.** The first tuning had a five-
+  piece session buying a single row out of seventeen. Light falls more than
+  twice as fast now (`LIGHT_FALL` 520 → 190) and a line **spills** into its
+  neighbours, further the more lines land together - the same shape as a
+  cascade, and the reason to stack rather than take every single line.
+- **An unbounded visit is not a visit.** A bot told to leave when the worst row
+  was clear never left: with viruses across a dozen rows there is always a row
+  re-fogging. Visits are bounded by lines won or time spent, whichever comes
+  first.
+- **The order of operations was load-bearing.** Committing the capsule before
+  opening the chamber deals a fresh capsule into an unsteered bottle, because
+  the lock resolves and asks for the next one. The chamber opens *first*, so the
+  deal finds the lamp already lit and waits.
+
+*What it cost to build:* `src/light.js` (a second falling-piece controller with
+its own seven-bag and its own grid), per-row fog in the model and a clipped
+gradient veil in the renderer, input routing at the top of every command, the
+three variant axes, six gauntlet checks and a lamp section in the playtest. The
+board and renderer were already cleanly separated, so it was a real piece of
+work and not a rewrite - the awkward part was that `Game` owned exactly one
+falling piece.
 
 ### Rationing - `shipped`
 
@@ -373,13 +415,13 @@ differently in the cave and in the clean room.
 This is what turns "there are interactions" into "I am finding the
 interactions", and it costs almost nothing: a set of flags, a line of copy each.
 
-*What shipped, and one change that made it better.* Ten discoveries, one for
+*What shipped, and one change that made it better.* Eleven discoveries, one for
 every mechanic on this page, and each one collects a note **per era** rather
 than a single note from wherever you happened to find it. Find a chain reaction
 in the cave and the shaman writes it up; find one again in the clean room and
 the technician writes it up beside them. So the notebook accumulates
 observations of one phenomenon across five eras of medicine, which is what a
-case book actually looks like - and it gives all fifty lines a reason to exist
+case book actually looks like - and it gives every one of those lines a reason to exist
 rather than forty-five of them being unreachable.
 
 A page you have not filled in says **nothing about itself**. It reads "Not yet
@@ -399,7 +441,7 @@ which is a fact about the bot, not about the game.
 | Antibiotic resistance | Viruses that survive build resistance and mutate to another colour. The arms race the whole theme rests on. |
 | Collateral sensitivity | A tolerant virus stops answering to its own colour and starts answering to an older one, cleared beside it. |
 | Hybrid strains | Capped by the wrong colour too long, a virus combines into a colour no capsule is dealt in. Both parents cure it; either one alone wears it down. |
-| Run modifiers | Outbreak, blackout, rationing, contaminated batch and quarantine, choosable together, each with a bound the gauntlet enforces. |
+| Run modifiers | Outbreak, phototherapy, rationing, contaminated batch and quarantine, choosable together, each with a bound the gauntlet enforces. |
 | The formulary | A notebook that fills in as you trigger interactions, collecting a note per era for each one. |
 | Antibodies | Both parents in one cascade synthesise a compound that takes the strain and the ring around it. |
 | The neck row | A row above the bottle. Filling the bottle is not a loss until capsules back up into the neck. |
@@ -410,8 +452,9 @@ which is a fact about the bot, not about the game.
 
 ## What is open
 
-**Phototherapy** is proposed and not built - see above. It is meant to replace
-the shipped blackout, which works and does not mean anything.
+**Phototherapy** shipped and replaced the blackout, which worked and did not
+mean anything. Its three open forks ship as toggles rather than as decisions -
+see above.
 
 Everything else on this page is built. That is not a finish line - it is an empty
 inbox, and the whole point of the page is that anyone can fill it again.

@@ -225,7 +225,7 @@ clipped inside.
   | Modifier | What it does | Why it is survivable |
   | --- | --- | --- |
   | Outbreak | Viruses replicate into empty cells; gravity halves to pay for it | A virus spreads once and never again, never above the virus ceiling, never past 1.6x the starting population |
-  | Blackout | The lights go out for five seconds every fourteen; hold Shift or L for light therapy | A blackout always ends on its own timer, and the bottle never fades to fully black |
+  | Phototherapy | The bottle silts up row by row, worst where the disease is; press Shift or L to go to the light chamber, where tetromino-shaped light falls and a completed line lights that row of the patient | The fog plateaus rather than compounding and a row never goes fully black, the lamp always comes back after its cooldown, and a run can be won without ever entering the chamber |
   | Rationing | Only two medicines in stock; viruses of the missing colour build tolerance every capsule while it is gone | The withheld colour rotates on a fixed timer, and tolerance always answers to the older medicine cleared beside it |
   | Contaminated batch | Some capsule halves are inert and belong to no run | An inert half washes out with any clear it is touching |
   | Quarantine | A column is sealed and refuses capsules | Clearing beside it breaks the seal, and it lifts on its own regardless; spawn columns are never sealed |
@@ -234,8 +234,8 @@ clipped inside.
   third of days plain - and says on the card which ones it drew. That is what
   stops the daily being the same game at a different level.
 - **The formulary** is a notebook that starts blank and fills in as you
-  *trigger* interactions, never as you read about them. Ten discoveries, one for
-  every mechanic, and each collects a note per era: find a chain reaction in the
+  *trigger* interactions, never as you read about them. Eleven discoveries, one
+  for every mechanic, and each collects a note per era: find a chain reaction in the
   cave and the shaman writes it up, find one again in the clean room and the
   technician writes it up beside them. A page you have not filled in says
   nothing about itself.
@@ -247,7 +247,7 @@ clipped inside.
 ## Development
 
 ```sh
-npm test           # 264 unit tests, no dependencies, well under a second
+npm test           # 269 unit tests, no dependencies, well under a second
 npm run test:watch # re-run on change
 
 # End-to-end checks in a real browser (Playwright is not a dependency):
@@ -275,6 +275,11 @@ src/rng.js            seedable PRNG - one seed reproduces a whole game
 src/board.js          the grid: matching, gravity, cascades, virus layouts
 src/pill.js           capsule geometry, rotation with wall kicks, locking
 src/game.js           the state machine: lock, clear, cascade, spawn, score
+src/light.js          the light chamber: phototherapy, played as falling light
+src/modifiers.js      the run modifiers, and the bound each one states
+src/formulary.js      the notebook: which interactions you have triggered
+src/eras.js           the five eras of medicine, and what each one calls things
+src/doctors.js        the physician who signs each era's notes
 src/versus.js         two games, garbage routed between them
 src/daily.js          the date-seeded daily challenge
 src/renderer.js       canvas drawing
@@ -286,7 +291,7 @@ sw.js                 service worker: precache everything, play offline
 manifest.webmanifest  installable app metadata
 tools/serve.js        the static server behind `npm start`
 tools/browser-check.mjs  end-to-end checks in a real browser
-tools/gauntlet.mjs    the UltraGauntlet: nine stages, one gate
+tools/gauntlet.mjs    the UltraGauntlet: thirteen stages, one gate
 docs/ultragauntlet.md what the gauntlet is and why each stage exists
 ```
 

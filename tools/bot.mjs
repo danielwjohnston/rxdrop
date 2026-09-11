@@ -175,3 +175,99 @@ export function steer(game, target) {
   return false;
 }
 
+
+// ---- the lamp -------------------------------------------------------------
+
+/**
+ * Where to drop the light piece: the flattest, least-holed chamber, with a
+ * completed line worth far more than a tidy stack.
+ *
+ * Same shape as `plan` for capsules, and here for the same reason - the gate
+ * and the measurement have to be asking about the same player. A bot that
+ * cannot work the lamp would report phototherapy as useless when what is
+ * useless is the bot.
+ */
+export function planLight(chamber) {
+  if (!chamber?.piece) return null;
+  let best = null;
+  for (let rotation = 0; rotation < 4; rotation += 1) {
+    for (let x = -3; x <= chamber.width; x += 1) {
+      let probe = { ...chamber.piece, rotation, x, y: 0 };
+      if (!chamber.fits(probe)) continue;
+      while (chamber.fits({ ...probe, y: probe.y + 1 })) probe = { ...probe, y: probe.y + 1 };
+      const cells = chamber.cellsOf(probe);
+      const stamped = cells.map(({ x: cx, y: cy }) => [cx, cy]);
+      for (const [cx, cy] of stamped) chamber.grid[chamber.index(cx, cy)] = { life: 1e9 };
+
+      let holes = 0;
+      let peak = 0;
+      let lines = 0;
+      for (let cx = 0; cx < chamber.width; cx += 1) {
+        let top = chamber.height;
+        for (let cy = 0; cy < chamber.height; cy += 1) {
+          if (chamber.at(cx, cy)) { top = cy; break; }
+        }
+        peak = Math.max(peak, chamber.height - top);
+        for (let cy = top + 1; cy < chamber.height; cy += 1) if (!chamber.at(cx, cy)) holes += 1;
+      }
+      for (let cy = 0; cy < chamber.height; cy += 1) {
+        let whole = true;
+        for (let cx = 0; cx < chamber.width; cx += 1) {
+          if (!chamber.at(cx, cy)) { whole = false; break; }
+        }
+        if (whole) lines += 1;
+      }
+      for (const [cx, cy] of stamped) chamber.grid[chamber.index(cx, cy)] = null;
+
+      const value = lines * 140 - holes * 14 - peak * 3 + Math.max(...cells.map((c) => c.y));
+      if (!best || value > best.value) best = { value, rotation, x };
+    }
+  }
+  return best;
+}
+
+/** Drives the light piece toward a plan. Returns true while still steering. */
+export function steerLight(game, target) {
+  const chamber = game.chamber;
+  if (!chamber?.piece || !target) return false;
+  if (chamber.piece.rotation !== target.rotation) return chamber.rotate(1);
+  if (chamber.piece.x < target.x) return chamber.move(1);
+  if (chamber.piece.x > target.x) return chamber.move(-1);
+  chamber.setHurry(true);
+  return false;
+}
+
+/**
+ * When a player goes to the lamp and when they come back.
+ *
+ * A visit is BOUNDED - by lines won or by time spent, whichever comes first -
+ * and that is not a convenience, it is the only sane policy. The first version
+ * of this left when the worst row in the bottle was clear again, and with
+ * viruses across a dozen rows there is always a row re-fogging: the bot walked
+ * into the chamber, stayed sixteen seconds, and lost the game with eight
+ * capsules placed. Nobody plays like that.
+ *
+ * `state` is the caller's, so one bot can run several games.
+ */
+export function workTheLamp(game, state = {}, { enterAt = 0.55, lines = 2, maxMs = 5000, ready = true } = {}) {
+  if (!game.has('phototherapy')) return null;
+  if (!game.inLight) {
+    // Only go once the dose in hand is where you want it. Entering commits the
+    // capsule where it stands, so a bot that walks off mid-flight dumps every
+    // one of them into the spawn column and tops the bottle out in six - which
+    // says nothing about the mechanic and everything about the bot.
+    if (ready && game.lampReady && game.worstFog >= enterAt) {
+      game.enterLight();
+      state.litAtEntry = game.rowsLit;
+      state.spent = 0;
+    }
+    return null;
+  }
+  state.spent = (state.spent ?? 0) + FRAME;
+  const won = game.rowsLit - (state.litAtEntry ?? 0);
+  if (won >= lines || state.spent >= maxMs) {
+    game.leaveLight('done');
+    return null;
+  }
+  return planLight(game.chamber);
+}

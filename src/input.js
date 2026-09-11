@@ -16,8 +16,9 @@ const KEY_MAP = {
   KeyZ: 'rotateCCW',
   KeyQ: 'rotateCCW',
   Space: 'hardDrop',
-  // Light therapy is HELD, never toggled - the decision the blackout modifier
-  // is about is when to spend the light, not whether you remembered a button.
+  // Light therapy is a TOGGLE. Going to the lamp commits the dose in your hand
+  // and holds the next, so it is a decision you make once rather than a key you
+  // hold - and a toggle is the only shape of it a phone can reach.
   ShiftLeft: 'light',
   ShiftRight: 'light',
   KeyL: 'light',

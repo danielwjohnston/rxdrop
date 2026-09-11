@@ -1,5 +1,7 @@
-import './runtime-overhaul.js';
-import './overhaul-ui.js';
+if (typeof window !== 'undefined') {
+  import('./runtime-overhaul.js');
+  import('./overhaul-ui.js');
+}
 
 /**
  * Lightweight procedural fallbacks for the authored practitioner atlas.

@@ -1,12 +1,8 @@
 /**
  * Offline support. Every file the game needs is precached on install, so once
- * RxDrop has been opened it plays with the network off - on a plane, on the
- * underground, or installed to a home screen.
- *
- * Bump CACHE when the file list or any cached file changes: the new worker
- * precaches under the new name and deletes the old cache on activate.
+ * RxDrop has been opened it plays with the network off.
  */
-const CACHE = 'rxdrop-v16';
+const CACHE = 'rxdrop-v17';
 
 const PRECACHE = [
   './',
@@ -25,21 +21,29 @@ const PRECACHE = [
   './src/versus.js',
   './src/daily.js',
   './src/eras.js',
+  './src/periods.js',
+  './src/art.js',
   './src/doctors.js',
   './src/modifiers.js',
   './src/formulary.js',
+  './src/runtime-overhaul.js',
+  './src/overhaul-ui.js',
+  './src/phototherapy.js',
+  './src/sonic-therapy.js',
+  './src/music.js',
+  './src/virus-theatre.js',
   './assets/favicon.svg',
   './assets/icon-180.png',
   './assets/icon-192.png',
   './assets/icon-512.png',
+  './assets/medical-era-sprites.svg',
+  './assets/virus-mascots.svg',
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches
       .open(CACHE)
-      // addAll is all-or-nothing, so a single 404 would leave the game
-      // half-cached and broken offline; fetch each file and report what failed.
       .then((cache) =>
         Promise.all(
           PRECACHE.map((url) =>
@@ -70,8 +74,6 @@ self.addEventListener('fetch', (event) => {
 
   event.respondWith(
     caches.match(request, { ignoreSearch: true }).then((cached) => {
-      // Serve from cache first: the game is static and this is what makes it
-      // work with no network. Refresh the entry in the background when online.
       const network = fetch(request)
         .then((response) => {
           if (response && response.ok) {
@@ -88,7 +90,6 @@ self.addEventListener('fetch', (event) => {
       }
       return network.then((response) => {
         if (response) return response;
-        // A navigation with nothing cached still gets the shell if we have it.
         return request.mode === 'navigate' ? caches.match('./index.html') : undefined;
       });
     }),

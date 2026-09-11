@@ -531,9 +531,9 @@ export class Renderer {
       for (let x = 0; x < chamber.width; x += 1) {
         const held = chamber.at(x, y);
         if (!held) continue;
-        // Light that is about to dissipate fades, so you can see what you are
-        // about to lose rather than having it vanish from under you.
-        lamp(x, y, Math.max(0.25, Math.min(1, held.life / 1200)));
+        // Light stands at full strength until it is cleared: it no longer has
+        // a lifetime to read off, and a fade here would say it did.
+        lamp(x, y, 1);
       }
     }
     for (const { x, y } of chamber.cellsOf()) lamp(x, y, 1);

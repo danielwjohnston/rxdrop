@@ -20,6 +20,7 @@ import {
   COLOR_COUNT,
   CONTAMINATION_EVERY,
   FOG_MAX,
+  LIGHT_COOLDOWN,
   LIGHT_SESSION,
   PILL,
   QUARANTINE_MAX,
@@ -237,18 +238,47 @@ describe('phototherapy: the fog, and the light you make to cut it', () => {
     assert.ok(Math.abs(game.fog[floor] - relieved) < 1e-9, 'a kill should clear its row');
   });
 
-  it('the chamber is never a dead end, however badly it is stacked', () => {
-    // Light decays, so a saturated chamber clears itself. It costs the session,
-    // never the run.
+  it('the chamber is never a dead end: flooding it ends the session, not the run', () => {
+    // Light used to fade, so a packed chamber cleared itself. It no longer
+    // fades - it stands until you clear it or leave - so the bound is reached
+    // the other way round: drown the chamber and you are handed back to the
+    // bottle. Either way it costs the session and never the run.
     const game = foggy();
     game.enterLight();
     for (let i = 0; i < game.chamber.grid.length; i += 1) {
-      game.chamber.grid[i] = { life: 500 };
+      game.chamber.grid[i] = { lit: true };
     }
     game.chamber.piece = null;
     assert.equal(game.chamber.saturated, true);
-    for (let t = 0; t < 2000; t += 16) game.updateLight(16);
-    assert.equal(game.chamber.saturated, false, 'the chamber should have cleared itself');
+
+    game.updateLight(16);
+    assert.equal(game.inLight, false, 'a flooded chamber should end the session');
+    assert.equal(game.isOver, false, 'and never the run');
+    // And the lamp comes back, so a flood is a setback rather than a loss.
+    for (let t = 0; t < LIGHT_COOLDOWN + 100; t += 16) game.updateLight(16);
+    assert.equal(game.lampReady, true, 'the lamp should come back after a flood');
+  });
+
+  it('light stands until it is cleared, however long you are in there', () => {
+    // Reported from play: "lights disappear before i get a chance to line up
+    // for the tetris". They do not any more. Lay one piece, wait out three
+    // times what the old decay was, and it is exactly where you left it.
+    const game = foggy();
+    game.enterLight();
+    const chamber = game.chamber;
+    while (chamber.spawns < 2) chamber.step();
+    const laid = chamber.grid.filter(Boolean).length;
+    assert.ok(laid > 0, 'a piece should have locked');
+
+    // Hold the fall clock at zero so nothing new is dealt: this is a test about
+    // what happens to light that is ALREADY down, and pieces landing on top of
+    // it would only muddy the count.
+    for (let t = 0; t < 45000; t += 16) {
+      chamber.fallTimer = 0;
+      chamber.update(16);
+    }
+    assert.equal(chamber.grid.filter(Boolean).length, laid, 'the light faded away');
+    assert.equal(chamber.spawns, 2, 'nothing new should have been dealt');
   });
 
   it('leaves on its own with the timer variant, and waits with the manual one', () => {
@@ -257,9 +287,15 @@ describe('phototherapy: the fog, and the light you make to cut it', () => {
     for (let t = 0; t < LIGHT_SESSION + 500; t += 16) timed.updateLight(16);
     assert.equal(timed.inLight, false, 'the timer variant should end the session');
 
+    // The manual variant waits to be told - but only for a player who is
+    // actually playing. Light no longer fades, so an abandoned chamber fills up
+    // and floods; clearing it as you go is what buys you the time.
     const manual = foggy({ lightExit: 'manual' });
     manual.enterLight();
-    for (let t = 0; t < LIGHT_SESSION * 3; t += 16) manual.updateLight(16);
+    for (let t = 0; t < LIGHT_SESSION * 3; t += 16) {
+      manual.updateLight(16);
+      if (manual.chamber) manual.chamber.grid.fill(null);
+    }
     assert.equal(manual.inLight, true, 'the manual variant should wait to be told');
     manual.toggleLight();
     assert.equal(manual.inLight, false);

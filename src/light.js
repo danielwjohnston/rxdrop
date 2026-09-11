@@ -12,12 +12,15 @@
  *   - Light never collides with medicine. These pieces fall through the capsule
  *     stack, because they are photons and not matter, and because an aid that
  *     sabotages the thing it is aiding is a trap.
- *   - Light that does not become a line DISSIPATES. You cannot bank a tower of
- *     it, so the chamber is never a safe room to hide in.
+ *   - Light STAYS until you clear it or leave. An earlier build faded it out
+ *     from under you on a timer, which read as the chamber eating your work:
+ *     "lights disappear before i get a chance to line up for the tetris". Stay
+ *     an hour if you like - the cost of standing at the lamp is the capsules
+ *     you are not placing, which is a cost the bottle already charges.
  *
  * Deliberately free of DOM and canvas, like the rest of the rules.
  */
-import { LIGHT_DECAY, LIGHT_FALL, LIGHT_FALL_FAST } from './constants.js';
+import { LIGHT_FALL, LIGHT_FALL_FAST } from './constants.js';
 
 /**
  * The seven tetrominoes, each as its cells in a square box. Rotations are
@@ -58,7 +61,7 @@ export class LightChamber {
     this.width = width;
     this.height = height;
     this.rng = rng;
-    /** null, or { life } counting down to nothing. */
+    /** null, or a marker object: light stands until cleared. */
     this.grid = new Array(width * height).fill(null);
     this.bag = [];
     this.piece = null;
@@ -168,7 +171,7 @@ export class LightChamber {
 
   lock() {
     for (const { x, y } of this.cellsOf()) {
-      this.grid[this.index(x, y)] = { life: LIGHT_DECAY };
+      this.grid[this.index(x, y)] = { lit: true };
     }
     this.piece = null;
     this.clearLines();
@@ -197,6 +200,9 @@ export class LightChamber {
       }
       for (let x = 0; x < this.width; x += 1) this.grid[this.index(x, 0)] = null;
     }
+    // Whatever takes cells out of the middle of the chamber has to let the rest
+    // come to rest, or light ends up hanging with nothing under it.
+    this.settle();
     this.lit.push(...full);
     return full;
   }
@@ -208,15 +214,81 @@ export class LightChamber {
     return lit;
   }
 
-  update(dt) {
-    // Light ages whether or not it is being used, which is what stops the
-    // chamber becoming somewhere to park.
-    for (let i = 0; i < this.grid.length; i += 1) {
-      const cell = this.grid[i];
-      if (!cell) continue;
-      cell.life -= dt;
-      if (cell.life <= 0) this.grid[i] = null;
+  /**
+   * The connected clumps of standing light, four-way.
+   *
+   * Light settles as a CLUMP rather than a column, which is the difference
+   * between this and a simple compaction. A piece that locks half over a gap is
+   * a legitimate overhang and has to stay one - flattening every column would
+   * quietly delete the whole point of having seven shapes.
+   */
+  clumps() {
+    const seen = new Uint8Array(this.grid.length);
+    const found = [];
+    for (let y = 0; y < this.height; y += 1) {
+      for (let x = 0; x < this.width; x += 1) {
+        const start = this.index(x, y);
+        if (seen[start] || this.grid[start] === null) continue;
+        const clump = [];
+        const queue = [[x, y]];
+        seen[start] = 1;
+        while (queue.length > 0) {
+          const [cx, cy] = queue.pop();
+          clump.push({ x: cx, y: cy });
+          for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+            const nx = cx + dx;
+            const ny = cy + dy;
+            if (nx < 0 || nx >= this.width || ny < 0 || ny >= this.height) continue;
+            const i = this.index(nx, ny);
+            if (seen[i] || this.grid[i] === null) continue;
+            seen[i] = 1;
+            queue.push([nx, ny]);
+          }
+        }
+        found.push(clump);
+      }
     }
+    return found;
+  }
+
+  /**
+   * Lets any clump of light that has nothing under it fall until something does.
+   *
+   * Decay takes cells one at a time, so without this a piece that fades out
+   * from UNDER another leaves the one above hanging in mid-air - reported from
+   * play as "sometimes it rests on the bottom and sometimes not even with
+   * nothing below". Nothing clever is happening there; it is a hole in the
+   * stack that nothing fell into.
+   *
+   * Overhangs survive, because a clump counts as supported the moment any one
+   * of its cells is on the floor or on another clump. Only light with nothing
+   * at all beneath it moves.
+   */
+  settle() {
+    let moved = false;
+    for (let pass = 0; pass < this.height; pass += 1) {
+      let movedThisPass = false;
+      for (const clump of this.clumps()) {
+        const own = new Set(clump.map(({ x, y }) => this.index(x, y)));
+        const supported = clump.some(({ x, y }) => {
+          if (y + 1 >= this.height) return true;
+          const below = this.index(x, y + 1);
+          return this.grid[below] !== null && !own.has(below);
+        });
+        if (supported) continue;
+        // Bottom-up, so a cell never overwrites one of its own clump.
+        for (const { x, y } of [...clump].sort((a, b) => b.y - a.y)) {
+          this.grid[this.index(x, y + 1)] = this.grid[this.index(x, y)];
+          this.grid[this.index(x, y)] = null;
+        }
+        moved = movedThisPass = true;
+      }
+      if (!movedThisPass) break;
+    }
+    return moved;
+  }
+
+  update(dt) {
     this.fallTimer += dt;
     const interval = this.fallInterval;
     let guard = 0;
@@ -230,9 +302,10 @@ export class LightChamber {
   /**
    * True when the chamber is packed too tightly to deal into.
    *
-   * Not a loss and not a dead end: light decays, so a saturated chamber clears
-   * itself within a few seconds. It is the chamber's own version of "you stacked
-   * badly", and it costs you the session rather than the run.
+   * Not a loss and not a dead end. Light no longer fades, so a flooded chamber
+   * does not clear itself - instead the Game ends the session and hands you back
+   * to the bottle. It is the chamber's own version of "you stacked badly", and
+   * it costs you the session rather than the run.
    */
   get saturated() {
     return this.piece === null;

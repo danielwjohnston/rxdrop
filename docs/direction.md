@@ -479,6 +479,16 @@ garbage.
 
 ## 17. Unused Light Should Dissipate
 
+> **Superseded in play, 11 September 2026.** Built as written, and it was wrong:
+> *"lights disappear before i get a chance to line up for the tetris... i'm not
+> expecting the tetris to go away at all unless through gameplay clearance or
+> turning light therapy off."* Light now stands until a line clears it or you
+> leave the lamp, and you may stay as long as you keep playing. What stops the
+> chamber being a permanent safe room is not a timer but the bottle: standing at
+> the lamp places no capsules and cures nothing. Drowning the chamber ends the
+> session. The section below is kept as written for the record.
+
+
 Incomplete light pieces should not remain forever.
 
 They should gradually lose coherence and fade away.
@@ -1056,6 +1066,15 @@ said so, and both written up in `docs/ideas.md`:
   chamber 95% of a run. The lamp now rests between sessions.
 
 **Section 26's discovery shipped** as *Light, delivered*.
+
+**Section 17 was cut in play** &mdash; see the note under it. Light does not
+dissipate. Three more things came back from the same session and are fixed:
+light was hanging in mid-air where a faded piece had been holding it up (a real
+defect &mdash; decay removed cells and nothing settled into the hole), the fog
+was too thin at 18% visibility to make the lamp worth its cost and now floors at
+7%, and the report that *"the medicine keeps coming while in light therapy
+mode"* turned out to be the overhaul branch's build rather than this one, which
+commits the dose and holds the next deal.
 
 **Sonotherapy** - sound as a third therapy, breaking the membrane the way light
 cuts the biofilm - is filed `proposed` in `docs/ideas.md`. It is the clearest

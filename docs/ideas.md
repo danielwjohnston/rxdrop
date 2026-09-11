@@ -240,10 +240,18 @@ capsule stack - they are photons, not matter - and settle on the floor among
 themselves. Light therapy must never make the medicine side harder; it is an
 aid, and an aid that sabotages you is a trap.
 
-**5. Unused light dissipates.** A light piece that does not complete a line
-fades after a few seconds. You cannot build a tower of light and bank it. Make
-lines or lose it - which is what stops the light chamber being a safe room to
-hide in when the bottle gets frightening.
+**5. Unused light dissipates.** ~~A light piece that does not complete a line
+fades after a few seconds.~~ *Cut in play.* Built as written and it ate the
+player's work: "lights disappear before i get a chance to line up for the
+tetris". Light now **stands until a line clears it or you leave**, and a session
+can last as long as you keep playing.
+
+What stops the chamber being a safe room turns out not to need a timer. Standing
+at the lamp places no capsules and cures no viruses, so the run does not advance
+while you are in there - the bottle charges for the time by itself. And the
+chamber can still be lost: light no longer clears itself, so pack it to the lip
+and it **floods**, which ends the session and hands you back to the bottle. The
+lamp then returns after its cooldown, so a flood is a setback and never a loss.
 
 **6. The cost is the dose in your hand.** *Changed during the build.* The design
 said the capsule keeps falling, unsteered, while you work the lamp. It was

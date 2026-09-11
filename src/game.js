@@ -592,6 +592,14 @@ export class Game {
     this.chamber.update(dt);
     const lit = this.chamber.drainLit();
     if (lit.length > 0) this.lightRows(lit);
+    // Light no longer fades, so a chamber packed to the lip cannot clear itself.
+    // Flooding it ends the SESSION and hands you back to the bottle - the same
+    // bound as before ("it costs the session, never the run"), reached the other
+    // way round. Stand at the lamp as long as you like; just do not drown it.
+    if (this.chamber.saturated) {
+      this.leaveLight('flooded');
+      return;
+    }
     if (this.lightExit === 'timer') {
       this.lightTimer -= dt;
       if (this.lightTimer <= 0) this.leaveLight('expired');

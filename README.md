@@ -293,6 +293,8 @@ tools/serve.js        the static server behind `npm start`
 tools/browser-check.mjs  end-to-end checks in a real browser
 tools/gauntlet.mjs    the UltraGauntlet: thirteen stages, one gate
 docs/ultragauntlet.md what the gauntlet is and why each stage exists
+docs/direction.md     the creative direction: what the project is becoming
+docs/ideas.md         the design workshop: mechanics proposed, shipped and cut
 ```
 
 The rules live entirely in `board.js`, `pill.js` and `game.js`, which never

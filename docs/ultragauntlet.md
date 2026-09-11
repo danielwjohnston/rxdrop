@@ -59,7 +59,7 @@ Run them all with `node tools/gauntlet.mjs`, or a few with
 | 8 | `hybrid` | A combined strain must still come apart. Proves no capsule is ever dealt in a hybrid colour and no hybrid ever appears in a match; that both parents cure every strain in either order; that both in one cascade always synthesise an antibody; that one parent alone always breaks it in the end; and that a hybrid never forms anywhere it cannot be treated from. |
 | 9 | `modifiers` | A modifier may change a run, never end it. Executes the bound each modifier writes down: outbreak's three caps and its gravity floor, blackout's self-ending timer and never-black floor and a light that is neither free nor spendable into a corner, rationing's rotation and the cost it has to impose, the contaminated batch washing out, quarantine's expiry and its placement-only reach - then plays every modifier alone and all five at once with the same bot the playtest uses, and finally plays the whole formulary at once to prove every discovery in the notebook is one that playing can actually trigger. |
 | 10 | `versus` | Two games in one page stay separate. Asserts every attack sent is an attack received, that a match always resolves to exactly one winner, and that one player's input cannot touch the other's board. |
-| 11 | `playtest` | The game is playable, not merely legal. Asserts a hurried capsule never falls faster than a hand can place a lateral into it, and that a capsule always lands with time to be steered. `npm run playtest` runs the full version: a bot plays whole games and reports reaction budgets, juggling room, hybrid cures and how far it gets. |
+| 11 | `playtest` | The game is playable, not merely legal. Asserts a hurried capsule never falls faster than a hand can place a lateral into it, and that a capsule always lands with time to be steered. `npm run playtest` runs the full version: a bot plays whole games and reports reaction budgets, juggling room, hybrid cures, what pressing hurry does at each point of a cell, and how far it gets. |
 | 12 | `performance` | The rules are cheap. Measures worst-case and average `update()` cost at level 20 with resistance on against the 16.7 ms frame budget. |
 | 13 | `browser` | It works in a browser, not just in Node. Runs the Playwright checks: menus, gamepad, touch gestures, versus, the daily, offline play, and a page with neither Web Audio nor localStorage. Skips cleanly if Playwright is not installed. |
 
@@ -108,6 +108,16 @@ The stages are not ceremony. Building this set surfaced real defects:
   the check failed on the *unmodified* game. The fix was to lift the playtest
   bot into `tools/bot.mjs` so the gate and the measurement ask about the same
   player; a stand-in that cannot play says nothing about the rule under test.
+- **`playtest`** now carries two checks written against a play report rather
+  than a hunch. The drop timer banked *milliseconds* toward the next row against
+  an interval that pressing hurry could shrink sevenfold, so a nearly-full cell
+  was suddenly worth seven rows and got cashed in on the next frame - felt as
+  "sometimes hurry is hurry and sometimes it will still snap", and felt random
+  because how far it snapped depended on where in the gravity cycle the key went
+  down. And both rotation kick tables had upward nudges in them, so lining a
+  capsule up with a notch and turning it could hop it on top of the thing it was
+  meant to slot beside. Both checks sweep every speed, every gravity tier and
+  every point of the fall rather than sampling one.
 - **`boundaries`** codifies the virus-ceiling rule after viruses were found
   spawning two rows below the neck by level 6.
 - **`browser`** caught three checks that had hard-coded row 15 as the floor of

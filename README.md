@@ -178,8 +178,14 @@ it?".
 - Gravity gets faster every ten capsules.
 - **Hurrying** a capsule holds it at a multiple of the level's own gravity, with
   a floor, so it is always fast enough to save time and never so fast you cannot
-  place a last lateral. There is no snap to the bottom unless you ask for one:
-  **Instant drop** is a setting on the title screen, off by default.
+  place a last lateral. Pressing it changes a *speed* and never a position: the
+  capsule does not move on the press itself, whatever point of the fall you
+  press at. There is no snap to the bottom unless you ask for one: **Instant
+  drop** is a setting on the title screen, off by default.
+- **A rotation never lifts the capsule.** It will lay itself down sideways to
+  make room, and a capsule in the neck will drop a row to stand up, but nothing
+  turns a capsule upward - so lining one up with a notch and turning it can
+  never hop it on top of what you were aiming beside.
 - With **resistance** on, a virus that survives long enough turns tolerant: four
   of its own colour clears the medicine but the virus shrugs it off, shedding a
   stack. What kills it is its **collateral colour** - red answers to blue,
@@ -225,7 +231,7 @@ it?".
 ## Development
 
 ```sh
-npm test           # 255 unit tests, no dependencies, well under a second
+npm test           # 264 unit tests, no dependencies, well under a second
 npm run test:watch # re-run on change
 
 # End-to-end checks in a real browser (Playwright is not a dependency):

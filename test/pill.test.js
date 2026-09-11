@@ -12,6 +12,7 @@ import {
   tryMove,
   tryRotate,
 } from '../src/pill.js';
+import { createRng } from '../src/rng.js';
 
 const coords = (pill) => pillCells(pill).map(({ x, y }) => [x, y]);
 
@@ -202,13 +203,53 @@ describe('rotation kicks out of tight spots', () => {
     assert.deepEqual(coords(rotated), [[4, 8], [4, 7]]);
   });
 
-  it('lifts a row when both sides are blocked', () => {
+  it('refuses rather than lifting the capsule out of a one-wide slot', () => {
+    // Reported from play: lining a capsule up with a notch, turning it, and
+    // watching it hop ON TOP of the thing it was meant to slot beside.
+    //
+    // This test used to assert the opposite - that a blocked turn lifts a row -
+    // which was an assumption of mine, not a rule of the game. Nothing else in
+    // this game moves a capsule upward, and a rotation that does is worse than
+    // a rotation that simply does not happen: you can always nudge sideways and
+    // try again, but you cannot un-hop.
     const board = new Board();
     block(board, 2, 8);
     block(board, 4, 8);
     const rotated = tryRotate(board, createPill([0, 1], 3, 8, 1));
-    assert.ok(rotated, 'a one-wide slot should still allow a turn upward');
-    assert.deepEqual(coords(rotated), [[3, 7], [4, 7]]);
+    assert.equal(rotated, null, 'a one-wide slot must not launch the capsule upward');
+  });
+
+  it('never moves a capsule upward, from anywhere, in any direction', () => {
+    // The general form, swept rather than argued. A rotation may lay the
+    // capsule down sideways or, in the neck, drop it a row - never lift it.
+    const rng = createRng(31);
+    for (let seed = 0; seed < 300; seed += 1) {
+      const board = new Board();
+      for (let i = 0; i < 40; i += 1) {
+        block(board, rng.int(board.width), 4 + rng.int(board.height - 4));
+      }
+      for (let x = 0; x < board.width; x += 1) {
+        for (let y = 0; y < board.height; y += 1) {
+          for (let orientation = 0; orientation < 4; orientation += 1) {
+            const pill = createPill([0, 1], x, y, orientation);
+            if (!fits(board, pill)) continue;
+            for (const direction of [1, -1]) {
+              const turned = tryRotate(board, pill, direction);
+              if (!turned) continue;
+              assert.ok(
+                turned.y >= pill.y,
+                `rotating at ${x},${y} o${orientation} lifted the capsule to ${turned.y}`,
+              );
+              // And the cells it lands in must never be above the cells it
+              // came from - the anchor is not the whole story for a vertical.
+              const was = Math.max(...pillCells(pill).map((c) => c.y));
+              const now = Math.max(...pillCells(turned).map((c) => c.y));
+              assert.ok(now >= was, `rotating at ${x},${y} o${orientation} lifted a half`);
+            }
+          }
+        }
+      }
+    }
   });
 
   it('turns in the corner of a filled bottle', () => {

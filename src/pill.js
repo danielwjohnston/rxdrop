@@ -93,9 +93,6 @@ const HORIZONTAL_KICKS = Object.freeze([
   [0, 0],
   [-1, 0], // Blocked to the right, by a wall or the stack: lay down leftwards.
   [1, 0], // Blocked to the left.
-  [0, -1], // Both sides blocked: lift a row and lay down there.
-  [-1, -1], // Lift and shift, for a capsule wedged into a corner.
-  [1, -1],
 ]);
 
 /** Turning to vertical: cells (x, y) and (x, y - 1). */
@@ -106,11 +103,9 @@ const VERTICAL_KICKS = Object.freeze([
   // makes the nudge feel like the capsule rather than a teleport.
   [1, 0],
   [-1, 0], // Both of its own columns blocked: step out one.
-  [0, -1],
-  [1, -1],
-  [-1, -1],
-  // Last, because kicking downwards can drop a capsule onto the stack: this is
-  // what lets a freshly dealt capsule stand up in the neck row.
+  // Last, and the only kick that moves the capsule off its row: one row DOWN,
+  // which is what lets a freshly dealt capsule stand up in the neck row where
+  // the row above it is the ceiling. Gravity was taking it there anyway.
   [0, 1],
 ]);
 
@@ -118,6 +113,14 @@ const VERTICAL_KICKS = Object.freeze([
  * Rotates by a quarter turn (+1 clockwise, -1 counter-clockwise), kicking the
  * pill away from walls and the stack when the naive rotation does not fit.
  * Returns null only when there is genuinely nowhere for the capsule to turn.
+ *
+ * Every kick here is sideways, with one exception that goes DOWN. **A rotation
+ * never lifts the capsule.** An earlier version had upward kicks in both
+ * tables - "both sides blocked: lift a row and lay down there" - and they did
+ * the single worst thing a rotation can do: you line the capsule up with a
+ * notch in the stack, turn it, and instead of slotting in it hops on top of the
+ * thing you were aiming beside. Nothing else in this game moves a capsule up,
+ * and rotation should not be the exception.
  */
 export function tryRotate(board, pill, direction = 1) {
   const orientation = (pill.orientation + (direction === 1 ? 1 : 3)) % 4;

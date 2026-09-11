@@ -36,6 +36,8 @@ import {
   MATCH_LENGTH,
   MAX_LEVEL,
   PILL,
+  DEAL_DELAY,
+  PILLS_PER_SPEED_UP,
   RESISTANCE_INTERVAL,
   RESISTANCE_MAX,
   SPEEDS,
@@ -53,7 +55,7 @@ import {
 import { Game, PHASE } from '../src/game.js';
 import { MODIFIERS, MODIFIER_IDS, normaliseModifiers } from '../src/modifiers.js';
 import { DISCOVERY_IDS, Formulary, discoveriesIn } from '../src/formulary.js';
-import { createPill, fits, tryMove } from '../src/pill.js';
+import { createPill, fits, pillCells, tryMove, tryRotate } from '../src/pill.js';
 import { FRAME, plan, steer } from './bot.mjs';
 import { VersusMatch } from '../src/versus.js';
 import { dailySetup } from '../src/daily.js';
@@ -1058,6 +1060,82 @@ stage('playtest', 'The game must be playable, not merely legal', (check) => {
           `${speed} level ${level} hurries at ${game.fallInterval}ms a row,`
           + ` under the ${HAND_FLOOR}ms a hand needs`,
         );
+      }
+    }
+  });
+
+  check('hurrying changes a speed and never moves the capsule', () => {
+    // Three symptoms, one cause. The drop timer banked MILLISECONDS toward the
+    // next row against an interval that pressing hurry could shrink sevenfold,
+    // so a nearly-full cell was suddenly worth seven rows and got cashed in on
+    // the next frame. Reported from play as "sometimes hurry is hurry and
+    // sometimes it will still snap", as things "going really fast", and as the
+    // capsule leaping on screen - and it felt random because how far it snapped
+    // depended on where in the gravity cycle the key went down.
+    for (const speed of Object.keys(SPEEDS)) {
+      for (const tier of [0, 4, 8, 16]) {
+        for (let share = 0.05; share < 1; share += 0.05) {
+          const game = new Game({ level: 0, speed, seed: 11 });
+          game.board.forEachCell((c, x, y) => game.board.set(x, y, null));
+          game.pillsPlaced = tier * PILLS_PER_SPEED_UP;
+          game.spawnPill();
+          game.update(DEAL_DELAY + 2);
+          game.dropTimer = 0;
+          game.update(game.dropInterval * share);
+
+          const row = game.pill.y;
+          const drawn = game.dropProgress;
+          game.setSoftDrop(true);
+          assert.equal(game.pill.y, row, `${speed} t${tier}: the press itself moved the capsule`);
+          assert.ok(
+            Math.abs(game.dropProgress - drawn) < 0.02,
+            `${speed} t${tier} at ${share.toFixed(2)}: the press jumped the capsule from`
+            + ` ${drawn.toFixed(2)} to ${game.dropProgress.toFixed(2)} of a cell`,
+          );
+          game.update(16);
+          assert.ok(
+            game.pill.y - row <= 1,
+            `${speed} t${tier} at ${share.toFixed(2)}: hurrying dropped`
+            + ` ${game.pill.y - row} rows in one frame`,
+          );
+        }
+      }
+    }
+  });
+
+  check('a rotation never lifts the capsule', () => {
+    // Reported from play: lining a capsule up with a notch, turning it, and
+    // watching it hop ON TOP of the thing it was meant to slot beside. Two of
+    // the kick tables had upward nudges in them. Nothing else in this game
+    // moves a capsule up, and a rotation that does is worse than one that
+    // simply does not happen - a refusal can be answered with a sideways nudge
+    // and another try, a hop cannot be undone.
+    const rng = createRng(4242);
+    for (let seed = 0; seed < 60; seed += 1) {
+      const board = new Board();
+      generateLevel(board, 8 + (seed % 12), createRng(seed));
+      for (let i = 0; i < 30; i += 1) {
+        const x = rng.int(board.width);
+        const y = 4 + rng.int(board.height - 4);
+        if (board.isEmpty(x, y)) board.set(x, y, cell(rng.int(COLOR_COUNT), PILL, null));
+      }
+      for (let x = 0; x < board.width; x += 1) {
+        for (let y = 0; y < board.height; y += 1) {
+          for (let orientation = 0; orientation < 4; orientation += 1) {
+            const pill = createPill([0, 1], x, y, orientation);
+            if (!fits(board, pill)) continue;
+            for (const direction of [1, -1]) {
+              const turned = tryRotate(board, pill, direction);
+              if (!turned) continue;
+              const was = Math.max(...pillCells(pill).map((c) => c.y));
+              const now = Math.max(...pillCells(turned).map((c) => c.y));
+              assert.ok(
+                turned.y >= pill.y && now >= was,
+                `seed ${seed}: rotating at ${x},${y} o${orientation} lifted the capsule`,
+              );
+            }
+          }
+        }
       }
     }
   });

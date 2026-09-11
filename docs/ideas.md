@@ -4,6 +4,11 @@ This is the design workshop for RxDrop. It exists so that ideas - mine, yours,
 anyone's - can be argued about against something, rather than piling up as a
 list of nice thoughts.
 
+The something they are argued against is the goal below, and behind that
+[the creative direction](direction.md) - what the project is trying to become.
+This page is the inbox; that one is the north star. Where they disagree, this
+page says what is *true* and that one says what we *want*.
+
 **Suggest one:** [mechanic](https://github.com/danielwjohnston/rxdrop/issues/new?template=mechanic.yml)
 · [challenge](https://github.com/danielwjohnston/rxdrop/issues/new?template=challenge.yml)
 · [theme](https://github.com/danielwjohnston/rxdrop/issues/new?template=theme.yml)

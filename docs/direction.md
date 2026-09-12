@@ -9,8 +9,9 @@
 > are measured against. Where the two disagree, this page says what we *want*
 > and that page says what is *true*.
 >
-> A dated note on what has moved since is at the bottom. The body is left as
-> written.
+> A dated note on what has moved since, and an addendum carrying direction that
+> arrived later, are at the bottom. The body is left as written; where the
+> addendum contradicts it, the addendum wins.
 
 ## Project Identity
 
@@ -1091,3 +1092,114 @@ not a merge. Nobody should assume that branch and `main` agree.
 
 Not yet started: sections 1-10 (the finer visual periods, authored sprites, the
 virus theatre, music per period) and sections 27, 32.
+
+---
+
+## Addendum — 12 September 2026
+
+Direction that arrived after the body above was captured. Kept separate from it
+rather than edited in, so the original stays readable as what was written on the
+day. Where this contradicts the body, this wins.
+
+### The frame is a laboratory, and every bottle is a sample
+
+> "In my mind the bottles are samples, and the different loads and their
+> behaviour are each kind of contagion that must be researched. We work on this
+> in a lab, via bottles and petri dishes and whatever makes sense narratively
+> that we can then work a sensible new-classic mechanic onto."
+
+This sharpens section 1 rather than replacing it, and it is worth stating
+plainly because it settles several things at once:
+
+- **Why there are levels.** Each is a different sample, a different load, a
+  different contagion. You are not fighting one disease through twenty rooms;
+  you are working a caseload.
+- **Why the formulary exists at all.** A researcher keeps a notebook. The
+  notebook is not a UI convenience, it is the thing the job produces.
+- **Why the player replays.** Research is repetition with variation. A daily
+  challenge is the same sample sent to every lab in the world on the same day,
+  which is a genuinely good reason for it to exist.
+- **Why the practitioner changes but the work does not.** The bench is the
+  constant. Ochre bowl, apothecary's jar, culture vessel, bioreactor - the
+  vessel changes and the question does not.
+
+It also gives the lamp its footing. Putting a sample under the light and holding
+everything else still is exactly what a bench does, and it is why the light
+chamber freezing the disease reads as correct rather than as a convenience.
+
+The player-facing word stays **bottle**. The lab is the frame around it, not a
+new noun to learn.
+
+### The art style is the timeline
+
+Thirty style explorations were produced across three sheets - game-native
+(pixel through low-poly 3D), illustration and historical technique, and physical
+through photoreal - each showing the same five practitioners.
+
+**The finding: sheet two's rows are themselves a chronology.** Illuminated
+manuscript, woodcut engraving, Victorian newspaper, pulp advertising,
+mid-century editorial. That is the history of *print*, running alongside the
+history of medicine, and they are the same timeline. Patent medicine **is** pulp
+advertising. Germ theory **is** the mid-century editorial diagram.
+
+So the direction is not to pick a row and apply it to eleven periods. It is to
+walk **down the column** as the ladder advances: the medium changes with the era.
+That is a far stronger signal than a costume change, and it is what section 2
+is asking for when it says the periods must not merely swap costumes. How we
+*depicted* medicine changed because how we *understood* it changed - which is
+this game's whole thesis, rendered rather than narrated.
+
+**Sheet three's lower half is wrong for this game.** Cinematic, ultra-photo and
+futuristic HDR fight the product they would sit in: the bottle, capsules and
+viruses are procedurally drawn shapes, and a photoreal portrait beside them
+reads as two different games. The upper half - claymation, felt, carved wood,
+porcelain - is *stylised physical* and could work; porcelain in particular sells
+"specimen jar". But those say craft object, not medical history.
+
+**Sheet one is the safe answer and should be resisted.** Pixel art survives small
+sizes better than anything and is the cheapest to produce, but it says "retro
+game" rather than "nine centuries of medicine", which flattens the one thing
+that makes this project distinct. The 8-bit → 16-bit → 3D progression is a
+chronology too, of *games* - a clever joke that undercuts the fiction instead of
+serving it.
+
+#### The constraint that decides it, and it is not taste
+
+In game the practitioner renders at about **130 pixels**, in a side panel, and
+smaller on a phone. The exploration sheets show them at roughly double that.
+Woodcut engraving and illuminated manuscript are detail-dense and turn to grey
+smudge at portrait size. Of sheet two, **ligne claire and comic book ink**
+survive small sizes best: clean outlines, flat fills, high contrast.
+
+**Nothing should be commissioned before it has been seen at 130px against the
+real bottle.** That test is cheap and it is the only one that matters.
+
+#### Consistency is the risk
+
+Eleven media across eleven periods can read as eleven different games. What holds
+it together has to be decided up front and enforced: one palette system (the era
+tints already exist and already do this job), one framing and silhouette rule,
+one canvas treatment. Section 9 already says the soundtrack must remain
+"recognizably part of one game" - the art needs the same sentence and the same
+discipline.
+
+### Historical credibility: two live instances
+
+Section 3 warns against iconic imagery placed centuries out of position. Both
+of the following are in the current work rather than hypothetical, and both are
+cheap to fix now and expensive after thirty assets exist.
+
+**The plague mask sits in a band labelled 1347–1799.** The beaked costume is
+documented from the 1600s - roughly three centuries after the Black Death it is
+popularly attached to. The band's opening date and its practitioner disagree.
+Either the band starts later, or the practitioner changes. This appears in the
+shipped procedural art *and* across all three exploration sheets.
+
+**The paleolithic healer is wearing a Plains war bonnet.** Several sheet panels
+give the prehistoric practitioner a feathered headdress. That is specific 18th
+and 19th century Plains regalia, not paleolithic anything - and unlike the plague
+doctor it is a living culture's ceremonial dress standing in for "primitive",
+which is a different and worse category of error. Real paleolithic material
+culture - ochre, hide, bone, antler, shell, cordage - is more distinctive
+anyway, and carries none of that freight.
+

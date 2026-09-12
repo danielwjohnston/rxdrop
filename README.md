@@ -247,7 +247,7 @@ clipped inside.
 ## Development
 
 ```sh
-npm test           # 269 unit tests, no dependencies, well under a second
+npm test           # 276 unit tests, no dependencies, well under a second
 npm run test:watch # re-run on change
 
 # End-to-end checks in a real browser (Playwright is not a dependency):
@@ -286,13 +286,18 @@ src/renderer.js       canvas drawing
 src/audio.js          Web Audio synthesis: two chiptune loops and the effects
 src/input.js          keyboard, touch, swipe and gamepad
 src/main.js           screens, HUD, persistence and the animation loop
+src/styles.css        every pixel of chrome around the canvas
 test/                 unit tests for the rules, plus randomised soak runs
+tools/bot.mjs         the shared bot: the gate and the report play the same way
+tools/playtest.mjs    the bot plays, and reports on how the game FEELS
 sw.js                 service worker: precache everything, play offline
 manifest.webmanifest  installable app metadata
 tools/serve.js        the static server behind `npm start`
 tools/browser-check.mjs  end-to-end checks in a real browser
 tools/gauntlet.mjs    the UltraGauntlet: thirteen stages, one gate
 docs/ultragauntlet.md what the gauntlet is and why each stage exists
+docs/branch-audit.md  the two branches compared, and which parts survive
+docs/collaboration.md how several agents work here without waste
 docs/direction.md     the creative direction: what the project is becoming
 docs/ideas.md         the design workshop: mechanics proposed, shipped and cut
 ```

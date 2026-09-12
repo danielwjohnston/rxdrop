@@ -57,7 +57,7 @@ Run them all with `node tools/gauntlet.mjs`, or a few with
 | 6 | `resistance` | The new mechanic obeys the old rules. 200 seeded boards mutated repeatedly, checking a mutation never creates a free clear, never changes the virus count, and always hands play back. |
 | 7 | `collateral` | No virus may become unanswerable. Sweeps every colour at every resistance level to prove something still kills it, checks that a collateral kill only ever takes tolerant viruses, and that resolution terminates on a board where everything shrugs. |
 | 8 | `hybrid` | A combined strain must still come apart. Proves no capsule is ever dealt in a hybrid colour and no hybrid ever appears in a match; that both parents cure every strain in either order; that both in one cascade always synthesise an antibody; that one parent alone always breaks it in the end; and that a hybrid never forms anywhere it cannot be treated from. |
-| 9 | `modifiers` | A modifier may change a run, never end it. Executes the bound each modifier writes down: outbreak's three caps and its gravity floor, blackout's self-ending timer and never-black floor and a light that is neither free nor spendable into a corner, rationing's rotation and the cost it has to impose, the contaminated batch washing out, quarantine's expiry and its placement-only reach - then plays every modifier alone and all five at once with the same bot the playtest uses, and finally plays the whole formulary at once to prove every discovery in the notebook is one that playing can actually trigger. |
+| 9 | `modifiers` | A modifier may change a run, never end it. Executes the bound each modifier writes down: outbreak's three caps and its gravity floor, phototherapy's film ceiling and its guarantee that a line always scrubs the lowest filmed row and that the lamp never traps or abandons you, rationing's rotation and the cost it has to impose, the contaminated batch washing out, quarantine's expiry and its placement-only reach - then plays every modifier alone and all five at once with the same bot the playtest uses, and finally plays the whole formulary at once to prove every discovery in the notebook is one that playing can actually trigger. |
 | 10 | `versus` | Two games in one page stay separate. Asserts every attack sent is an attack received, that a match always resolves to exactly one winner, and that one player's input cannot touch the other's board. |
 | 11 | `playtest` | The game is playable, not merely legal. Asserts a hurried capsule never falls faster than a hand can place a lateral into it, and that a capsule always lands with time to be steered. `npm run playtest` runs the full version: a bot plays whole games and reports reaction budgets, juggling room, hybrid cures, what pressing hurry does at each point of a cell, and how far it gets. |
 | 12 | `performance` | The rules are cheap. Measures worst-case and average `update()` cost at level 20 with resistance on against the 16.7 ms frame budget. |
@@ -135,7 +135,16 @@ The stages are not ceremony. Building this set surfaced real defects:
 ## Using it
 
 ```sh
-node tools/gauntlet.mjs           # everything, ~40s with Playwright installed
+node tools/gauntlet.mjs           # everything, ~5min with Playwright installed
+
+# The cost is NOT evenly spread. Eleven of the thirteen stages together take
+# 1.4 seconds; `modifiers` takes ~240s and `browser` ~65s. So while iterating:
+node tools/gauntlet.mjs rules determinism timing boundaries fuzz \
+  resistance collateral hybrid versus playtest performance   # 1.4s, 11 stages
+
+# Add `modifiers` when you touch src/modifiers.js or src/light.js.
+# Add `browser` when you touch index.html, styles.css, main.js or sw.js.
+# Run the whole thing once, before handing off.
 node tools/gauntlet.mjs --list    # the stages and what they attack
 node tools/gauntlet.mjs fuzz      # one stage while iterating
 ```

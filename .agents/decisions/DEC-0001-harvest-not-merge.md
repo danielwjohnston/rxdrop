@@ -1,7 +1,7 @@
 # DEC-0001 — Harvest the overhaul branch's art; do not merge the branch
 
 **Date:** 12 September 2026
-**Status:** recommendation — **awaiting Principal decision**
+**Status:** **accepted by the Principal**
 **Author:** `claude-opus-5`
 **Evidence:** [`docs/branch-audit.md`](../../docs/branch-audit.md)
 **Review:** three cycles, [`docs/collaboration.md`](../../docs/collaboration.md) §6
@@ -14,7 +14,7 @@ overlapping ideas. Which parts of which should survive?
 ## Options considered
 
 1. **Merge the branch into `main`.**
-2. **Harvest its art onto `main`, leave its mechanics.** ← recommended
+2. **Harvest its art onto `main`, leave its mechanics.** ← **accepted**
 3. **Keep both branches indefinitely as competing directions.**
 
 ## Evidence
@@ -50,20 +50,29 @@ service worker cache upward — while touching `Game`, `Board` and
 
 ## Recommendation
 
-**Option 2.** Confidence: **high** on the technical comparison; **medium** on
-sequencing, which depends on an untested assumption (below).
+**Option 2 — accepted.** Confidence remains **high** on the technical comparison.
+The sequencing guard below remains mandatory.
 
 ## Principal decision
 
-**Not yet given.** Two parts of this require the Principal under §3:
+**Accepted by Daniel Johnston, Principal, on 12 September 2026.**
 
-1. **Branch consolidation.** The plan's step "tag `archive/openai-medical-eras`
-   and delete the branch" is a destructive repository operation over a branch
-   this agent did not create. **No agent should do this without Daniel's
-   explicit instruction.** Recorded here as a recommendation only.
-2. **Whether to consolidate at all.** §8 warns against collapsing competing
-   branches merely for neatness, and this one may be worth keeping as a
-   reference for the art even after harvesting.
+The authoritative direction is:
+
+1. Harvest the valuable art and presentation work from
+   `openai/medical-eras-visual-overhaul` onto current `main`; do not merge the
+   branch wholesale and do not port its superseded treatment mechanics.
+2. Create the archival tag `archive/openai-medical-eras` at the audited branch
+   tip, `40ebd8e4c22080fa497efb567cad325b13e9f5e7`.
+3. Keep the source branch intact until the harvest has landed and passed its
+   legibility, fallback/offline, and full-gauntlet verification.
+4. After that verified harvest, delete
+   `openai/medical-eras-visual-overhaul`. The archival tag preserves the exact
+   source state and allows a branch to be recreated if later needed.
+
+This decision explicitly authorizes the eventual branch deletion only after the
+verification condition in item 3 is satisfied. It does not authorize deleting
+the branch now.
 
 ## Conditions that justify revisiting
 

@@ -685,11 +685,18 @@ makes a good thing better, and the mechanic has to be complete without them.
 
 More than phototherapy, and the expensive part is not the gameplay:
 
-- **A transport.** The audio engine today triggers effects and loops two
-  chiptunes. A rhythm mechanic needs a sample-accurate beat clock off
-  `AudioContext.currentTime` with a look-ahead scheduler - never
-  `requestAnimationFrame` or `Date.now()`, both of which drift audibly. This is
-  the single biggest piece of work and everything else waits on it.
+- **A transport.** *Corrected on audit, 12 September 2026 - the original claim
+  here was that the audio engine has no transport, and that was wrong.*
+  `src/audio.js:387-404` already runs the textbook look-ahead scheduler:
+  `nextNoteTime = currentTime + 0.1`, a 25ms `setInterval` tick, and a 150ms
+  scheduling horizon off `AudioContext.currentTime`. The clock is right and does
+  not drift.
+  What is actually missing is smaller: the scheduler keeps its beat position to
+  itself. A rhythm mechanic needs that position **queryable** - beat index, bar
+  position, time until the next beat - and needs the clock **injectable** so
+  tests and the bot can drive a virtual one. That is an afternoon's work
+  exposing state that already exists, not a rebuild, which makes sonotherapy
+  materially cheaper than this page previously said.
 - **Music as data.** Eras would each need a score - a timeline the transport
   reads - rather than imperative loops. That is the same refactor the
   eleven-period music direction needs anyway, so it gets paid for twice.
@@ -838,8 +845,9 @@ phototherapy that shipped: light cuts the biofilm hiding the disease, sound
 breaks the membrane protecting it, and the drug finishes what the other two
 opened up. It is the only proposal on this page that touches every system already
 in the bottle, and the only one blocked on a piece of engineering rather than a
-decision - the audio engine has no transport, and a rhythm mechanic is a
-sample-accurate beat clock before it is anything else.
+decision - the audio scheduler keeps its beat position private, and a rhythm
+mechanic needs that position queryable and the clock injectable before it is
+anything else. Smaller than first written: see the corrected note above.
 
 **Phototherapy** shipped and replaced the blackout, which worked and did not
 mean anything. Its three open forks ship as toggles rather than as decisions -

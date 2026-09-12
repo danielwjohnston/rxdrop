@@ -383,3 +383,40 @@ gauntlet stages in 1.4 s versus `modifiers` at 240 s. Two additions:
 **Verdict on the collective plan.** Approved with the revisions requested in
 `branch-audit.md` cycle 2, items 1, 3 and 4. The harvest-not-merge strategy and
 the Phase A → Phase B ordering are agreed.
+
+## 7. Approval record
+
+Closing statement for the audit exercise of 12 September 2026. Per protocol §36,
+each participant's position is recorded with its reasoning; approval from every
+historical participant is not required, and the Principal determines final
+acceptance.
+
+| Participant | Position | Reasoning |
+| --- | --- | --- |
+| `claude-opus-5` (author) | **approve-with-concerns** | The recommendation survived three cycles and two of my own claims did not. Concern: the plan's largest assumption — that the harvested art reads at 130px — is untested, and I cannot test it. |
+| Reviewer A — delivery planning | **approve** | Produced the two-phase plan; found the campaign-end gap and the audio transport error. |
+| Reviewer B — adversarial | **approve** (verdict: "agree with harvest; reject the stated reasoning") | Verified the numbers, overturned the separability and merge-outcome claims. |
+| Reviewer C — process and efficiency | **approve** | Four documentation claims measurably false, all fixed. One finding of its own rejected on evidence (the `blackout` references are deliberate). |
+| Reviewer D — convergence | **approve-with-conditions**, all four conditions met | One further condition rejected on evidence — it resolved `main` against a stale local ref. |
+| Reviewer (cycle 1, adversarial brief) | **did not report** | Recorded rather than hidden; brief reissued in cycle 2. |
+| Devin (Cognition) — external, cross-vendor | **approve-with-revisions** | Re-ran every measurable claim; all reproduced. Revisions requested on `branch-audit.md` external-review items 1, 3 and 4 (bonnet location, strengths-matrix certainty, retirement owner); not yet answered. |
+| **Daniel Johnston (Principal)** | **pending** | `DEC-0001` awaits his decision. Branch consolidation is his authority under §3. |
+
+**Verification at sign-off:** 276 unit tests pass; the full gauntlet passed
+twice independently — 13/13 stages in 310.2s and 305.8s.
+
+**What is explicitly NOT verified:** the harvested art at its real display size;
+the visual coherence of eleven media across eleven periods; whether `music.js`
+sounds right on `main`'s audio engine, where only its imports were checked.
+
+**Unresolved by design** (§26 — do not manufacture certainty):
+
+- Whether to retire the overhaul branch or keep it as an art reference. §8 warns
+  against collapsing competing branches for neatness; both are defensible and
+  the Principal chooses.
+- Whether sonotherapy's rhythm layer belongs in the web version at all. The plan
+  cuts it as scope; it is also the strongest idea in `docs/ideas.md`.
+
+**The experiment that would resolve the most uncertainty**, and it costs about
+an hour: render the branch's atlases at ~130px against the real bottle. It
+produces no commit and it can invalidate the entire art plan.

@@ -408,7 +408,7 @@ for (const setup of modified) {
     const share = total('lampFrames') / Math.max(1, runs.reduce((n, r) => n + r.frames, 0));
     notes.push(
       `lamp ${total('lampVisits')} visits, ${(share * 100).toFixed(0)}% of the time,`
-      + ` ${total('rowsLit')} rows lit, ${total('darkClears')} clears in the fog`,
+      + ` ${total('rowsLit')} rows scrubbed, ${total('darkClears')} clears in the film`,
     );
   }
   // Viruses per hundred capsules is the number that matters. Survival alone is
@@ -443,7 +443,7 @@ console.log('\nPhototherapy: what a session at the lamp buys, and what it costs'
     console.log(
       `  ${name.padEnd(22)}`
       + ` visits ${String(e.visits).padStart(3)}`
-      + ` | rows lit ${String(e.rowsLit).padStart(3)}`
+      + ` | rows scrubbed ${String(e.rowsLit).padStart(3)}`
       + ` (${e.rowsPerVisit.toFixed(1)}/visit)`
       + ` | at the lamp ${(e.lampShare * 100).toFixed(0).padStart(3)}%`
       + ` | capsules ${String(e.capsules).padStart(3)}`

@@ -227,19 +227,6 @@ export const LIGHT_WIDTH_FULL = BOARD_WIDTH;
 export const LIGHT_FALL = 190;
 export const LIGHT_FALL_FAST = 55;
 
-/**
- * Light spills. A completed line clears the fog from its own row outright and
- * halves it this many rows either side, because light scatters and because one
- * row out of seventeen per visit is not worth the capsules a visit costs.
- */
-export const LIGHT_SPILL = 1;
-
-/**
- * Clearing several lines at once is worth more than clearing them one at a
- * time, the same way a cascade is: this is the multiplier on how far the spill
- * reaches, indexed by lines cleared together. Four at once floods the bottle.
- */
-export const LIGHT_SPILL_BY_LINES = Object.freeze([0, 1, 2, 4, 99]);
 
 /*
  * Light used to carry a lifetime here (LIGHT_DECAY). It does not any more.
@@ -261,18 +248,15 @@ export const LIGHT_SPILL_BY_LINES = Object.freeze([0, 1, 2, 4, 99]);
 export const LIGHT_SESSION = 6000;
 
 /**
- * How long after leaving the lamp before you can go back to it.
+ * How much harder the film comes back after a failed attempt at the lamp.
  *
- * This is the answer to the only real abuse the mechanic has: with the fog at
- * its ceiling the case for going to the lamp is ALWAYS true, so without a
- * cooldown the lamp is not a decision, it is a room - the playtest bot lived
- * in it 95% of the run and placed a fifth of the capsules it otherwise would.
- * A fixed cooldown makes the lamp a rhythm: work, go, work.
- *
- * It always expires, and it is never running at the start of a run, so the
- * lamp can never be taken away - only made to wait.
+ * Drowning the chamber is a consequence, not a game over: the sample re-films
+ * faster next time, and you may switch the lamp straight back on and try again.
+ * It compounds to a ceiling so that a bad run of attempts makes the bench
+ * harder without ever making it hopeless.
  */
-export const LIGHT_COOLDOWN = 9000;
+export const FILM_REGROWTH_STEP = 0.35;
+export const FILM_REGROWTH_MAX = 2.5;
 
 /**
  * The fog. Rate is per millisecond per virus in the row, so a row holding three

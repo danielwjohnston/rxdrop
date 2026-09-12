@@ -32,7 +32,8 @@ import {
   FOG_RATE,
   FOG_RELIEF,
   FOG_SHRUG,
-  LIGHT_COOLDOWN,
+  FILM_REGROWTH_MAX,
+  FILM_REGROWTH_STEP,
   LIGHT_SESSION,
   LIGHT_WIDTH_NARROW,
   OUTBREAK_INTERVAL,
@@ -42,7 +43,6 @@ import {
 } from './constants.js';
 import { Board, cell, generateLevel, isHybrid, virusTopRow } from './board.js';
 import {
-  lightSpill,
   normaliseModifiers,
   outbreakCeiling,
   outbreakTargets,
@@ -160,8 +160,8 @@ export class Game {
     /** The light chamber, while you are in it. Null the rest of the time. */
     this.chamber = null;
     this.lightTimer = 0;
-    /** Counts down after a session. You cannot go straight back to the lamp. */
-    this.lampCooldown = 0;
+    /** How much harder the film comes back, after failed attempts at the lamp. */
+    this.filmRegrowth = 1;
     this.rowsLit = 0;
     /** A deal that fell due while the player was at the lamp. */
     this.dealHeld = false;
@@ -485,6 +485,9 @@ export class Game {
   update(dt) {
     if (this.paused || this.isOver) return;
     this.updateLight(dt);
+    // Under the light the bench is held: no gravity, no lock clock, no
+    // resolution, no spread. You are looking at the sample, not treating it.
+    if (this.inLight) return;
     switch (this.phase) {
       case PHASE.FALLING:
         this.updateFalling(dt);
@@ -523,34 +526,33 @@ export class Game {
     this.setLight(!this.inLight);
   }
 
-  /** True when the lamp is available: the modifier is on and it is not resting. */
+  /**
+   * True when the lamp can be switched on.
+   *
+   * There is no cooldown any more. A failed attempt costs you the film coming
+   * back harder, not the lamp being taken away - flick it off and straight back
+   * on and try again, which is what a bench actually lets you do.
+   */
   get lampReady() {
-    return this.has('phototherapy') && !this.inLight && this.lampCooldown <= 0;
+    return this.has('phototherapy') && !this.inLight;
   }
 
   enterLight() {
     if (!this.has('phototherapy') || this.inLight) return false;
     if (this.isOver || this.paused) return false;
-    // The lamp rests between sessions. Without this the case for going is
-    // always true once the fog is at its ceiling, and a lamp you would be a
-    // fool to ever leave is a room rather than a decision.
-    if (this.lampCooldown > 0) return false;
-    // Going to the lamp COMMITS the capsule in your hand where you last left
-    // it. That is the cost, and it is the right one: a player who plans places
-    // the dose first and then goes; a player who panics dumps it.
+
+    // The whole bench is SUSPENDED, not spent. The sample goes under the light:
+    // nothing grows, nothing spreads, and the dose in your hand waits exactly
+    // where you left it until you come back to it.
     //
-    // Letting it fall unsteered instead was much worse - every abandoned
-    // capsule lands in the spawn column, and a tower there tops the bottle out
-    // in a handful of visits. Measured: eight capsules to a lost run.
-    // The chamber opens FIRST, so that the lock below - which resolves and asks
-    // for the next capsule - finds the lamp already lit and holds the deal. The
-    // other order deals a fresh capsule into an unsteered bottle, which is the
-    // thing this is written to avoid.
+    // Two earlier rules died here. Letting the capsule fall unsteered was worst
+    // - every abandoned one lands in the spawn column and a tower there tops
+    // the bottle out in eight. Committing it on the way in was better but still
+    // wrong once the lamp became free to flick on and off: six visits stacked
+    // six dumped capsules in the neck and ended the run, which the gauntlet
+    // caught as "attempt 6: a flood ended the run". Suspending costs nothing it
+    // should not, and it is what the fiction says anyway.
     this.chamber = new LightChamber(this.lightWidth, this.height, this.rng);
-    if (this.pill && this.phase === PHASE.FALLING) {
-      this.pill = hardDropPosition(this.board, this.pill);
-      this.lockCurrentPill();
-    }
     this.lightTimer = this.lightExit === 'timer' ? LIGHT_SESSION : 0;
     this.emit('lightOn', { width: this.lightWidth, exit: this.lightExit });
     return true;
@@ -560,7 +562,6 @@ export class Game {
     if (!this.inLight) return false;
     this.chamber = null;
     this.lightTimer = 0;
-    this.lampCooldown = LIGHT_COOLDOWN;
     this.emit('lightOff', { reason });
     // Whatever was waiting on you comes now.
     if (this.dealHeld) {
@@ -581,22 +582,24 @@ export class Game {
    */
   updateLight(dt) {
     if (!this.has('phototherapy')) return;
-    this.foulAir(dt);
+    // The disease is held while the lamp is on. Nothing grows, nothing spreads,
+    // nothing thickens: you have stopped treating and started LOOKING, and the
+    // sample is under the light rather than on the bench. That is what makes the
+    // lamp a change of approach rather than a tax - and it is why standing in
+    // there costs you progress rather than ground.
     if (!this.inLight) {
-      if (this.lampCooldown > 0) {
-        this.lampCooldown = Math.max(0, this.lampCooldown - dt);
-        if (this.lampCooldown === 0) this.emit('lampReady');
-      }
+      this.foulAir(dt);
       return;
     }
     this.chamber.update(dt);
-    const lit = this.chamber.drainLit();
-    if (lit.length > 0) this.lightRows(lit);
-    // Light no longer fades, so a chamber packed to the lip cannot clear itself.
-    // Flooding it ends the SESSION and hands you back to the bottle - the same
-    // bound as before ("it costs the session, never the run"), reached the other
-    // way round. Stand at the lamp as long as you like; just do not drown it.
+    const lines = this.chamber.drainLit().length;
+    if (lines > 0) this.scrubFilm(lines);
+    // Drowning the chamber is a failed attempt, not a lost run: it ends the
+    // session and the film comes back harder next time. Turn the lamp straight
+    // back on and try again if you like.
     if (this.chamber.saturated) {
+      this.filmRegrowth = Math.min(FILM_REGROWTH_MAX, this.filmRegrowth + FILM_REGROWTH_STEP);
+      this.emit('flooded', { regrowth: this.filmRegrowth });
       this.leaveLight('flooded');
       return;
     }
@@ -622,20 +625,49 @@ export class Game {
     });
     for (let y = 0; y < this.height; y += 1) {
       if (weight[y] === 0) continue;
-      this.fog[y] = Math.min(FOG_MAX, this.fog[y] + dt * FOG_RATE * weight[y]);
+      this.fog[y] = Math.min(
+        FOG_MAX,
+        this.fog[y] + dt * FOG_RATE * weight[y] * this.filmRegrowth,
+      );
     }
   }
 
-  /** Lines completed in the chamber, spilling into the rows either side. */
-  lightRows(rows) {
-    const before = this.worstFog;
-    for (const row of rows) {
-      for (const { row: y, clears } of lightSpill(row, rows.length, this.height)) {
-        this.fog[y] = Math.max(0, this.fog[y] - clears);
-      }
+  /** The lowest row still carrying film, or -1 when the sample is sterile. */
+  get lowestFilmedRow() {
+    for (let y = this.height - 1; y >= 0; y -= 1) {
+      if (this.fog[y] > 0) return y;
     }
-    this.rowsLit += rows.length;
-    this.emit('lit', { rows: rows.length, lifted: before - this.worstFog });
+    return -1;
+  }
+
+  /**
+   * Lines completed at the lamp, spent on the film.
+   *
+   * One line scrubs ONE ROW, and always the lowest dirty one - never the row the
+   * line happened to complete on. That was the first build's rule and it was
+   * quietly broken: tetromino lines complete at the floor of the well, so 60% of
+   * all light landed in the bottom three rows of the bottle and the top five
+   * were never lit once in forty measured sessions. Gravity was choosing the
+   * patient's treatment.
+   *
+   * As a queue it is simply legible instead: make a line anywhere, the bottle
+   * cleans from the bottom up, and seventeen lines sterilise the sample.
+   */
+  scrubFilm(lines) {
+    const cleaned = [];
+    for (let i = 0; i < lines; i += 1) {
+      const row = this.lowestFilmedRow;
+      if (row < 0) break;
+      this.fog[row] = 0;
+      cleaned.push(row);
+    }
+    this.rowsLit += cleaned.length;
+    this.emit('lit', {
+      rows: cleaned.length,
+      cleaned,
+      sterile: this.lowestFilmedRow < 0,
+    });
+    if (cleaned.length > 0 && this.lowestFilmedRow < 0) this.emit('sterile', {});
   }
 
   updateFalling(dt) {

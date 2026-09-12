@@ -39,8 +39,8 @@ import {
   BOARD_HEIGHT,
   BOARD_WIDTH,
   DEAL_DELAY,
-  LIGHT_COOLDOWN,
   LIGHT_WIDTH_NARROW,
+  FILM_REGROWTH_MAX,
   FOG_MAX,
   PILLS_PER_SPEED_UP,
   RESISTANCE_INTERVAL,
@@ -735,10 +735,10 @@ stage('modifiers', 'A modifier may change a run, never end it', (check) => {
   });
 
   check('the chamber always deals, and never becomes a dead end', () => {
-    // Light no longer fades, so a packed chamber cannot clear itself. The same
+    // Light no longer fades, so a packed well cannot clear itself. The same
     // bound is reached the other way round: drowning it ends the SESSION and
-    // hands you back to the bottle, and the lamp comes back after its cooldown.
-    // It costs the session, never the run.
+    // hands you back to the bench, and the lamp reopens at once. It costs the
+    // attempt, never the run.
     for (const width of [LIGHT_WIDTH_NARROW, BOARD_WIDTH]) {
       const game = new Game({ level: 4, speed: 'LOW', seed: 3, modifiers: ['phototherapy'], lightWidth: width });
       assert.equal(game.enterLight(), true, `width ${width}: the lamp refused to open`);
@@ -751,7 +751,6 @@ stage('modifiers', 'A modifier may change a run, never end it', (check) => {
       assert.equal(game.inLight, false, `width ${width}: a flooded chamber trapped the player`);
       assert.equal(game.isOver, false, `width ${width}: a flood ended the run`);
 
-      for (let t = 0; t < LIGHT_COOLDOWN + 200 && !game.lampReady; t += FRAME) game.updateLight(FRAME);
       assert.equal(game.lampReady, true, `width ${width}: the lamp never came back`);
       assert.equal(game.enterLight(), true, `width ${width}: the lamp refused to reopen`);
       assert.ok(game.chamber.piece, `width ${width}: the reopened chamber dealt nothing`);
@@ -800,75 +799,107 @@ stage('modifiers', 'A modifier may change a run, never end it', (check) => {
     }
   });
 
-  check('a line always lights its own row, at every width and every row', () => {
-    for (const width of [5, BOARD_WIDTH]) {
-      for (let row = 0; row < BOARD_HEIGHT; row += 1) {
-        const game = new Game({
-          level: 4, speed: 'LOW', seed: 7, modifiers: ['phototherapy'], lightWidth: width,
-        });
-        game.fog = game.fog.map(() => FOG_MAX);
-        game.lightRows([row]);
-        assert.equal(game.fog[row], 0, `width ${width}: lighting row ${row} did not clear it`);
-        // And the spill never reaches the whole bottle off a single line.
-        const untouched = game.fog.filter((f) => f === FOG_MAX).length;
-        assert.ok(untouched > 0, `width ${width}: one line at row ${row} flooded the bottle`);
+  check('a line always scrubs the lowest filmed row, and enough of them sterilise', () => {
+    // The rule the whole lamp turns on, and the fix for the one that came
+    // before it. Lines were mapped to the row they completed on - but tetromino
+    // lines complete at the FLOOR of the well, so 60% of all light landed in the
+    // bottom three rows of the bottle and the top five were never lit once in
+    // forty measured sessions. Gravity was choosing the treatment.
+    //
+    // A line is a dose, not a coordinate. The bottle cleans from the bottom up,
+    // one row per line, and every row is reachable by making enough of them.
+    for (const width of [LIGHT_WIDTH_NARROW, BOARD_WIDTH]) {
+      const game = new Game({
+        level: 4, speed: 'LOW', seed: 7, modifiers: ['phototherapy'], lightWidth: width,
+      });
+      game.fog = game.fog.map(() => FOG_MAX);
+
+      for (let expected = BOARD_HEIGHT - 1; expected >= 0; expected -= 1) {
+        assert.equal(
+          game.lowestFilmedRow, expected,
+          `width ${width}: expected row ${expected} to be next in the queue`,
+        );
+        game.scrubFilm(1);
+        assert.equal(game.fog[expected], 0, `width ${width}: row ${expected} was not scrubbed`);
+        for (let above = 0; above < expected; above += 1) {
+          assert.equal(
+            game.fog[above], FOG_MAX,
+            `width ${width}: scrubbing row ${expected} reached up to row ${above}`,
+          );
+        }
       }
+
+      // Every row reachable, and the sample ends sterile.
+      assert.ok(game.fog.every((f) => f === 0), `width ${width}: the sample never came clean`);
+      assert.equal(game.lowestFilmedRow, -1);
+      // Past the end is a no-op rather than an error.
+      game.scrubFilm(4);
+      assert.equal(game.lowestFilmedRow, -1);
     }
   });
 
-  check('going to the lamp commits the dose in your hand and holds the next', () => {
-    // The cost, and the reason this is a decision rather than a chore: you
-    // finish the dose or you lose the placement, and nothing new is dealt until
-    // you come back. Letting capsules keep dealing into an unsteered bottle was
-    // far worse - every one lands in the spawn column, and six of them top the
-    // bottle out.
+  check('going to the lamp suspends the bench, and toggling it never costs the bottle', () => {
+    // Under the light the whole bench is held: no gravity, no lock clock, no
+    // resolution, no spread. The dose in your hand waits exactly where it was.
+    //
+    // Two earlier rules died here, both for the same reason. Letting the capsule
+    // fall unsteered dumped every one into the spawn column. Committing it on
+    // the way in did the same thing more slowly once the lamp became free to
+    // flick on and off - this very check caught it as "attempt 6: a flood ended
+    // the run" - because six visits stack six capsules in the neck.
     const game = new Game({ level: 4, speed: 'LOW', seed: 5, modifiers: ['phototherapy'] });
     game.update(DEAL_DELAY + 20);
     const placed = game.pillsPlaced;
-    assert.ok(game.pill, 'there should be a capsule in hand to commit');
+    const held = { ...game.pill };
+    assert.ok(game.pill, 'there should be a dose in hand to suspend');
 
     game.enterLight();
     assert.equal(game.inLight, true);
-    assert.equal(game.pillsPlaced, placed + 1, 'the capsule in hand should have been committed');
-    assert.equal(game.pill, null, 'and nothing new dealt while the lamp is lit');
+    assert.deepEqual({ ...game.pill }, held, 'the dose moved on the way in');
 
-    // It stays that way however long you stand there.
-    for (let t = 0; t < 8000; t += 16) {
-      game.update(16);
+    // It stays put however long you stand there.
+    for (let t = 0; t < 20000; t += FRAME) {
+      game.update(FRAME);
+      if (game.chamber) game.chamber.grid.fill(null);
     }
-    assert.equal(game.pill, null, 'a capsule was dealt into an unsteered bottle');
-    assert.equal(game.dealHeld, true, 'the deal should be waiting on you');
+    assert.deepEqual({ ...game.pill }, held, 'the dose moved while the lamp was on');
+    assert.equal(game.pillsPlaced, placed, 'a capsule was placed while the lamp was on');
 
-    // And it arrives the moment you come back.
     game.leaveLight('done');
-    assert.ok(game.pill, 'leaving the lamp should deal the capsule that was waiting');
-    assert.equal(game.dealHeld, false);
+    assert.deepEqual({ ...game.pill }, held, 'the dose was lost on the way out');
+
+    // And the lamp may be worked as hard as you like without costing the bottle.
+    for (let visit = 0; visit < 40; visit += 1) {
+      assert.equal(game.enterLight(), true, `visit ${visit}: the lamp refused to open`);
+      game.update(FRAME * 4);
+      game.leaveLight('done');
+      assert.equal(game.isOver, false, `visit ${visit}: toggling the lamp ended the run`);
+    }
   });
 
-  check('the lamp rests between sessions, and always comes back', () => {
-    // The abuse this closes, measured before it was closed: with the fog at its
-    // ceiling the case for going to the lamp is ALWAYS true, so the playtest bot
-    // lived in the chamber 95% of the run and placed a fifth of the capsules.
-    // A lamp you would be a fool to ever leave is a room, not a decision.
-    //
-    // The bound on the bound: the cooldown is fixed, it is never running at the
-    // start of a run, and it always expires - so the lamp can be made to wait
-    // and can never be taken away.
+  check('the lamp is always available, and a failed attempt costs regrowth', () => {
+    // Drowning the well is a consequence, not a game over: the film comes back
+    // harder and you may flick the lamp straight back on. Nothing about a bad
+    // attempt may take the switch away, and the regrowth is capped so a run of
+    // bad attempts makes the bench harder without ever making it hopeless.
     const game = new Game({ level: 4, speed: 'LOW', seed: 21, modifiers: ['phototherapy'] });
     assert.equal(game.lampReady, true, 'the lamp should be available from the first frame');
-    assert.equal(game.enterLight(), true);
-    game.leaveLight('done');
-    assert.equal(game.lampReady, false, 'the lamp should be resting');
-    assert.equal(game.enterLight(), false, 'and refuse to open while it rests');
+    assert.equal(game.filmRegrowth, 1, 'and the film should start at its base rate');
 
-    // It comes back on its own, without the player doing anything at all.
-    let waited = 0;
-    for (; waited < LIGHT_COOLDOWN * 3 && !game.lampReady; waited += 16) game.updateLight(16);
-    assert.ok(game.lampReady, 'the lamp never came back');
-    assert.ok(waited <= LIGHT_COOLDOWN + 32, `the lamp took ${waited}ms to come back`);
-    assert.equal(game.enterLight(), true, 'and opens again once it has');
+    let last = game.filmRegrowth;
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      assert.equal(game.enterLight(), true, `attempt ${attempt}: the lamp refused to open`);
+      for (let i = 0; i < game.chamber.grid.length; i += 1) game.chamber.grid[i] = { lit: true };
+      game.chamber.piece = null;
+      game.updateLight(FRAME);
+      assert.equal(game.inLight, false, `attempt ${attempt}: a flood trapped the player`);
+      assert.equal(game.isOver, false, `attempt ${attempt}: a flood ended the run`);
+      assert.equal(game.lampReady, true, `attempt ${attempt}: the lamp was taken away`);
+      assert.ok(game.filmRegrowth >= last, `attempt ${attempt}: regrowth went backwards`);
+      last = game.filmRegrowth;
+    }
+    assert.ok(game.filmRegrowth <= FILM_REGROWTH_MAX + 1e-9, 'regrowth ran past its ceiling');
 
-    // Nothing about the cooldown may touch a run without the modifier.
     const plain = new Game({ level: 4, speed: 'LOW', seed: 21 });
     assert.equal(plain.lampReady, false, 'there is no lamp without the modifier');
     assert.equal(plain.enterLight(), false);

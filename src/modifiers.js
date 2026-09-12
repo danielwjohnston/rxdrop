@@ -16,8 +16,6 @@
 import {
   BOARD_WIDTH,
   COLOR_COUNT,
-  LIGHT_SPILL,
-  LIGHT_SPILL_BY_LINES,
   OUTBREAK_CEILING,
   QUARANTINE_MAX,
   RATION_SPELL,
@@ -47,18 +45,19 @@ export const MODIFIERS = Object.freeze([
     name: 'Phototherapy',
     icon: 'M12 3v3M12 18v3M4.2 7.5l2.6 1.5M17.2 15l2.6 1.5M4.2 16.5l2.6-1.5'
       + 'M17.2 9l2.6-1.5M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8',
-    blurb: 'The bottle silts up. Go make light to cut it.',
+    blurb: 'The sample films over. Put it under the light and clean it.',
     detail: 'Colonies shield themselves behind a matrix, so the bottle clouds '
-      + 'row by row, worst where the disease is worst. Cutting it is a second '
-      + 'treatment you deliver rather than a switch you flip: enter the light '
-      + 'chamber and tetromino-shaped light falls, and a completed line lights '
-      + 'that ROW of the patient. The cost is the dose in your hand - going to '
-      + 'the lamp places it where it would have landed, and the next capsule '
-      + 'waits until you come back.',
-    bound: 'The fog never hides the falling capsule or the column it will land '
-      + 'in, a row never goes fully black, the fog plateaus rather than '
-      + 'compounding, the lamp always comes back after its cooldown, and a run '
-      + 'can be won without ever entering the chamber.',
+      + 'row by row, worst where the disease is worst. Clearing it is a change '
+      + 'of approach rather than a switch you flip: put the sample under the '
+      + 'light and tetromino-shaped light falls, and every line you complete '
+      + 'scrubs the film from the lowest dirty row. Enough lines and the sample '
+      + 'is sterile. Nothing on the bench moves while the lamp is on - the '
+      + 'disease is held and the dose in your hand waits - so what a session '
+      + 'costs you is progress, not ground.',
+    bound: 'The film never hides the falling capsule or the column it will land '
+      + 'in, a row never goes fully black, the film plateaus rather than '
+      + 'compounding, the lamp can always be switched on, and a run can be won '
+      + 'without ever using it.',
   }),
   Object.freeze({
     id: 'rationing',
@@ -185,26 +184,6 @@ export const outbreakCeiling = (startingViruses) =>
  */
 export const rationedOut = (pillsPlaced) =>
   Math.floor(pillsPlaced / RATION_SPELL) % COLOR_COUNT;
-
-// ---- phototherapy ---------------------------------------------------------
-
-/**
- * How much the fog lifts around a lit row.
- *
- * The row itself clears outright. Light scatters, so rows either side clear by
- * half as much again for each step out, and clearing several lines at once
- * reaches further than clearing them one at a time - the same shape as a
- * cascade, and the reason to stack rather than take every single line.
- */
-export function lightSpill(row, lines, height) {
-  const reach = LIGHT_SPILL_BY_LINES[Math.min(lines, LIGHT_SPILL_BY_LINES.length - 1)] * LIGHT_SPILL;
-  const lifted = [];
-  for (let y = Math.max(0, row - reach); y <= Math.min(height - 1, row + reach); y += 1) {
-    const distance = Math.abs(y - row);
-    lifted.push({ row: y, clears: distance === 0 ? 1 : 1 / (distance + 1) });
-  }
-  return lifted;
-}
 
 // ---- quarantine -----------------------------------------------------------
 

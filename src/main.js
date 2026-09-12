@@ -604,16 +604,14 @@ function syncHud(force = false) {
     dom.lightMeter.classList.toggle('is-spent', clarity < 0.35);
     dom.lightMeter.classList.toggle('is-lit', Boolean(shown.inLight));
     dom.lightButton.classList.toggle('is-lit', Boolean(shown.inLight));
-    // The lamp rests between sessions, and the pad has to SAY so - a button
-    // that silently does nothing reads as a broken button, which is the one
-    // reading that is worse than the truth.
-    const resting = !shown.inLight && (shown.lampCooldown ?? 0) > 0;
-    dom.lightButton.classList.toggle('is-resting', resting);
-    dom.lightButton.disabled = resting;
-    dom.lightMeter.classList.toggle('is-resting', resting);
-    if (shown.inLight) dom.lightButton.textContent = 'BACK TO THE BOTTLE';
-    else if (resting) dom.lightButton.textContent = `LAMP ${Math.ceil(shown.lampCooldown / 1000)}s`;
-    else dom.lightButton.textContent = 'LIGHT THERAPY';
+    // The lamp is always available: a failed attempt costs regrowth, never the
+    // switch. What the pad shows instead is how much of the sample is still
+    // filmed, because that is the number the decision turns on.
+    const filmed = shown.fog.filter((f) => f > 0).length;
+    dom.lightButton.disabled = false;
+    dom.lightButton.textContent = shown.inLight
+      ? `BACK TO THE BENCH${filmed > 0 ? ` (${filmed} left)` : ' - STERILE'}`
+      : 'LIGHT THERAPY';
   }
   if (force || game) drawPillPreview(dom.next, game ? game.nextColors : null, era);
 }

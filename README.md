@@ -125,13 +125,14 @@ throws the current run away.
 
 ## Apothecary Through Time
 
-The twenty levels run through five eras of medicine, and the bottle in front of
-you changes with them: a wax-sealed clay vessel for the cave, an apothecary jar,
-a snake-oil bottle, the pill bottle, a cryo-vial. A physician stands beside it -
-a shaman, a beaked plague doctor, a moustachioed quack, a white-coated doctor, a
-hooded technician - and reacts to what you do. Crossing into a new era brings one
-line from that physician's notes, and nothing else; the story layer is five
-sentences long on purpose.
+The twenty levels run through ten eras of medicine, and the bottle in front of
+you changes with them: protomedicine, Egyptian, Hippocratic, bimaristan,
+apothecary, plague, patent medicine, antisepsis, pharmaceutical and genetic.
+A physician stands beside it - a shaman, swnw, Hippocratic physician, bimaristan
+scholar, apothecary, plague doctor, moustachioed quack, surgeon, white-coated
+doctor and hooded technician - and reacts to what you do. Crossing into a new
+era brings one line from that physician's notes, and nothing else; the story
+layer is ten sentences long on purpose.
 
 The theme is not decoration over the mechanic, it is the mechanic's argument.
 Viruses that survive your medicine build resistance and mutate, which is the same
@@ -247,7 +248,7 @@ clipped inside.
 ## Development
 
 ```sh
-npm test           # 276 unit tests, no dependencies, well under a second
+npm test           # 279 unit tests, no dependencies, well under a second
 npm run test:watch # re-run on change
 
 # End-to-end checks in a real browser (Playwright is not a dependency):
@@ -278,7 +279,7 @@ src/game.js           the state machine: lock, clear, cascade, spawn, score
 src/light.js          the light chamber: phototherapy, played as falling light
 src/modifiers.js      the run modifiers, and the bound each one states
 src/formulary.js      the notebook: which interactions you have triggered
-src/eras.js           the five eras of medicine, and what each one calls things
+src/eras.js           the ten eras of medicine, and what each one calls things
 src/doctors.js        the physician who signs each era's notes
 src/art.js            ligne-claire practitioner sprites and resilient loading
 src/versus.js         two games, garbage routed between them

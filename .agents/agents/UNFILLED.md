@@ -1,7 +1,13 @@
 # Unfilled registry slots
 
-Two participants named in the Principal's protocol have not joined. Recorded so
+Two **vendors** named in the Principal's protocol have not joined. Recorded so
 their absence is visible rather than inferred from silence.
+
+**The team is not empty without them.** Four Claude agents are registered here,
+each having investigated independently and each having named a specific error it
+made. §4 of the protocol says the vendor list is "examples, not a roster" and
+that agents are judged "by the quality of their actual contributions" — so these
+two rows are open seats, not missing prerequisites.
 
 | Slot | Status | How to fill it |
 | --- | --- | --- |

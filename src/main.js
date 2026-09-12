@@ -453,8 +453,9 @@ function startGame(options = {}) {
   game = new Game(setup);
   input.setKeyMap(KEY_MAP);
   dangerMusic = false;
-  audio.setTrack('chill');
-  audio.startMusic('chill');
+  setEra(eraFor(game.level));
+  audio.setTrack(era.id);
+  audio.startMusic();
   audio.play('start');
   showScreen('playing');
   syncHud(true);
@@ -474,8 +475,9 @@ function startVersus() {
   dom.playfield2.hidden = false;
   for (const hud of dom.vsHud) hud.hidden = false;
   dangerMusic = false;
-  audio.setTrack('fever');
-  audio.startMusic('fever');
+  setEra(eraFor(match.players[0].level));
+  audio.setTrack(era.id);
+  audio.startMusic();
   audio.play('start');
   showScreen('playing');
   syncHud(true);
@@ -516,6 +518,7 @@ loadPractitionerArt(DOCTOR_IDS).then((loaded) => {
 
 function setEra(next) {
   era = next;
+  audio.setTrack(next.id);
   // Guard on what has actually been applied, not on `era` - the first call is
   // for the era the page starts on, and it still has to paint everything.
   if (appliedEra === next) return;
@@ -680,7 +683,7 @@ function updateMusicMood() {
   }
   if (danger !== dangerMusic) {
     dangerMusic = danger;
-    audio.setTrack(danger ? 'fever' : 'chill');
+    audio.setDanger(danger);
   }
 }
 
@@ -1005,7 +1008,7 @@ function resumeGame() {
   else return;
   audio.play('resume');
   audio.resume();
-  audio.startMusic(match ? 'fever' : dangerMusic ? 'fever' : 'chill');
+  audio.startMusic();
   showScreen('playing');
   lastFrame = performance.now();
 }
@@ -1063,12 +1066,16 @@ document.addEventListener('click', (event) => {
   else if (target.dataset.quit !== undefined) quitToTitle();
   else if (target.dataset.rematch !== undefined) {
     match.rematch();
-    audio.startMusic('fever');
+    setEra(eraFor(match.players[0].level));
+    audio.setTrack(era.id);
+    audio.startMusic();
     showScreen('playing');
   } else if (target.dataset.retry !== undefined || target.dataset.restart !== undefined) {
     if (match) {
       match.rematch();
-      audio.startMusic('fever');
+      setEra(eraFor(match.players[0].level));
+      audio.setTrack(era.id);
+      audio.startMusic();
       showScreen('playing');
     } else {
       startGame({ level: game?.level ?? settings.level, speed: game?.speedName ?? settings.speed });
@@ -1078,8 +1085,9 @@ document.addEventListener('click', (event) => {
     settings.level = game.level;
     saveSettings();
     dangerMusic = false;
-    audio.setTrack('chill');
-    audio.startMusic('chill');
+    setEra(eraFor(game.level));
+    audio.setTrack(era.id);
+    audio.startMusic();
     showScreen('playing');
     syncHud(true);
   } else if (target.dataset.copy !== undefined) copyShare(target);

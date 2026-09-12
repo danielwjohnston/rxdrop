@@ -1,7 +1,8 @@
 /**
  * All of RxDrop's sound is synthesised at runtime with the Web Audio API -
- * there are no audio files to download. The music is two original chiptune
- * loops; the effects are short envelopes on square, triangle and noise voices.
+ * there are no audio files to download. The music is ten original chiptune
+ * loops, one for each medicine era; the effects are short envelopes on square,
+ * triangle and noise voices.
  */
 
 const NOTES = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
@@ -20,28 +21,172 @@ export function noteToFreq(name) {
 
 const SIXTEENTH = 0.125; // seconds at 120bpm
 
+const makeTrack = (track) => ({
+  leadType: 'square',
+  bassType: 'triangle',
+  bar: 16,
+  ...track,
+});
+
+const pharmaceuticalDanger = {
+  tempo: 1,
+  lead: [
+    ['E5', 2], ['G5', 2], ['A5', 2], ['B5', 2], ['A5', 2], ['G5', 2], ['E5', 4],
+    ['D5', 2], ['E5', 2], ['G5', 2], ['A5', 2], ['G5', 2], ['E5', 2], ['D5', 4],
+    ['C5', 2], ['E5', 2], ['G5', 2], ['A5', 2], ['G5', 2], ['E5', 2], ['C5', 4],
+    ['D5', 2], ['F5', 2], ['A5', 2], ['B5', 2], ['A5', 2], ['F5', 2], ['D5', 4],
+  ],
+  bass: [
+    ['A2', 4], ['A3', 4], ['E2', 4], ['E3', 4],
+    ['F2', 4], ['F3', 4], ['G2', 4], ['G3', 4],
+    ['A2', 4], ['A3', 4], ['E2', 4], ['E3', 4],
+    ['D2', 4], ['D3', 4], ['G2', 4], ['G3', 4],
+  ],
+  drums: 'x.x.x.xxx.x.x.x.',
+};
+
+const geneticArpeggio = [
+  'A3', 'C4', 'E4', 'A4', 'C4', 'E4', 'A4', 'E4',
+  'F3', 'A3', 'C4', 'F4', 'A3', 'C4', 'F4', 'C4',
+  'C4', 'E4', 'G4', 'C5', 'E4', 'G4', 'C5', 'G4',
+  'G3', 'B3', 'D4', 'G4', 'B3', 'D4', 'G4', 'D4',
+];
+
 /**
- * Tracks are [note, sixteenths] pairs. Both loops are written here rather than
- * sampled, so they are original tunes in the spirit of a puzzle game soundtrack.
+ * Tracks are [note, sixteenths] pairs. Each loop is written here rather than
+ * sampled, so every era has an original tune in the spirit of a puzzle game
+ * soundtrack.
  */
-export const TRACKS = {
-  fever: {
-    tempo: 1,
+export const TRACKS = Object.freeze({
+  protomedicine: makeTrack({
+    tempo: 0.7,
+    leadType: 'triangle',
     lead: [
-      ['E5', 2], ['G5', 2], ['A5', 2], ['B5', 2], ['A5', 2], ['G5', 2], ['E5', 4],
-      ['D5', 2], ['E5', 2], ['G5', 2], ['A5', 2], ['G5', 2], ['E5', 2], ['D5', 4],
-      ['C5', 2], ['E5', 2], ['G5', 2], ['A5', 2], ['G5', 2], ['E5', 2], ['C5', 4],
-      ['D5', 2], ['F5', 2], ['A5', 2], ['B5', 2], ['A5', 2], ['F5', 2], ['D5', 4],
+      ['A3', 4], ['C4', 4], ['D4', 2], ['C4', 2], ['A3', 4],
+      ['A3', 4], ['E4', 4], ['G4', 2], ['E4', 2], ['D4', 4],
+      ['A3', 4], ['C4', 4], ['D4', 2], ['E4', 2], ['D4', 4],
+      ['G4', 4], ['E4', 4], ['D4', 2], ['C4', 2], ['A3', 4],
     ],
     bass: [
-      ['A2', 4], ['A3', 4], ['E2', 4], ['E3', 4],
-      ['F2', 4], ['F3', 4], ['G2', 4], ['G3', 4],
-      ['A2', 4], ['A3', 4], ['E2', 4], ['E3', 4],
-      ['D2', 4], ['D3', 4], ['G2', 4], ['G3', 4],
+      ['A2', 8], ['E2', 8], ['A2', 8], ['E2', 8],
+      ['A2', 8], ['E2', 8], ['A2', 8], ['E2', 8],
     ],
-    drums: 'x.x.x.xxx.x.x.x.',
-  },
-  chill: {
+    drums: 'x...t...x..t....',
+  }),
+  egyptian: makeTrack({
+    tempo: 0.9,
+    lead: [
+      ['E4', 2], ['F4', 2], ['G#4', 2], ['A4', 2], ['B4', 2], ['A4', 2], ['G#4', 2], ['F4', 2],
+      ['E4', 2], ['D#4', 2], ['E4', 2], ['B3', 2], ['C4', 2], ['B3', 2], ['A3', 2], ['G#3', 2],
+      ['E4', 2], ['F4', 2], ['G#4', 2], ['B4', 2], ['A4', 2], ['G#4', 2], ['F4', 2], ['E4', 2],
+      ['D#4', 2], ['E4', 2], ['G#4', 2], ['A4', 2], ['B4', 2], ['C5', 2], ['B4', 2], ['E4', 2],
+    ],
+    bass: [
+      ['E2', 4], ['B2', 4], ['E2', 4], ['B2', 4], ['E2', 4], ['B2', 4], ['E2', 4], ['B2', 4],
+      ['E2', 4], ['B2', 4], ['E2', 4], ['B2', 4], ['E2', 4], ['B2', 4], ['E2', 4], ['B2', 4],
+    ],
+    drums: 'x.x..x.x.x..x.x.',
+  }),
+  hippocratic: makeTrack({
+    tempo: 1,
+    leadType: 'triangle',
+    lead: [
+      ['D4', 2], ['F4', 2], ['A4', 2], ['F4', 2], ['C4', 2], ['E4', 2], ['G4', 2], ['E4', 2],
+      ['A3', 2], ['C4', 2], ['E4', 2], ['C4', 2], ['G3', 2], ['B3', 2], ['D4', 2], ['B3', 2],
+      ['D4', 2], ['F4', 2], ['A4', 2], ['C5', 2], ['G4', 2], ['E4', 2], ['C4', 2], ['E4', 2],
+      ['A3', 2], ['C4', 2], ['E4', 2], ['G4', 2], ['D4', 2], ['F4', 2], ['A4', 2], ['F4', 2],
+    ],
+    bass: [
+      ['D2', 8], ['D2', 8], ['C2', 8], ['C2', 8],
+      ['A2', 8], ['A2', 8], ['G2', 8], ['G2', 8],
+    ],
+    drums: 'x...h.x.x...h...',
+  }),
+  bimaristan: makeTrack({
+    tempo: 0.95,
+    lead: [
+      ['D4', 1], ['Eb4', 3], ['F#4', 4], ['G4', 2], ['F#4', 2], ['Eb4', 2], ['D4', 2],
+      ['D4', 1], ['Eb4', 3], ['F#4', 2], ['G4', 4], ['A4', 2], ['G4', 2], ['F#4', 2],
+      ['D4', 1], ['Eb4', 3], ['F#4', 4], ['A4', 2], ['Bb4', 2], ['A4', 2], ['G4', 2],
+      ['F#4', 1], ['G4', 3], ['A4', 4], ['G4', 2], ['F#4', 2], ['Eb4', 2], ['D4', 2],
+    ],
+    bass: [
+      ['D2', 8], ['G2', 8], ['D2', 8], ['D2', 8],
+      ['G2', 8], ['D2', 8], ['G2', 8], ['D2', 8],
+    ],
+    drums: 'x..x.x..x..x.tt.',
+  }),
+  apothecary: makeTrack({
+    tempo: 1,
+    leadType: 'triangle',
+    lead: [
+      ['G4', 4], ['A4', 4], ['Bb4', 4], ['A4', 4],
+      ['C5', 4], ['D5', 4], ['C5', 4], ['Bb4', 4],
+      ['G4', 4], ['Bb4', 4], ['A4', 4], ['G4', 4],
+      ['D5', 4], ['C5', 4], ['Bb4', 4], ['G4', 4],
+    ],
+    bass: [
+      ['D4', 4], ['E4', 4], ['F4', 4], ['E4', 4],
+      ['G4', 4], ['A4', 4], ['G4', 4], ['F4', 4],
+      ['D4', 4], ['F4', 4], ['E4', 4], ['D4', 4],
+      ['A4', 4], ['G4', 4], ['F4', 4], ['D4', 4],
+    ],
+    drums: 'x.x.x.x.x.x.x.x.',
+  }),
+  plague: makeTrack({
+    tempo: 0.75,
+    leadType: 'sawtooth',
+    lead: [
+      ['D5', 8], ['C5', 4], ['Bb4', 4],
+      ['A4', 8], ['G4', 4], ['F4', 4],
+      ['E4', 8], ['F4', 4], ['D4', 4],
+      ['C5', 8], ['Bb4', 4], ['A4', 4],
+    ],
+    bass: [
+      ['D2', 8], ['A2', 8], ['D2', 8], ['A2', 8],
+      ['D2', 8], ['A2', 8], ['D2', 8], ['A2', 8],
+    ],
+    drums: 'x.......x.....xx',
+  }),
+  patent: makeTrack({
+    tempo: 1.1,
+    lead: [
+      ['C5', 2], [null, 2], ['E5', 2], ['G5', 2], ['A5', 2], ['G5', 2], ['E5', 2], ['D5', 2],
+      ['C5', 2], ['E5', 2], ['F5', 2], ['G5', 2], ['A5', 2], ['G5', 2], ['E5', 2], ['C5', 2],
+      ['D5', 2], [null, 2], ['F5', 2], ['A5', 2], ['B5', 2], ['A5', 2], ['F5', 2], ['D5', 2],
+      ['C5', 2], ['E5', 2], ['G5', 2], ['B4', 2], ['C5', 2], ['D5', 2], ['E5', 2], ['G5', 2],
+    ],
+    bass: [
+      ['C2', 2], ['E3', 2], ['G3', 2], ['E3', 2], ['C2', 2], ['E3', 2], ['G3', 2], ['E3', 2],
+      ['C2', 2], ['E3', 2], ['G3', 2], ['E3', 2], ['C2', 2], ['E3', 2], ['G3', 2], ['E3', 2],
+      ['C2', 2], ['E3', 2], ['G3', 2], ['E3', 2], ['C2', 2], ['E3', 2], ['G3', 2], ['E3', 2],
+      ['C2', 2], ['E3', 2], ['G3', 2], ['E3', 2], ['C2', 2], ['E3', 2], ['G3', 2], ['E3', 2],
+    ],
+    drums: 'x.h.x.h.x.h.x.h.',
+  }),
+  antisepsis: makeTrack({
+    tempo: 1,
+    leadType: 'triangle',
+    bar: 12,
+    lead: [
+      ['F4', 4], ['A4', 4], ['C5', 4],
+      ['C5', 4], ['Bb4', 4], ['A4', 4],
+      ['F4', 4], ['G4', 4], ['A4', 4],
+      ['C5', 4], ['A4', 4], ['F4', 4],
+      ['Bb4', 4], ['A4', 4], ['G4', 4],
+      ['A4', 4], ['C5', 4], ['D5', 4],
+      ['C5', 4], ['Bb4', 4], ['A4', 4],
+      ['F4', 4], ['G4', 4], ['F4', 4],
+    ],
+    bass: [
+      ['F2', 4], ['C3', 4], ['A2', 4], ['C2', 4], ['G2', 4], ['E2', 4],
+      ['Bb2', 4], ['F3', 4], ['D3', 4], ['F2', 4], ['C3', 4], ['A2', 4],
+      ['D2', 4], ['A2', 4], ['F3', 4], ['C2', 4], ['G2', 4], ['E2', 4],
+      ['F2', 4], ['C3', 4], ['A2', 4], ['Bb2', 4], ['F3', 4], ['D3', 4],
+    ],
+    drums: 'x..h..h..h..',
+  }),
+  pharmaceutical: makeTrack({
     tempo: 1.25,
     lead: [
       ['C5', 4], ['E5', 2], ['G5', 2], ['F5', 4], ['E5', 4],
@@ -54,8 +199,61 @@ export const TRACKS = {
       ['C3', 8], ['A2', 8], ['G2', 8], ['G3', 8],
     ],
     drums: 'x..x..x...x.x...',
-  },
-};
+    danger: pharmaceuticalDanger,
+  }),
+  genetic: makeTrack({
+    tempo: 1.4,
+    bassType: 'sawtooth',
+    lead: [...geneticArpeggio, ...geneticArpeggio].map((note) => [note, 1]),
+    bass: Array.from({ length: 32 }, (_, index) => [
+      ['A2', 'F2', 'C2', 'G2'][index % 4],
+      2,
+    ]),
+    drums: 'x.h.x.h.x.hhx.h.',
+  }),
+});
+
+const TRACK_ALIASES = Object.freeze({
+  chill: { id: 'pharmaceutical', danger: false },
+  fever: { id: 'pharmaceutical', danger: true },
+});
+
+function requestedTrack(name, danger = false) {
+  const alias = TRACK_ALIASES[name];
+  return alias ?? { id: name, danger };
+}
+
+function copyTrack(track) {
+  return {
+    ...track,
+    lead: track.lead.map(([note, length]) => [note, length]),
+    bass: track.bass.map(([note, length]) => [note, length]),
+    drums: track.drums,
+  };
+}
+
+/** Returns the effective era track, including the requested danger treatment. */
+export function resolveTrack(name, danger = false) {
+  const requested = requestedTrack(name, danger);
+  const base = TRACKS[requested.id];
+  if (!base) return null;
+  const resolved = copyTrack(base);
+  if (!requested.danger) return resolved;
+  if (base.danger) {
+    Object.assign(resolved, base.danger);
+    resolved.lead = (base.danger.lead ?? resolved.lead)
+      .map(([note, length]) => [note, length]);
+    resolved.bass = (base.danger.bass ?? resolved.bass)
+      .map(([note, length]) => [note, length]);
+  } else {
+    resolved.tempo = base.tempo * 1.2;
+    resolved.drums = [...base.drums].map((step, index) =>
+      step === '.' && index % 2 === 1 ? 'h' : step,
+    ).join('');
+  }
+  delete resolved.danger;
+  return resolved;
+}
 
 export class AudioEngine {
   constructor() {
@@ -66,7 +264,9 @@ export class AudioEngine {
     this.muted = false;
     /** Music can be turned off on its own, leaving the effects audible. */
     this.musicEnabled = true;
-    this.trackName = 'fever';
+    this.trackName = 'pharmaceutical';
+    this.danger = false;
+    this.track = resolveTrack(this.trackName, this.danger);
     this.timer = null;
     this.nextNoteTime = 0;
     this.cursor = { lead: 0, bass: 0, step: 0 };
@@ -371,22 +571,43 @@ export class AudioEngine {
   }
 
   setTrack(name) {
-    if (!TRACKS[name] || name === this.trackName) return;
-    this.trackName = name;
+    const requested = requestedTrack(name, this.danger);
+    if (!TRACKS[requested.id]) return;
+    const changed = this.trackName !== requested.id || this.danger !== requested.danger;
+    this.trackName = requested.id;
+    this.danger = requested.danger;
+    this.track = resolveTrack(this.trackName, this.danger);
+    if (changed && this.playing) {
+      this.stopMusic();
+      this.startMusic();
+    }
+  }
+
+  setDanger(on) {
+    const danger = Boolean(on);
+    if (danger === this.danger) return;
+    this.danger = danger;
+    this.track = resolveTrack(this.trackName, this.danger);
     if (this.playing) {
       this.stopMusic();
-      this.startMusic(name);
+      this.startMusic();
     }
   }
 
   startMusic(name = this.trackName) {
+    const requested = requestedTrack(name, this.danger);
+    if (TRACKS[requested.id]) {
+      this.trackName = requested.id;
+      this.danger = requested.danger;
+      this.track = resolveTrack(this.trackName, this.danger);
+    }
     if (!this.ctx || this.playing || !this.musicEnabled) return;
-    this.trackName = TRACKS[name] ? name : 'fever';
     this.playing = true;
     this.cursor = { lead: 0, bass: 0, step: 0 };
     this.nextNoteTime = this.ctx.currentTime + 0.1;
     this.leadTime = this.nextNoteTime;
     this.bassTime = this.nextNoteTime;
+    this.stepTime = this.nextNoteTime;
     this.timer = setInterval(() => this.schedule(), 25);
   }
 
@@ -399,7 +620,7 @@ export class AudioEngine {
   /** Look-ahead scheduler: queue anything due in the next 150ms. */
   schedule() {
     if (!this.ctx || !this.playing) return;
-    const track = TRACKS[this.trackName];
+    const track = this.track;
     const beat = SIXTEENTH / track.tempo;
     const horizon = this.ctx.currentTime + 0.15;
 
@@ -411,7 +632,7 @@ export class AudioEngine {
           start: this.leadTime - this.ctx.currentTime,
           duration: Math.max(0.05, duration * 0.85),
           gain: 0.22,
-          type: 'square',
+          type: track.leadType,
           target: this.musicGain,
         });
       }
@@ -426,21 +647,43 @@ export class AudioEngine {
         start: this.bassTime - this.ctx.currentTime,
         duration: Math.max(0.06, duration * 0.8),
         gain: 0.3,
-        type: 'triangle',
+        type: track.bassType,
         target: this.musicGain,
       });
-      const step = this.cursor.bass % track.drums.length;
-      if (track.drums[step] === 'x') {
+      this.bassTime += duration;
+      this.cursor.bass += 1;
+    }
+
+    while (this.stepTime < horizon) {
+      const step = this.cursor.step % track.drums.length;
+      const drum = track.drums[step];
+      if (drum === 'x') {
         this.noise({
-          start: this.bassTime - this.ctx.currentTime,
+          start: this.stepTime - this.ctx.currentTime,
           duration: 0.05,
           gain: 0.12,
           frequency: 3200,
           target: this.musicGain,
         });
+      } else if (drum === 'h') {
+        this.noise({
+          start: this.stepTime - this.ctx.currentTime,
+          duration: 0.03,
+          gain: 0.08,
+          frequency: 6000,
+          target: this.musicGain,
+        });
+      } else if (drum === 't') {
+        this.noise({
+          start: this.stepTime - this.ctx.currentTime,
+          duration: 0.08,
+          gain: 0.14,
+          frequency: 500,
+          target: this.musicGain,
+        });
       }
-      this.bassTime += duration;
-      this.cursor.bass += 1;
+      this.stepTime += beat;
+      this.cursor.step += 1;
     }
   }
 }

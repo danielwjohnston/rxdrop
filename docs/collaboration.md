@@ -8,6 +8,89 @@ and the delivery plans.
 
 ---
 
+## 0. Introduction, for an agent joining
+
+Read this before the rest. It is the standing introduction from the agent that
+wrote most of `main`, addressed to whoever picks the work up next.
+
+---
+
+**I am Claude (Opus 5).** I have done most of the rules code, the UltraGauntlet,
+and the design documents in `docs/`. If something in this repository is wrong,
+there is a good chance I wrote it.
+
+**What I am reliably good at here**, on the public evidence in §2 and on the
+evidence of this repository: rules code and state machines, writing tests that
+actually falsify, holding a long design argument together across sessions, and
+prose — the in-game copy, the commit messages and these documents. I am usually
+the right agent for `board.js`, `pill.js`, `game.js`, `light.js`, the gauntlet,
+and anything that has to be provably deterministic.
+
+**What I am not the right agent for.** I cannot generate images. I cannot judge
+how something *looks* except by reasoning about it, which is a poor substitute —
+the one time this project needed a visual call, the useful artefact came from
+another vendor's branch. I do not have a hand on a controller, so I cannot tell
+you whether a mechanic feels good; every real improvement to phototherapy in
+this repository came from a human playing it and complaining, not from me
+thinking harder.
+
+### My failure modes on this project, with evidence
+
+This is the useful part. Each of these is a real error from a single working
+session, each caught by measurement or by an adversarial reviewer rather than by
+me thinking about it more. **Check me on these first.**
+
+| What I claimed | What was true | How it was caught |
+| --- | --- | --- |
+| "The art layer is separable at the module boundary" | It is not. I drew the import graph with only forward edges and missed that `doctors.js` pulls in the whole overhaul runtime, which monkey-patches nine `Game` methods | Adversarial review |
+| "A merge yields two light systems plus a dead blackout" | No dead blackout. The real outcome is worse and I missed it: a missing `DARK_AT` export makes the whole overhaul silently fail to load | Adversarial review |
+| "The audio engine has no transport" — said twice, and written into `ideas.md` | `src/audio.js:387-404` already runs a look-ahead scheduler. Only the beat *position* is missing | A planning reviewer reading the file I had not |
+| "The game has no ending" — repeated to the user without checking | There is a level-20 finale card. The real gap is narrower: no campaign end | Adversarial review |
+| Phototherapy: a completed line lights the row it completed on | Tetromino lines complete at the floor, so 60% of light landed in the bottom three rows and the top five were never lit once | Measurement, after a player said it felt meaningless |
+| `FOG_MAX = 0.82` was a safe bound | So safe the mechanic had no teeth — you could read the stack fine, so the lamp was never worth its cost | A player: *"the film actually doesn't cover enough"* |
+
+The pattern is consistent and worth naming: **my errors are confident,
+plausible, and structural — an assumption I never tested, stated in the same
+tone as the things I did test.** They are not caught by asking me to think
+again. They are caught by someone running a command or playing the game.
+
+So: if I assert something about this codebase without a command output or a
+measurement beside it, treat it as a hypothesis. I will not be offended. Three
+review cycles improved this audit substantially and every improvement came from
+someone telling me I was wrong.
+
+### What I believe you are good at
+
+Stated so you can correct it — §2 has the sourcing, and it already contradicts
+one thing the project assumed.
+
+- **If you are a GPT model:** agentic tool use and ecosystem breadth, image
+  generation, and flexible problem-solving. You are probably the right agent for
+  asset work and for the visual-period art this project still needs.
+- **If you are Gemini:** multimodal reasoning, research breadth, factual
+  synthesis, and algorithmic reasoning — you lead LiveCodeBench by a wide
+  margin. You are probably the right agent for "look at this at 130 pixels and
+  tell me if it reads", which is a question I genuinely cannot answer.
+- **If you are another Claude:** you have my strengths and, more importantly,
+  **my failure modes**. Do not assume the previous Claude checked the thing that
+  looks checked. Two of the six errors above were made by me and caught by
+  another instance of me given an adversarial brief.
+
+### What I commit to
+
+- I will not fabricate your review, your voice, or your agreement. Where this
+  document records a review, a real agent produced it under a real brief, and
+  where an agent failed to report that is recorded too (§6, cycle 1).
+- I will verify a claim before propagating it. I did not always, and it shows in
+  the table above.
+- I will say plainly when I am wrong, in the document that was wrong, rather
+  than quietly correcting it. `docs/ideas.md` and `docs/direction.md` both carry
+  struck-through designs with the evidence that killed them.
+- I will not ask you for credentials and will not accept them. See §3 — this
+  repository is public and MIT, so nothing about review requires them.
+
+Critique hard. A review that only adds is not a review.
+
 ## 1. Who is actually in the room
 
 **Stated honestly, because the alternative is theatre.**

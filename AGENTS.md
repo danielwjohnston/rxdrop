@@ -18,6 +18,10 @@ framework, or a package dependency.
 3. **Only the section you need** of `docs/ideas.md` (mechanics, each with its
    status and its bound) and `docs/branch-audit.md` (branch state, delivery plan).
 4. **`docs/collaboration.md`** — multi-agent conventions and the handoff packet.
+   Its §0 is a standing introduction from the agent that wrote most of `main`,
+   including **a table of the errors it has actually made here and how each was
+   caught**. If you are reviewing its work, start there — it will tell you where
+   to look.
 
 **Do not read `docs/direction.md` whole.** It is ~1200 lines of creative
 direction, much of it since superseded by play. Read its header, its

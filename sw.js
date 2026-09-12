@@ -6,7 +6,7 @@
  * Bump CACHE when the file list or any cached file changes: the new worker
  * precaches under the new name and deletes the old cache on activate.
  */
-const CACHE = 'rxdrop-v20';
+const CACHE = 'rxdrop-v21';
 
 const PRECACHE = [
   './',
@@ -26,6 +26,7 @@ const PRECACHE = [
   './src/daily.js',
   './src/eras.js',
   './src/doctors.js',
+  './src/art.js',
   './src/modifiers.js',
   './src/formulary.js',
   './src/light.js',
@@ -33,6 +34,26 @@ const PRECACHE = [
   './assets/icon-180.png',
   './assets/icon-192.png',
   './assets/icon-512.png',
+  './assets/practitioners/physician-cheer.png',
+  './assets/practitioners/physician-idle.png',
+  './assets/practitioners/physician-toss.png',
+  './assets/practitioners/physician-worry.png',
+  './assets/practitioners/plague-cheer.png',
+  './assets/practitioners/plague-idle.png',
+  './assets/practitioners/plague-toss.png',
+  './assets/practitioners/plague-worry.png',
+  './assets/practitioners/quack-cheer.png',
+  './assets/practitioners/quack-idle.png',
+  './assets/practitioners/quack-toss.png',
+  './assets/practitioners/quack-worry.png',
+  './assets/practitioners/shaman-cheer.png',
+  './assets/practitioners/shaman-idle.png',
+  './assets/practitioners/shaman-toss.png',
+  './assets/practitioners/shaman-worry.png',
+  './assets/practitioners/technician-cheer.png',
+  './assets/practitioners/technician-idle.png',
+  './assets/practitioners/technician-toss.png',
+  './assets/practitioners/technician-worry.png',
 ];
 
 self.addEventListener('install', (event) => {

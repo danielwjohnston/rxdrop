@@ -14,7 +14,8 @@ import { ERAS, eraFor, entersEra } from './eras.js';
 import { collateralOf, hybridOf, isHybrid } from './board.js';
 import { MODIFIERS, describeModifiers, modifierFor, normaliseModifiers } from './modifiers.js';
 import { DISCOVERIES, Formulary, discoveriesIn } from './formulary.js';
-import { drawDoctor, POSE_HOLD } from './doctors.js';
+import { drawDoctor, DOCTOR_IDS, POSE_HOLD } from './doctors.js';
+import { loadPractitionerArt, POSE_MOTION, practitionerSprite } from './art.js';
 import { pillCells } from './pill.js';
 import { AudioEngine } from './audio.js';
 import { InputController, KEY_MAP, VERSUS_KEY_MAP } from './input.js';
@@ -496,6 +497,10 @@ let era = eraFor(0);
 let appliedEra = null;
 let pose = 'idle';
 let poseUntil = 0;
+let art = new Map();
+loadPractitionerArt(DOCTOR_IDS).then((loaded) => {
+  art = loaded;
+});
 
 function setEra(next) {
   era = next;
@@ -532,7 +537,21 @@ function drawPhysician(now) {
   ctx.scale(dpr, dpr);
   ctx.clearRect(0, 0, rect.width, rect.height);
   const size = Math.min(rect.width, rect.height);
-  drawDoctor(ctx, { x: (rect.width - size) / 2, y: rect.height - size, size, era, pose, now });
+  const img = practitionerSprite(art, era?.doctor, pose);
+  if (img) {
+    const shape = POSE_MOTION[pose] ?? POSE_MOTION.idle;
+    const breath = Math.sin(now / 700) * 1.1;
+    const sway = Math.sin(now / 1100) * 0.02;
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.translate(rect.width / 2, rect.height);
+    ctx.translate(0, breath + shape.lift);
+    ctx.rotate(shape.lean + sway);
+    ctx.drawImage(img, -size / 2, -size, size, size);
+    ctx.restore();
+  } else {
+    drawDoctor(ctx, { x: (rect.width - size) / 2, y: rect.height - size, size, era, pose, now });
+  }
   ctx.restore();
 }
 

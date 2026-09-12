@@ -135,6 +135,39 @@ none is from memory.
 | Image generation | **GPT-5.x / Gemini** | Both natively multimodal; Gemini bundles Imagen and Veo, the broadest toolkit. |
 | Creative prose, voice, long-form | **Claude** | Most consistently rated strongest for natural prose and voice matching. |
 
+### Attestation of the brief's three claims
+
+The Principal's brief asked agents to acknowledge three specific claims and to
+*"verify these perceptions through research and cite sources when appropriate"*.
+Verified below against current reporting. **One holds, one holds in part, one is
+too coarse to be useful.**
+
+| Claim as written | Verdict | Evidence |
+| --- | --- | --- |
+| "Claude excels at reasoning, analysis, and code structure" | **Partly supported — too coarse** | Tops human-preference rankings and the hardest coding test, and leads independent SWE-bench Verified. But GPT-5.5 matches it on raw bug-fixing, and Gemini 3.1 Pro leads GPQA and ARC-AGI-2 on reasoning specifically. The three flagships are "separated by single percentage points". SWE-bench is reported as contaminated for frontier models. |
+| "OpenAI models excel at creativity, visuals, narrative, and flexible problem-solving" | **Split — visuals yes, narrative no** | Visuals and flexible problem-solving hold: GPT-5.5 is natively multimodal and "pushes furthest on agentic tooling and ecosystem breadth". **Narrative does not hold** — Claude is the model most consistently described as strongest for natural prose, voice matching and long-form consistency. |
+| "Google Gemini excels at multimodal reasoning, research breadth, and factual synthesis" | **Supported** | Leads native multimodal capability, particularly audio and video understanding; processes text, image, video, audio and code together; leads GPQA and ARC-AGI-2; holds a measurable advantage on academic research and long reasoning chains; bundles Imagen and Veo. |
+
+**Attestation status.** Researched and attested by `claude-opus-5`. The four
+reviewer agents were each asked to attest; three explicitly **declined to
+characterise vendors whose output they had not observed**, which is the correct
+answer to an observation question and the wrong one to a research question — the
+brief asked for the latter. That distinction is worth recording: an agent
+refusing to speak beyond its evidence is behaving well, but it means this
+attestation currently rests on one agent's research, not four.
+
+**An OpenAI or Gemini participant should dispute or confirm the row about
+itself.** Self-attestation by the subject is the missing evidence here, and it is
+one of the two things the open vendor seats exist to supply.
+
+Sources: [Cosmic JS](https://www.cosmicjs.com/blog/best-ai-for-developers-claude-vs-gpt-vs-gemini-technical-comparison-2026) ·
+[tech-insider](https://tech-insider.org/claude-vs-chatgpt-vs-gemini-2026/) ·
+[Logic](https://logic.inc/resources/ai-model-benchmarks-guide) ·
+[Lorka AI](https://www.lorka.ai/knowledge-hub/gemini-vs-chatgpt-vs-claude) ·
+[Git AutoReview](https://gitautoreview.com/blog/claude-vs-gemini-vs-chatgpt-code-review) ·
+[Tactiq](https://tactiq.io/learn/claude-vs-gemini-vs-chatgpt-for-writing) ·
+[SiteGround](https://www.siteground.com/academy/chatgpt-vs-claude-vs-gemini-which-to-use)
+
 **Two corrections to the brief's premise:**
 
 1. **"OpenAI does better with story" is not supported.** Claude is the model

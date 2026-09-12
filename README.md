@@ -247,7 +247,7 @@ clipped inside.
 ## Development
 
 ```sh
-npm test           # 269 unit tests, no dependencies, well under a second
+npm test           # 276 unit tests, no dependencies, well under a second
 npm run test:watch # re-run on change
 
 # End-to-end checks in a real browser (Playwright is not a dependency):
@@ -280,12 +280,14 @@ src/modifiers.js      the run modifiers, and the bound each one states
 src/formulary.js      the notebook: which interactions you have triggered
 src/eras.js           the five eras of medicine, and what each one calls things
 src/doctors.js        the physician who signs each era's notes
+src/art.js            ligne-claire practitioner sprites and resilient loading
 src/versus.js         two games, garbage routed between them
 src/daily.js          the date-seeded daily challenge
 src/renderer.js       canvas drawing
 src/audio.js          Web Audio synthesis: two chiptune loops and the effects
 src/input.js          keyboard, touch, swipe and gamepad
 src/main.js           screens, HUD, persistence and the animation loop
+assets/practitioners/ rendered practitioner poses, with one set per era
 test/                 unit tests for the rules, plus randomised soak runs
 sw.js                 service worker: precache everything, play offline
 manifest.webmanifest  installable app metadata
@@ -301,6 +303,9 @@ The rules live entirely in `board.js`, `pill.js` and `game.js`, which never
 touch the DOM. That is what lets the test suite play thousands of frames
 headlessly and assert that the board never floats a capsule half or leaves a
 match unresolved.
+
+Portraits are rendered ligne-claire practitioner sprites, with the procedural
+doctor drawing retained as a fallback when art is unavailable.
 
 ## Deploying
 

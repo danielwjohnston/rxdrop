@@ -248,7 +248,7 @@ clipped inside.
 ## Development
 
 ```sh
-npm test           # 279 unit tests, no dependencies, well under a second
+npm test           # 284 unit tests, no dependencies, well under a second
 npm run test:watch # re-run on change
 
 # End-to-end checks in a real browser (Playwright is not a dependency):
@@ -285,7 +285,7 @@ src/art.js            ligne-claire practitioner sprites and resilient loading
 src/versus.js         two games, garbage routed between them
 src/daily.js          the date-seeded daily challenge
 src/renderer.js       canvas drawing
-src/audio.js          Web Audio synthesis: two chiptune loops and the effects
+src/audio.js          Web Audio synthesis: ten era chiptune loops and the effects
 src/input.js          keyboard, touch, swipe and gamepad
 src/main.js           screens, HUD, persistence and the animation loop
 assets/practitioners/ rendered practitioner poses, with one set per era
@@ -298,6 +298,7 @@ tools/gauntlet.mjs    the UltraGauntlet: thirteen stages, one gate
 docs/ultragauntlet.md what the gauntlet is and why each stage exists
 docs/direction.md     the creative direction: what the project is becoming
 docs/ideas.md         the design workshop: mechanics proposed, shipped and cut
+docs/music.md         the musical ideas and historical caveats for each era
 ```
 
 The rules live entirely in `board.js`, `pill.js` and `game.js`, which never

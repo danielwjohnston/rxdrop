@@ -31,7 +31,7 @@ Sprite status: R = rendered in PR #32 (5 x 4 poses), - = not yet rendered.
 | 9 | Patent-medicine showman | 1800 - 1906 | US patent-medicine boom; Pure Food and Drug Act 1906 | top hat, brocade waistcoat, embossed bottle | R (`quack`) |
 | 10 | Germ-theory surgeon | 1867 - 1900 | Pasteur 1860s, Lister's antisepsis 1867, Koch's postulates 1882 | gown, carbolic spray, microscope | - |
 | 11 | Antibiotic-era physician | 1928 - 1999 | penicillin 1928 / mass production 1943; sulfa (Prontosil) 1935 | white coat, stethoscope, clipboard | R (`physician`) - **note: PR #32 sprite wears a dark suit, not a white coat; re-render recommended** |
-Open item: re-render the physician in a white coat for the final art pass.
+|   | **Open item:** re-render the physician in a white coat for the final art pass. | | | | |
 | 12 | Molecular researcher | c. 1985 | PCR 1983, first genetically engineered drug (insulin) 1982 | lab coat, pipette, gel | - (optional; overlaps 13) |
 | 13 | Gene-therapy clinician | 1990 - onward | DeSilva trial 1990; Glybera 2012; CRISPR 2012; Casgevy 2023 | visor, sealed suit, cryo vial | R (`technician`) |
 

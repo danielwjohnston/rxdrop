@@ -1,6 +1,10 @@
 # Branch audit: `main` vs `openai/medical-eras-visual-overhaul`
 
-**Audited 12 September 2026, at `main` 782d324 and overhaul `40ebd8e`.**
+**Audited 12 September 2026, at `origin/main` 782d324 and
+`origin/openai/medical-eras-visual-overhaul` 40ebd8e.**
+Refs are given against `origin` deliberately: a reviewer of this document
+resolved `main` against a stale local pointer and produced a confident, wrong
+finding as a result.
 Open for review and comment — see [Review log](#review-log) at the bottom.
 
 This exists because the two branches are now parallel implementations of
@@ -372,7 +376,24 @@ URL — never by handing it a token.
 Reviewers: append a dated section. State what you disagree with, not just what
 you would add. An empty review is worse than none.
 
-### Cycle 2 — 12 September 2026 — Devin (Cognition), external reviewer
+Three cycles ran on 12 September 2026. The log lives in
+[`collaboration.md` §6](collaboration.md#6-review-log) so it sits beside the
+conventions it exercises rather than being duplicated here.
+
+**What review changed in this document:** the separability claim in §5 was
+wrong and is corrected; the merge-outcome claim in §4 was wrong and the truth is
+worse; the "no ending" finding was overstated and is narrowed in §7b; six
+further findings were added that the first pass missed. The recommendation did
+not change, but its reasoning did.
+
+**Status: approved with conditions, all conditions met.** One condition was
+rejected on evidence — a reviewer resolved `main` against a stale local ref and
+reported a base-commit error that does not exist. Recorded in the log.
+
+### External review — 12 September 2026 — Devin (Cognition)
+
+Written against this branch at 7c1bc7d, before the cycle-3 close-out above
+landed; the internal reviewers B–D in `collaboration.md` §6 are not Devin.
 
 **Who.** Devin, Cognition AI's software-engineering agent, in its own session
 and its own container. Not a Claude sub-agent: a different vendor reading this
@@ -489,5 +510,3 @@ answered by §4 alone: a merge produces a build that silently loads nothing, and
 "merge then delete" would spend its first day discovering what §4 already
 states. Request revision on items 1, 3 and 4 above before this is treated as the
 consensus plan; items 5–9 are additions, not blockers.
-
-<!-- REVIEW CYCLES APPENDED BELOW -->

@@ -64,6 +64,8 @@ node tools/gauntlet.mjs       # the full gate, ~5 minutes
 | `modifiers` | ~240 s |
 | `browser` | ~65 s |
 
+Full gate, all thirteen: **~5 minutes**.
+
 So while iterating:
 
 ```
@@ -76,9 +78,21 @@ That is 11 of 13 stages in under two seconds. Add `modifiers` when you touch
 `index.html`, `src/styles.css`, `src/main.js` or `sw.js`. Run the whole thing
 once, before handing off. Never run the full gauntlet to check a one-line edit.
 
+`node tools/gauntlet.mjs --list` prints every stage and what it is for.
+
+**Two traps in that command line.** A mistyped *stage name* errors out, but a
+mistyped *flag* is silently dropped (`gauntlet.mjs:1469` filters anything
+starting with `-`) and the full five-minute gate runs instead — exactly the
+mistake this section is trying to save you. Check the stage count in the output
+line matches what you asked for.
+
 Playwright is installed on demand (`npm i --no-save playwright`), not a
-dependency. In this container the browser is pre-installed — do **not** run
-`playwright install`; launch with `executablePath: '/opt/pw-browsers/chromium'`.
+dependency. In this container the browsers are pre-installed and found through
+`PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers`, which is already set — so do **not**
+run `playwright install`, and do not add an `executablePath`: the repo's tooling
+deliberately has none and relies on that variable. If you install a Playwright
+version whose bundled browser revision differs from the pre-installed one, the
+launch fails; pin to the installed revision rather than downloading.
 
 ## Token budget
 

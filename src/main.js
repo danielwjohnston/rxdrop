@@ -5,6 +5,7 @@ import {
   SPEEDS,
   TOLERANCE_AT,
   VIRUS,
+  LIGHT_WIDTH_FULL,
 } from './constants.js';
 import { Game } from './game.js';
 import { VersusMatch } from './versus.js';
@@ -153,7 +154,7 @@ function loadSettings() {
     hasPlayed: false,
     modifiers: [],
     /** Phototherapy variants, all three unsettled and all three toggleable. */
-    lightWidth: 5,
+    lightWidth: LIGHT_WIDTH_FULL,
     lightExit: 'manual',
     lightView: 'switch',
     mode: 'solo',
@@ -177,7 +178,9 @@ function loadSettings() {
   if (params.has('seed')) merged.seed = Number(params.get('seed')) >>> 0;
   if (params.has('resistance')) merged.resistance = params.get('resistance') !== '0';
   if (params.has('mods')) merged.modifiers = params.get('mods').split(',');
-  if (params.has('lightWidth')) merged.lightWidth = Number(params.get('lightWidth')) || 5;
+  if (params.has('lightWidth')) {
+    merged.lightWidth = Number(params.get('lightWidth')) || LIGHT_WIDTH_FULL;
+  }
   if (params.has('lightExit')) merged.lightExit = params.get('lightExit');
   if (params.has('lightView')) merged.lightView = params.get('lightView');
   merged.modifiers = normaliseModifiers(merged.modifiers);
@@ -1279,9 +1282,9 @@ function syncLightVariants() {
       button.classList.toggle('is-selected', button.getAttribute(attr) === value);
     }
   }
-  const width = settings.lightWidth === 5
-    ? 'A narrow chamber: fewer cells to a line, so each one is worth something.'
-    : 'The full bottle: lines are rare and big.';
+  const width = settings.lightWidth === LIGHT_WIDTH_FULL
+    ? 'The full bottle: lines are rare and big.'
+    : 'A narrow chamber: fewer cells to a line, so each one is worth something.';
   const exit = settings.lightExit === 'manual'
     ? 'You leave when you say - a straight trade.'
     : 'A timer ends the session - a commitment you can regret.';

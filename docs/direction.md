@@ -355,6 +355,11 @@ The solution is to replace it with a treatment system.
 
 That system is Phototherapy.
 
+The shipped light chamber uses the full bottle width and the capsule's current
+gravity, so the two falling-piece games share one pace. A narrow well and a
+faster fallback pace remain selectable for measurement, but they are no longer
+the default player experience.
+
 ## 12. Biofilm Is the Correct Cause of Lost Visibility
 
 The strongest contribution from the current design notes is biofilm.

@@ -158,9 +158,15 @@ export const HYBRID_BONUS = 4;
 /** Milliseconds a mutation flashes before the new colour takes over. */
 export const MUTATION_ANIMATION = 420;
 
-/** Versus: how much garbage a clear sends, and the most one clear can send. */
-export const ATTACK_PER_EXTRA_CELL = 1;
-export const ATTACK_PER_COMBO = 2;
+/** The exponent at which the per-virus payout reaches its 3200-point row. */
+export const SCORE_DOUBLING_CAP = 5;
+
+/** Chain bonuses and the highest stage that can increase them. */
+export const CHAIN_BONUS_BASE = 3;
+export const CHAIN_STAGE_CAP = 6;
+
+/** Simultaneous multi-line clears send extra garbage in versus. */
+export const MULTI_LINE_BONUS = 2;
 export const ATTACK_CAP = 6;
 
 /**

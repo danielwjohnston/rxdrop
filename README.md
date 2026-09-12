@@ -188,10 +188,14 @@ clipped inside.
   more** of one colour in a row or column and they are destroyed - viruses
   included.
 - Clearing part of a capsule leaves the other half behind, and loose halves
-  fall. If they complete another line the chain keeps going, and each extra
-  stage in a cascade multiplies the score.
-- Each virus in a single clear is worth double the last: at LOW speed one virus
-  scores 100, two score 300, three score 700, and so on. MED and HI pay more.
+  fall. If they complete another line the chain keeps going: every virus in the
+  same capsule drop, including cascade stages, continues the doubling table,
+  and every cascade stage from the second also pays a chain bonus.
+- Each virus in a single drop is worth double the last: at LOW speed one virus
+  scores 100, two score 300, three score 700, four score 1500, five score 3100,
+  and six score 6300. The doubling row caps after six viruses; MED and HI pay
+  more. A simultaneous second line is a double-line bonus, and capsule-only
+  cascades still earn their chain bonus.
 - Gravity gets faster every ten capsules.
 - **Hurrying** a capsule holds it at a multiple of the level's own gravity, with
   a floor, so it is always fast enough to save time and never so fast you cannot

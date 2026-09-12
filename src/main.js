@@ -27,6 +27,8 @@ const LEGACY_FORMULARY_KEY = 'rxdrop.formulary.v1';
 const SPEED_ORDER = ['LOW', 'MEDIUM', 'HIGH'];
 const CONFIRM_LOCKOUT = 550;
 const LOCKOUT_SCREENS = new Set(['over', 'clear', 'daily', 'versus']);
+let toastTimer = null;
+let discoveryToastActive = false;
 
 const el = (id) => document.getElementById(id);
 
@@ -299,8 +301,25 @@ function announceDiscovery(id) {
   dom.toastTitle.textContent = 'Written up';
   dom.toastText.textContent = discovery.title;
   dom.toast.hidden = false;
-  clearTimeout(announceDiscovery.timer);
-  announceDiscovery.timer = setTimeout(() => { dom.toast.hidden = true; }, 2600);
+  clearTimeout(toastTimer);
+  discoveryToastActive = true;
+  toastTimer = setTimeout(() => {
+    dom.toast.hidden = true;
+    discoveryToastActive = false;
+    toastTimer = null;
+  }, 2600);
+}
+
+function announce(text) {
+  if (discoveryToastActive) return;
+  dom.toastTitle.textContent = text;
+  dom.toastText.textContent = '';
+  dom.toast.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    dom.toast.hidden = true;
+    toastTimer = null;
+  }, 1200);
 }
 
 function syncFormularyCount() {
@@ -697,6 +716,15 @@ function handleGameEvents() {
         renderers[0].addShake(2 + Math.min(6, event.viruses * 2 + event.combo));
         if (event.viruses > 0) react('cheer');
         if (event.collateral > 0) renderers[0].addShake(4);
+        if (event.runs >= 2) {
+          announce(event.runs === 2 ? 'DOUBLE LINE' : event.runs === 3 ? 'TRIPLE LINE' : 'QUAD LINE');
+        }
+        break;
+      case 'chain':
+        announce(`CHAIN ×${event.stage}`);
+        react('cheer');
+        renderers[0].addShake(3 + event.stage);
+        audio.play('chain', event);
         break;
       case 'antibody':
         audio.play('antibody', event);

@@ -126,13 +126,9 @@ export class Board {
     if (c && c.link === OPPOSITE_LINK[this.get(x, y).link]) c.link = null;
   }
 
-  /**
-   * Finds every cell belonging to a horizontal or vertical run of at least
-   * MATCH_LENGTH cells of one colour. Returns a Set of "x,y" keys.
-   */
-  findMatches(minRun = MATCH_LENGTH) {
-    const matched = new Set();
-
+  /** Finds every horizontal or vertical run of at least `minRun` cells. */
+  findRuns(minRun = MATCH_LENGTH) {
+    const runs = [];
     const scan = (length, at) => {
       let runStart = 0;
       let runColor = -1;
@@ -145,7 +141,10 @@ export class Board {
         if (color !== runColor || color === -1) {
           const runLength = i - runStart;
           if (runColor !== -1 && runLength >= minRun) {
-            for (let j = runStart; j < i; j += 1) matched.add(at.key(j));
+            runs.push(Array.from(
+              { length: runLength },
+              (_, offset) => at.key(runStart + offset),
+            ));
           }
           runStart = i;
           runColor = color;
@@ -162,6 +161,18 @@ export class Board {
       const at = (y) => this.get(x, y);
       at.key = (y) => `${x},${y}`;
       scan(this.height, at);
+    }
+    return runs;
+  }
+
+  /**
+   * Finds every cell belonging to a horizontal or vertical run of at least
+   * MATCH_LENGTH cells of one colour. Returns a Set of "x,y" keys.
+   */
+  findMatches(minRun = MATCH_LENGTH) {
+    const matched = new Set();
+    for (const run of this.findRuns(minRun)) {
+      for (const key of run) matched.add(key);
     }
     return matched;
   }

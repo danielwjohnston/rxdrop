@@ -197,6 +197,20 @@ export class AudioEngine {
         }
         break;
       }
+      case 'chain': {
+        const stage = Math.min(6, Math.max(2, detail.stage ?? 2));
+        const roots = ['C5', 'G5', 'D6', 'A6', 'E7'];
+        const root = noteToFreq(roots[stage - 2]);
+        for (const [interval, start] of [[0, 0], [4, 0.08], [7, 0.16]]) {
+          this.tone(root * 2 ** (interval / 12), {
+            start,
+            duration: 0.16,
+            gain: 0.2,
+            type: 'square',
+          });
+        }
+        break;
+      }
       case 'antibody': {
         // A rising two-note chime over a bright sweep: the one sound in the
         // game that says you did the hardest thing available.

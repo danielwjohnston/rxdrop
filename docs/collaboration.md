@@ -256,11 +256,13 @@ what brief, and what changed as a result.
 two-phase plan now in `branch-audit.md`. Two findings the audit had missed, both
 verified independently before acceptance:
 
-- **The game has no ending.** `src/game.js` clamps
+- **The campaign does not end.** `src/game.js` clamps
   `Math.min(this.level + 1, MAX_LEVEL)` at 20, so level 20 advances to level 20
-  forever, and there is no run-complete state anywhere. Confirmed. This is now
-  the highest-priority item for "web complete" and had gone unnoticed for the
-  whole project.
+  forever. **Corrected in cycle 2:** the original wording here — "there is no
+  run-complete state anywhere" — was wrong, and was repeated to the user before
+  anyone checked. `index.html:226` carries a finale card and `src/main.js:739`
+  switches the title to "Bottle empty!". The real gap is narrower: the button
+  reads "Play level 20 again", so there is a level finale but no campaign end.
 - **The audio transport claim was wrong.** `docs/ideas.md` said the engine has
   no transport. `src/audio.js:387-404` already runs a look-ahead scheduler.
   Confirmed, and the document has been corrected — sonotherapy is materially
@@ -275,4 +277,66 @@ over five gameplay eras — the architecture the direction document asked for.
 **Reviewer B (adversarial brief) did not report in cycle 1.** Recorded rather
 than hidden; the brief was reissued in cycle 2.
 
-<!-- CYCLE 2 AND 3 APPENDED BELOW -->
+### Cycle 2 — 12 September 2026
+
+**Reviewer B (adversarial brief).** Verified the audit's numbers and its central
+claim — the branch's `index.html`, `main.js` and `styles.css` are byte-identical
+to the merge base, so it demonstrably is not solving onboarding another way —
+then took three findings apart. All three verified before acceptance:
+
+- **The art layer is not cleanly separable.** The import graph showed only
+  forward edges; `doctors.js` pulls the overhaul runtime in, and that runtime is
+  prototype surgery on nine `Game` methods. Harvest still wins, but because
+  merge is worse, not because a clean boundary exists.
+- **A merge leaves no dead blackout.** The real outcome is worse: a missing
+  `DARK_AT` export makes the whole overhaul fail at module load, silently.
+- **The "no ending" finding was overstated** — see the correction above.
+
+Also found four things neither the audit nor cycle 1 caught: a merge silently
+regresses `doctors.js` 436→140 lines with no conflict; the service worker cache
+would go backwards v20→v17; `shot-tmp.mjs` is tracked scratch on both branches;
+and the asset-weight question was mis-framed against two 480 KB PNGs already in
+the repo. Licences confirmed clean.
+
+**Reviewer C (process, documentation, efficiency brief).** Found four measurably
+stale documentation claims, all since fixed, and one finding that changes how
+everyone should work here: **the gauntlet's cost is two stages.** Eleven run
+together in 1.4 s; `modifiers` takes ~247 s and `browser` ~65 s. Nothing in the
+repository said so. Now in `AGENTS.md`.
+
+*Not accepted:* C flagged three `blackout` references in `browser-check.mjs` as
+residue. They are deliberate — two exercise the rename-compatibility table via
+the old URL id, one is an explanatory comment. Kept.
+
+### Cycle 3 — 12 September 2026
+
+**Reviewer D (convergence brief).** Verified that all three cycle-2 corrections
+landed accurately, that the documentation fixes are true against measurement
+(276 tests, 1.4 s for eleven stages, 247.4 s for `modifiers`), and that every
+`wc -l` figure in `AGENTS.md` is exact. Returned **approve with conditions**.
+
+Conditions accepted and fixed:
+
+- The Cycle 1 entry above still carried the retracted "no run-complete state"
+  wording. Fixed.
+- Both review logs were empty for cycles 2 and 3 while §0 claimed three cycles
+  had run. Fixed — this entry.
+- **`AGENTS.md`'s Playwright advice was wrong.** It said to launch with an
+  `executablePath`; the repository's tooling has none and relies on
+  `PLAYWRIGHT_BROWSERS_PATH`. That advice was generalised from a scratch script
+  and would have broken `npm run test:browser`. Fixed.
+- Minor: full-gate cost stated inconsistently, `--list` undocumented, and a
+  mistyped *flag* is silently dropped so the full gate runs. All noted in
+  `AGENTS.md`.
+
+Condition **rejected, and instructive.** D reported that the audit's base commit
+`782d324` "is not `main`", that `main` is `cc90377`, and therefore that the
+harvest instruction to wire to a `sterile` event was wrong. It used a **stale
+local `main` ref**. `git ls-remote` and `origin/main` both give `782d324`, and
+`git grep sterile origin/main -- src/` finds it in two files.
+
+Worth recording rather than quietly dismissing: a stale ref produced a
+confident, specific, well-evidenced and entirely wrong finding — the same
+failure mode §0 documents about the author, reproduced by the reviewer checking
+the author. The lesson generalises: **resolve refs against `origin`, never a
+local branch pointer.** The stale ref has been corrected.

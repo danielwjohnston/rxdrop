@@ -1,6 +1,10 @@
 # Branch audit: `main` vs `openai/medical-eras-visual-overhaul`
 
-**Audited 12 September 2026, at `main` 782d324 and overhaul `40ebd8e`.**
+**Audited 12 September 2026, at `origin/main` 782d324 and
+`origin/openai/medical-eras-visual-overhaul` 40ebd8e.**
+Refs are given against `origin` deliberately: a reviewer of this document
+resolved `main` against a stale local pointer and produced a confident, wrong
+finding as a result.
 Open for review and comment — see [Review log](#review-log) at the bottom.
 
 This exists because the two branches are now parallel implementations of
@@ -372,4 +376,16 @@ URL — never by handing it a token.
 Reviewers: append a dated section. State what you disagree with, not just what
 you would add. An empty review is worse than none.
 
-<!-- REVIEW CYCLES APPENDED BELOW -->
+Three cycles ran on 12 September 2026. The log lives in
+[`collaboration.md` §6](collaboration.md#6-review-log) so it sits beside the
+conventions it exercises rather than being duplicated here.
+
+**What review changed in this document:** the separability claim in §5 was
+wrong and is corrected; the merge-outcome claim in §4 was wrong and the truth is
+worse; the "no ending" finding was overstated and is narrowed in §7b; six
+further findings were added that the first pass missed. The recommendation did
+not change, but its reasoning did.
+
+**Status: approved with conditions, all conditions met.** One condition was
+rejected on evidence — a reviewer resolved `main` against a stale local ref and
+reported a base-commit error that does not exist. Recorded in the log.

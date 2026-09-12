@@ -709,7 +709,7 @@ try {
       // clearing the store under a running bottle just gets it rewritten before
       // the reload lands.
       window.rxdrop.quit();
-      localStorage.removeItem('rxdrop.formulary.v1');
+      localStorage.removeItem('rxdrop.formulary.v2');
     });
     await modPage.reload({ waitUntil: 'networkidle' });
     const blank = await modPage.evaluate(() => {

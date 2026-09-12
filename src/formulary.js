@@ -213,6 +213,10 @@ export const DISCOVERIES = Object.freeze([
 
 export const DISCOVERY_IDS = Object.freeze(DISCOVERIES.map((d) => d.id));
 
+export const LEGACY_ERA_IDS = Object.freeze({
+  apothecary: 'plague',
+});
+
 /** The discovery with this id, or undefined. */
 export const discoveryFor = (id) => DISCOVERIES.find((d) => d.id === id);
 
@@ -270,7 +274,8 @@ export class Formulary {
     for (const id of DISCOVERY_IDS) {
       const entry = found?.[id];
       if (!entry?.first) continue;
-      const eras = [...new Set([entry.first, ...(entry.eras ?? [])])];
+      const eras = [...new Set(entry.eras ?? [])];
+      if (!eras.includes(entry.first)) eras.unshift(entry.first);
       this.found[id] = { first: entry.first, eras };
     }
   }
@@ -278,6 +283,30 @@ export class Formulary {
   static from(json) {
     try {
       return new Formulary(JSON.parse(json ?? '{}'));
+    } catch {
+      return new Formulary();
+    }
+  }
+
+  static fromLegacy(json) {
+    try {
+      const parsed = JSON.parse(json ?? '{}');
+      const mapped = Object.fromEntries(
+        Object.entries(parsed).map(([id, entry]) => {
+          if (!entry || typeof entry !== 'object') return [id, entry];
+          return [
+            id,
+            {
+              ...entry,
+              first: LEGACY_ERA_IDS[entry.first] ?? entry.first,
+              eras: Array.isArray(entry.eras)
+                ? entry.eras.map((era) => LEGACY_ERA_IDS[era] ?? era)
+                : entry.eras,
+            },
+          ];
+        }),
+      );
+      return new Formulary(mapped);
     } catch {
       return new Formulary();
     }

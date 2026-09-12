@@ -207,6 +207,87 @@ Rationale: `main` is ahead on everything that was tested against a human, and
 behind on everything that was drawn. Those are disjoint, and the module boundary
 happens to fall in the right place.
 
+## 7a. The consensus plan
+
+Converged across three review cycles. Sequenced by dependency, not by appeal.
+
+### Phase A — finish the web version
+
+**A0. Groundwork (hours, no dependencies, do first).**
+- Fix the two historical-credibility problems in `src/eras.js` **before** any art
+  work: the plague band opens at 1347 with a beaked mask documented from the
+  1600s, and the paleolithic healer wears a Plains war bonnet. Cheap now,
+  expensive after thirty assets exist.
+- Tag `archive/openai-medical-eras` and delete the branch once harvested. A
+  stale branch that looks mergeable is a trap, and it very nearly was one.
+- Add a gauntlet check that every `src/*.js` and every referenced asset is in
+  `sw.js`'s `PRECACHE`. The list is hand-maintained and nothing guards it.
+
+**A1. The campaign ends (independent — do it early).**
+`main` has a level finale card, but the button reads "Play level 20 again". A
+caseload needs a last case. Add a terminal state and a gauntlet check that
+level 20 reaches it. This is the only item that changes what the game *is*.
+
+**A2. Harvest the art (depends on A0).**
+Order matters, and each step gates the next:
+
+1. **The 130px test first, before any glue.** Render the branch's atlases at
+   the size they actually appear — ~130px in a side panel — against the real
+   bottle. *This is the riskiest assumption in the whole plan*: the assets were
+   generated at roughly double their display size. If they fail here, A2 is a
+   commission, not a harvest, and Phase A's cost triples.
+2. `art.js` + one atlas + **the fallback path and a check for it** — a missing
+   atlas must degrade to procedural drawing, not break offline play.
+3. **New glue, written from scratch.** Do not port `runtime-overhaul.js`: it
+   monkey-patches nine `Game` methods and pulls itself in through `doctors.js`.
+   Wire the art to `main`'s renderer and event stream instead.
+4. `periods.js` as a presentation map over the five gameplay eras. **Keep the
+   era ids** — the formulary keys saved notebooks by them.
+5. `virus-theatre.js`, **with its event switch rewritten** for `main`'s
+   vocabulary (`lightOn`/`lightOff`/`lit`/`flooded`/`sterile`).
+
+Explicitly do not port: `phototherapy.js`, `sonic-therapy.js`, the `doctors.js`
+import hunk. Resolve `sw.js` **upward** to `main`'s cache version.
+
+**A3. Expose the beat (independent of A1/A2 — can run in parallel).**
+`src/audio.js` already has the look-ahead scheduler. Expose beat index, bar
+position and next-beat time, and make the clock injectable for headless tests.
+Smaller than previously documented, and it is the only item with two dependents.
+
+**A4. Music per period.** Blocked on A3 *and* A2's period map.
+
+**A5. Freeze.** Full gauntlet, ship, add no mechanics.
+
+**Cut from "web complete", deliberately:** sonotherapy, the macro-organism boss,
+heat/over-treatment. All three make the game *bigger*, not *done*. They are the
+best ideas in `docs/ideas.md` and they belong after a shipped web version.
+
+### Phase B — the Godot port
+
+The separation is real and was checked, not assumed: `board.js`, `pill.js`,
+`game.js`, `light.js`, `modifiers.js`, `rng.js`, `versus.js`, `eras.js` and
+`constants.js` contain **zero** DOM references — roughly 2,800 lines of pure,
+deterministic, seeded logic. Transliterating that to GDScript is tedious and
+low-risk.
+
+Rewritten, not ported: `renderer.js`, `main.js` (1,468 lines, ~62 DOM
+references, entirely throwaway), `input.js`, `audio.js`, the service worker, and
+`formulary.js`'s storage layer.
+
+**The gauntlet does not port, and pretending otherwise is the trap.** It is Node
+ESM importing `src/*.js` directly. Rather than rewrite thirteen stages in
+GDScript and lose the accumulated catch history, **keep the JS rules as a
+differential oracle**: run one seed and one input log through both engines and
+compare board hashes per frame. That reduces "did the port change the rules" to
+a single automated question.
+
+It rests entirely on the ported PRNG being bit-exact, which is why
+`test/fixtures/rng-golden.json` now exists. **Port `src/rng.js` first, check it
+against the fixture, and port nothing else until it matches.** mulberry32 ports
+*almost* right — `Math.imul` is a signed 32-bit multiply and `>>>` is unsigned,
+neither free in a 64-bit integer language — and an almost-right generator makes
+the differential test fail far from the actual cause.
+
 ## 7b. Found on review, not in the first pass
 
 - **A merge silently regresses `src/doctors.js` from 436 lines to 140** —

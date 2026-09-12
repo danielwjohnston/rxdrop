@@ -348,6 +348,7 @@ docs/collaboration.md how several agents work here without waste
 docs/direction.md     the creative direction: what the project is becoming
 docs/ideas.md         the design workshop: mechanics proposed, shipped and cut
 docs/music.md         the musical ideas and historical caveats for each era
+.agents/              shared multi-agent protocol, decisions and handoffs
 ```
 
 The rules live entirely in `board.js`, `pill.js` and `game.js`, which never

@@ -69,9 +69,9 @@ playtest checks above.
 
 Checks the branch has that `main` does not are all **blackout** checks — see §4.
 
-## 4. Three light systems, not one
+## 4. Three light systems on the branch, and a silent failure on merge
 
-The branch **kept the old blackout and layered on top of it**:
+Taken on its own, the branch **kept the old blackout and layered on top of it**:
 
 - 11 blackout constants still in `src/constants.js` (`LIGHT_CAPACITY`,
   `LIGHT_REFILL`, `LIGHT_ARM`, …)
@@ -82,9 +82,21 @@ The branch **kept the old blackout and layered on top of it**:
 
 `main` cut blackout entirely and replaced it with `src/light.js` (326 lines).
 
-So a merge yields **two complete, competing phototherapy implementations plus a
-dead blackout**. The two-file textual conflict surface (§6) badly understates
-this: the code merges cleanly and the *result* is incoherent.
+**What a merge actually produces — corrected on review, and it is worse than
+the original claim here.** The branch never touched `game.js` or
+`constants.js`, so a merge takes `main`'s versions of both: no dead blackout
+survives (`grep -cE 'LIGHT_CAPACITY|BLACKOUT'` on the merged `constants.js`
+returns 0). Instead:
+
+> `src/phototherapy.js:3` imports `DARK_AT`, which the branch exports and
+> `main` does not. Post-merge that is
+> `SyntaxError: The requested module './constants.js' does not provide an
+> export named 'DARK_AT'` — **the entire overhaul silently never loads.**
+
+A merge would look successful, pass a smoke test, and ship nothing. And if
+someone "fixed" it by re-adding the export, the patched `setLight` and
+`updateLight` would then silently override `main`'s tested light system. Silent
+either way, which is the worst available failure mode.
 
 Worse, the branch's phototherapy is the version the design originally specified,
 which play has since falsified twice on `main`:
@@ -135,8 +147,33 @@ runtime-overhaul.js -> art, audio, board, constants, game, input, music,
                        virus-theatre
 ```
 
-Only `runtime-overhaul.js` — the glue — touches the branch's mechanics.
-**The art layer is separable from the mechanics layer at the module boundary.**
+**That graph was wrong, and adversarial review caught it.** It shows only
+forward edges from the art modules. Two reverse edges break the claim:
+
+- **`src/doctors.js:1-4`** — on the branch, a *mechanics* module pulls the whole
+  overhaul in:
+  ```js
+  if (typeof window !== 'undefined') {
+    import('./runtime-overhaul.js');
+    import('./overhaul-ui.js');
+  }
+  ```
+- **`src/runtime-overhaul.js:92-231` is prototype surgery.** It monkey-patches
+  `Game.prototype.{reset,move,rotate,setSoftDrop,hardDrop,emit,drainEvents,
+  updateLight,setLight}`, `Board.prototype.cureHybrids`, and
+  `InputController.prototype.pollGamepad`.
+- **`src/virus-theatre.js:56-72`** switches on event names (`phototherapy`,
+  `phototherapyEnter`, `sonicPulse`) emitted *only* by that patched `emit`.
+  `main` renamed the whole vocabulary to `lightOn`/`lightOff`/`lit`/`flooded`/
+  `sterile`, so the switch must be rewritten whichever route is taken.
+
+What *is* safe, and confirmed: `renderer.js`'s layout keys
+(`originX`/`originY`/`cell`/`fieldW`) and every DOM id and class the art needs
+all still exist on `main`.
+
+**Corrected conclusion: the art layer is harvestable but not cleanly
+separable.** The glue is prototype surgery and has to be rewritten either way.
+That changes the reasoning for the recommendation, not the recommendation.
 
 ## 6. Merge mechanics
 
@@ -169,6 +206,29 @@ Take the art and presentation layer onto `main`; leave the mechanics behind.
 Rationale: `main` is ahead on everything that was tested against a human, and
 behind on everything that was drawn. Those are disjoint, and the module boundary
 happens to fall in the right place.
+
+## 7b. Found on review, not in the first pass
+
+- **A merge silently regresses `src/doctors.js` from 436 lines to 140** —
+  `main`'s five parametric physicians replaced by the branch's flat fallback,
+  **with no conflict raised**. Any harvest must drop that hunk.
+- **`sw.js` cache regression.** Branch is `rxdrop-v17`, `main` is `rxdrop-v20`.
+  The conflict must resolve upward or installed PWA users keep a stale cache.
+- **`shot-tmp.mjs` is dead scrap on *both* branches** — hardcodes
+  `/home/user/rxdrop`, spawns `python3 -m http.server`, and references the
+  removed `blackout` modifier. Delete it.
+- **Licence: clean.** Both SVG atlases are hand-written path data — no generator
+  metadata, no embedded rasters. MIT throughout.
+- **Q3 answered.** `music.js` needs only `TRACKS` and `noteToFreq`, both still
+  exported from `main`'s `audio.js`. Shallow coupling; harvestable.
+- **Q5 was mis-framed.** 22 KB of SVG is noise beside `assets/screenshot.png`
+  (483 KB) and `assets/versus.png` (480 KB), both already in the repo and
+  neither precached. The offline budget question is about those, not the art.
+- **The "no ending" finding was overstated.** `main` *does* have a finale card —
+  `index.html:226` "Level 20 beaten - the bottle is clean!" and `main.js:738`
+  switches the title to "Bottle empty!". What is missing is narrower: the button
+  reads **"Play level 20 again"**, so there is a level finale but no campaign
+  end. Still worth fixing; not the hole first reported.
 
 ## 8. Open questions for reviewers
 

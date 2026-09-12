@@ -286,7 +286,7 @@ try {
 
   await page.close();
 
-  // The apothecary layer: the era has to follow the level, and the physician
+  // The era layer: the era has to follow the level, and the physician
   // has to actually paint - an empty canvas would look identical to a missing
   // one at a glance.
   const eraPage = await browser.newPage({ viewport: { width: 1024, height: 820 } });
@@ -313,8 +313,8 @@ try {
         pixels: data.length / 4,
       };
     });
-    assert.equal(state.name, 'Gene Therapy');
-    assert.equal(state.eraAttr, 'genetic');
+    assert.equal(state.name, 'Pharmaceutical');
+    assert.equal(state.eraAttr, 'pharmaceutical');
     assert.ok(state.period.length > 0, 'the era should show its period');
     assert.notEqual(state.accent, '', 'the era accent should be set on the body');
     assert.ok(
@@ -466,7 +466,7 @@ try {
       place: document.getElementById('note-place').textContent,
     }));
     assert.equal(shown.hidden, false, 'crossing into level 4 should show the note');
-    assert.match(shown.era, /Apothecary/);
+    assert.match(shown.era, /Hippocratic/);
     assert.ok(shown.text.length > 40);
     assert.ok(shown.place.length > 0);
   });

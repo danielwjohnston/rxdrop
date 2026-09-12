@@ -1,8 +1,9 @@
 /**
  * The physicians.
  *
- * One per era, drawn parametrically like everything else in this game - no
- * image files, no sprite sheet. Each is drawn into a 100 x 100 box with the
+ * Each historical era has its own procedural fallback, drawn parametrically
+ * like everything else in this game - no image files, no sprite sheet. Each is
+ * drawn into a 100 x 100 box with the
  * feet on the origin line and the head around y = -72, so they all sit the same
  * way in the panel however different they look.
  *
@@ -177,7 +178,196 @@ const DOCTORS = {
     face(ctx, { ...state, skin: '#c08a5c', ink: '#2b1a12', eyeY: -74, spread: 8 });
   },
 
-  /** The apothecary era: the beaked plague doctor. */
+  /** Egyptian medicine: shaved head, linen and a broad faience collar. */
+  swnw(ctx, state) {
+    shoulders(ctx, { coat: '#eee7cf', collar: '#1e8991', trim: '#d7b44f' });
+
+    // Shaved head and the clean profile of a linen-wrapped practitioner.
+    ctx.fillStyle = '#b9784c';
+    ctx.beginPath();
+    ctx.ellipse(0, -72, 20, 22, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#7d4a35';
+    ctx.beginPath();
+    ctx.arc(0, -88, 18, Math.PI * 1.05, Math.PI * 1.95);
+    ctx.fill();
+
+    // Wide turquoise collar, picked out like faience.
+    ctx.fillStyle = '#28a6a0';
+    ctx.beginPath();
+    ctx.moveTo(-25, -42);
+    ctx.lineTo(-14, -54);
+    ctx.lineTo(0, -44);
+    ctx.lineTo(14, -54);
+    ctx.lineTo(25, -42);
+    ctx.lineTo(18, -28);
+    ctx.lineTo(0, -35);
+    ctx.lineTo(-18, -28);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = state.accent;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    face(ctx, { ...state, skin: '#b9784c', ink: '#382015', eyeY: -74, spread: 8 });
+
+    // Papyrus strip and its blue-green ink marks.
+    ctx.fillStyle = '#d7c38a';
+    roundBox(ctx, 25, -45, 10, 38, 2);
+    ctx.fill();
+    ctx.strokeStyle = '#7b5b37';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.strokeStyle = state.accent;
+    for (let i = 0; i < 4; i += 1) {
+      ctx.beginPath();
+      ctx.moveTo(28, -39 + i * 7);
+      ctx.lineTo(32, -39 + i * 7);
+      ctx.stroke();
+    }
+  },
+
+  /** Classical medicine: himation, grey beard and a physician's staff. */
+  hippocratic(ctx, state) {
+    shoulders(ctx, { coat: '#eee9dc', collar: '#d4d0c5', trim: '#8f918d' });
+
+    // White himation gathered over one shoulder.
+    ctx.fillStyle = '#f6f2e8';
+    ctx.beginPath();
+    ctx.moveTo(-37, 0);
+    ctx.quadraticCurveTo(-30, -35, -13, -48);
+    ctx.lineTo(8, -26);
+    ctx.lineTo(31, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#aaa79f';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.fillStyle = '#d3a77d';
+    ctx.beginPath();
+    ctx.ellipse(0, -73, 20, 22, 0, 0, Math.PI * 2);
+    ctx.fill();
+    face(ctx, { ...state, skin: '#d3a77d', ink: '#332a24', eyeY: -75, spread: 8 });
+
+    // Grey beard, leaving the eyes visible for the pose to read.
+    ctx.fillStyle = '#8b8c86';
+    ctx.beginPath();
+    ctx.moveTo(-14, -64);
+    ctx.quadraticCurveTo(0, -54, 14, -64);
+    ctx.quadraticCurveTo(11, -40, 0, -36);
+    ctx.quadraticCurveTo(-11, -40, -14, -64);
+    ctx.closePath();
+    ctx.fill();
+
+    // Staff and a small wax tablet at the hand.
+    ctx.strokeStyle = '#78563c';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(30, 0);
+    ctx.lineTo(30, -111);
+    ctx.stroke();
+    ctx.fillStyle = state.accent;
+    ctx.beginPath();
+    ctx.arc(30, -114, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#c9b47f';
+    roundBox(ctx, -34, -39, 13, 18, 2);
+    ctx.fill();
+    ctx.strokeStyle = state.accent;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  },
+
+  /** Bimaristan medicine: a white turban, green robe and glass flask. */
+  bimaristan(ctx, state) {
+    shoulders(ctx, { coat: '#296b58', collar: '#d7d1a4', trim: '#4fae8f' });
+
+    ctx.fillStyle = '#c58e68';
+    ctx.beginPath();
+    ctx.ellipse(0, -73, 20, 22, 0, 0, Math.PI * 2);
+    ctx.fill();
+    face(ctx, { ...state, skin: '#c58e68', ink: '#30231d', eyeY: -75, spread: 8 });
+
+    // Layered white turban, with the era accent as the pin.
+    ctx.fillStyle = '#f5f0df';
+    ctx.beginPath();
+    ctx.ellipse(0, -89, 25, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(-8, -94, 12, Math.PI * 0.95, Math.PI * 1.95);
+    ctx.arc(7, -95, 12, Math.PI * 1.05, Math.PI * 2.05);
+    ctx.fill();
+    ctx.fillStyle = state.accent;
+    ctx.beginPath();
+    ctx.arc(12, -96, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // A little glass flask held beside the robe.
+    ctx.strokeStyle = '#cfe8d9';
+    ctx.lineWidth = 1.5;
+    roundBox(ctx, 25, -38, 12, 22, 3);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(99, 199, 181, 0.75)';
+    roundBox(ctx, 26, -29, 10, 12, 2);
+    ctx.fill();
+    ctx.fillStyle = '#d7d1a4';
+    roundBox(ctx, 28, -44, 6, 7, 1.5);
+    ctx.fill();
+  },
+
+  /** The medieval apothecary: felt cap, leather apron and mortar. */
+  apothecary(ctx, state) {
+    shoulders(ctx, { coat: '#6f4c35', collar: '#c8b08a', trim: '#3e2a20' });
+
+    // Leather apron straps over the working coat.
+    ctx.strokeStyle = '#2f2119';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(-17, -39);
+    ctx.lineTo(-10, -5);
+    ctx.moveTo(17, -39);
+    ctx.lineTo(10, -5);
+    ctx.stroke();
+    ctx.fillStyle = '#875d3e';
+    roundBox(ctx, -19, -28, 38, 31, 4);
+    ctx.fill();
+    ctx.strokeStyle = state.accent;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.fillStyle = '#d3a37d';
+    ctx.beginPath();
+    ctx.ellipse(0, -73, 20, 22, 0, 0, Math.PI * 2);
+    ctx.fill();
+    face(ctx, { ...state, skin: '#d3a37d', ink: '#352219', eyeY: -75, spread: 8 });
+
+    // Brown felt cap.
+    ctx.fillStyle = '#4c3025';
+    ctx.beginPath();
+    ctx.ellipse(0, -91, 27, 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+    roundBox(ctx, -17, -105, 34, 17, 5);
+    ctx.fill();
+    ctx.fillStyle = state.accent;
+    ctx.fillRect(-17, -94, 34, 3);
+
+    // Mortar and pestle, the silhouette that identifies the trade.
+    ctx.fillStyle = '#c1a477';
+    ctx.beginPath();
+    ctx.ellipse(-29, -8, 13, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    roundBox(ctx, -40, -16, 22, 12, 5);
+    ctx.fill();
+    ctx.strokeStyle = '#6e5138';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(-31, -14);
+    ctx.lineTo(-24, -29);
+    ctx.stroke();
+  },
+
+  /** The plague era: the beaked plague doctor. */
   plague(ctx, state) {
     shoulders(ctx, { coat: '#171a24', collar: '#e8e3d6', trim: '#2c3040' });
 
@@ -306,6 +496,63 @@ const DOCTORS = {
     ctx.fillRect(-14, -95, 28, 4.5);
   },
 
+  /** Antisepsis: white gown over a dark suit and a brass carbolic sprayer. */
+  surgeon(ctx, state) {
+    shoulders(ctx, { coat: '#edf1ec', collar: '#d2ddd7', trim: '#8bb8b1' });
+
+    // Dark Victorian suit beneath the open gown.
+    ctx.fillStyle = '#252b32';
+    ctx.beginPath();
+    ctx.moveTo(-14, -43);
+    ctx.lineTo(0, -28);
+    ctx.lineTo(14, -43);
+    ctx.lineTo(19, 0);
+    ctx.lineTo(-19, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#edf1ec';
+    ctx.beginPath();
+    ctx.moveTo(-16, -43);
+    ctx.lineTo(0, -22);
+    ctx.lineTo(16, -43);
+    ctx.lineTo(21, 0);
+    ctx.lineTo(-21, 0);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#d2a17d';
+    ctx.beginPath();
+    ctx.ellipse(0, -73, 20, 22, 0, 0, Math.PI * 2);
+    ctx.fill();
+    face(ctx, { ...state, skin: '#d2a17d', ink: '#30251e', eyeY: -75, spread: 8 });
+
+    // Mutton-chop whiskers.
+    ctx.fillStyle = '#3a2a23';
+    ctx.beginPath();
+    ctx.ellipse(-17, -72, 6, 14, 0.12, 0, Math.PI * 2);
+    ctx.ellipse(17, -72, 6, 14, -0.12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#3a2a23';
+    ctx.fillRect(-5, -62, 10, 3);
+
+    // Small brass carbolic sprayer with an accent-coloured nozzle.
+    ctx.fillStyle = '#c39a4b';
+    roundBox(ctx, 24, -31, 13, 22, 4);
+    ctx.fill();
+    ctx.strokeStyle = '#6d522d';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.fillStyle = state.accent;
+    roundBox(ctx, 27, -38, 7, 8, 2);
+    ctx.fill();
+    ctx.strokeStyle = '#c39a4b';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(31, -38);
+    ctx.lineTo(38, -48);
+    ctx.stroke();
+  },
+
   /** The pharmaceutical era, and the nod to the doctor who started all this. */
   physician(ctx, state) {
     shoulders(ctx, { coat: '#f2f5fb', collar: '#dbe4f2', trim: '#b9c6dd' });
@@ -365,7 +612,7 @@ const DOCTORS = {
     ctx.fill();
   },
 
-  /** Gene therapy: hooded, visored, lit from inside. */
+  /** Genomic medicine: hooded, visored, lit from inside. */
   technician(ctx, state) {
     shoulders(ctx, { coat: '#dfe6f2', collar: '#c3d0e6', trim: '#9fb0cc' });
 

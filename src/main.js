@@ -766,7 +766,7 @@ function finishLevel(event) {
 
 /**
  * A physician's note, shown only on the level that carries you into a new era.
- * Twenty sentences is the whole story layer; it earns its place by being short.
+ * Ten sentences are the whole story layer; they earn their place by being short.
  */
 function showNote(level) {
   if (!entersEra(level)) {

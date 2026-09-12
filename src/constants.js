@@ -213,16 +213,16 @@ export const OUTBREAK_CEILING = 1.6;
  * ship behind toggles and get cut or kept on evidence.
  */
 
-/** How wide the light chamber is. Narrow makes each line cost something. */
+/** Light uses the full bottle by default; the narrow well remains selectable. */
 export const LIGHT_WIDTH_NARROW = 5;
 export const LIGHT_WIDTH_FULL = BOARD_WIDTH;
 
 /**
- * Milliseconds per row a light piece falls, and the hurried version.
+ * Standalone fallback gravity for a light chamber, and its hurried version.
  *
- * Much faster than a capsule. You are in the chamber for seconds, not minutes,
- * and a session that only lands five pieces buys one line - which is a terrible
- * exchange for the capsules you are not steering while you are in there.
+ * A Game supplies the capsule's current gravity so the two falling-piece games
+ * feel like one hand. These values keep bare LightChamber instances useful,
+ * and the narrow/fast variant available for measurement.
  */
 export const LIGHT_FALL = 190;
 export const LIGHT_FALL_FAST = 55;

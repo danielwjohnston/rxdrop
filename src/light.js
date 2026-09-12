@@ -26,7 +26,12 @@
  *
  * Deliberately free of DOM and canvas, like the rest of the rules.
  */
-import { LIGHT_FALL, LIGHT_FALL_FAST } from './constants.js';
+import {
+  LIGHT_FALL,
+  LIGHT_FALL_FAST,
+  SOFT_DROP_FACTOR,
+  SOFT_DROP_MIN,
+} from './constants.js';
 
 /**
  * The seven tetrominoes, each as its cells in a square box. Rotations are
@@ -63,10 +68,11 @@ export function pieceCells(id, rotation = 0) {
  * can reach into the medicine board by accident.
  */
 export class LightChamber {
-  constructor(width, height, rng) {
+  constructor(width, height, rng, pace = null) {
     this.width = width;
     this.height = height;
     this.rng = rng;
+    this.pace = pace;
     /** null, or a marker object: light stands until cleared. */
     this.grid = new Array(width * height).fill(null);
     this.bag = [];
@@ -158,6 +164,12 @@ export class LightChamber {
   }
 
   get fallInterval() {
+    if (this.pace) {
+      const normal = this.pace();
+      return this.hurrying
+        ? Math.max(SOFT_DROP_MIN, normal / SOFT_DROP_FACTOR)
+        : normal;
+    }
     return this.hurrying ? LIGHT_FALL_FAST : LIGHT_FALL;
   }
 

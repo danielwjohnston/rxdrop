@@ -13,6 +13,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { DISCOVERIES } from '../src/formulary.js';
+import { LIGHT_WIDTH_FULL } from '../src/constants.js';
 
 const require = createRequire(import.meta.url);
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -605,7 +606,7 @@ try {
     });
     assert.equal(entered.inLight, true, 'the lamp key should open the chamber');
     assert.ok(entered.piece, 'the chamber should deal light to steer');
-    assert.equal(entered.width, 5, 'and take the chosen chamber width');
+    assert.equal(entered.width, LIGHT_WIDTH_FULL, 'and use the default full chamber width');
 
     // Going suspends the bench: the dose in hand is exactly where it was.
     assert.equal(entered.column, before.column, 'the dose should not have moved');

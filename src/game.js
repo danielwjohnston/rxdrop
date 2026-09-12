@@ -35,7 +35,7 @@ import {
   FILM_REGROWTH_MAX,
   FILM_REGROWTH_STEP,
   LIGHT_SESSION,
-  LIGHT_WIDTH_NARROW,
+  LIGHT_WIDTH_FULL,
   OUTBREAK_INTERVAL,
   OUTBREAK_MAX,
   QUARANTINE_INTERVAL,
@@ -85,7 +85,7 @@ export class Game {
     height = BOARD_HEIGHT,
     resistance = false,
     modifiers = [],
-    lightWidth = LIGHT_WIDTH_NARROW,
+    lightWidth = LIGHT_WIDTH_FULL,
     lightExit = 'manual',
   } = {}) {
     /**
@@ -552,7 +552,12 @@ export class Game {
     // six dumped capsules in the neck and ended the run, which the gauntlet
     // caught as "attempt 6: a flood ended the run". Suspending costs nothing it
     // should not, and it is what the fiction says anyway.
-    this.chamber = new LightChamber(this.lightWidth, this.height, this.rng);
+    this.chamber = new LightChamber(
+      this.lightWidth,
+      this.height,
+      this.rng,
+      () => this.dropInterval,
+    );
     this.lightTimer = this.lightExit === 'timer' ? LIGHT_SESSION : 0;
     this.emit('lightOn', { width: this.lightWidth, exit: this.lightExit });
     return true;

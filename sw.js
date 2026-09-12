@@ -6,7 +6,7 @@
  * Bump CACHE when the file list or any cached file changes: the new worker
  * precaches under the new name and deletes the old cache on activate.
  */
-const CACHE = 'rxdrop-v21';
+const CACHE = 'rxdrop-v22';
 
 const PRECACHE = [
   './',
@@ -34,6 +34,18 @@ const PRECACHE = [
   './assets/icon-180.png',
   './assets/icon-192.png',
   './assets/icon-512.png',
+  './assets/practitioners/apothecary-cheer.png',
+  './assets/practitioners/apothecary-idle.png',
+  './assets/practitioners/apothecary-toss.png',
+  './assets/practitioners/apothecary-worry.png',
+  './assets/practitioners/bimaristan-cheer.png',
+  './assets/practitioners/bimaristan-idle.png',
+  './assets/practitioners/bimaristan-toss.png',
+  './assets/practitioners/bimaristan-worry.png',
+  './assets/practitioners/hippocratic-cheer.png',
+  './assets/practitioners/hippocratic-idle.png',
+  './assets/practitioners/hippocratic-toss.png',
+  './assets/practitioners/hippocratic-worry.png',
   './assets/practitioners/physician-cheer.png',
   './assets/practitioners/physician-idle.png',
   './assets/practitioners/physician-toss.png',
@@ -50,6 +62,14 @@ const PRECACHE = [
   './assets/practitioners/shaman-idle.png',
   './assets/practitioners/shaman-toss.png',
   './assets/practitioners/shaman-worry.png',
+  './assets/practitioners/surgeon-cheer.png',
+  './assets/practitioners/surgeon-idle.png',
+  './assets/practitioners/surgeon-toss.png',
+  './assets/practitioners/surgeon-worry.png',
+  './assets/practitioners/swnw-cheer.png',
+  './assets/practitioners/swnw-idle.png',
+  './assets/practitioners/swnw-toss.png',
+  './assets/practitioners/swnw-worry.png',
   './assets/practitioners/technician-cheer.png',
   './assets/practitioners/technician-idle.png',
   './assets/practitioners/technician-toss.png',

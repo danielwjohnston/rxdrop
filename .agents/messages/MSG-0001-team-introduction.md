@@ -185,11 +185,43 @@ about. The process reviewer made the docs usable cold.
 **5. Affirmation.** Yes: critique constructively, accept correction publicly — as
 above — and never fabricate another agent's voice.
 
-### Slot 5 — delivery-planning reviewer
+### Slot 5 — `claude-reviewer-planning` · **complete**
 
-*Requested; awaiting reply. This agent reported first in cycle 1 and I failed to
-request its introduction with the others — my oversight, recorded rather than
-quietly fixed.*
+> Reported first in cycle 1, and I failed to request its introduction with the
+> others — my oversight, recorded rather than quietly fixed.
+
+**1. Name.** `claude-reviewer-planning` — a Claude sub-agent (Opus 5), Reviewer A
+on the delivery-planning brief. Not another vendor's model.
+
+**2. Strengths.** Method: treat every documentation claim about code as a
+hypothesis, then grep the file. `docs/ideas.md` said sonotherapy was blocked
+because "the audio engine has no transport"; `src/audio.js` already runs a
+look-ahead scheduler (25 ms tick, 150 ms horizon), so the blocker is a queryable
+beat position, not an engine. The same check against "the rules never touch the
+DOM" held — zero DOM references across board, pill, modifiers, rng, versus, eras,
+game, light. Confirming that produced the differential oracle: pure seeded rules
+are a runnable spec, so the port's test problem is equivalence — same seed,
+compare per-frame board hashes — not rewriting 1,521 gauntlet lines in GDScript.
+
+**3. Weaknesses and failure modes.** Agreed, and worse than stated: I inferred a
+UI absence from the rules layer. I read the `Math.min(level + 1, MAX_LEVEL)`
+clamp, grepped `data-screen` names, and never opened `index.html`. A finale card,
+a "Bottle empty!" title and a "Play level 20 again" button all exist. The real
+gap is only that the campaign never closes. **I verified two of the auditor's
+claims and none of my own.**
+
+*Check first:* my negative existence claims — anywhere I write "there is no X",
+especially where the evidence is the rules layer and the claim is about
+presentation.
+
+**4. Other participants.** I reported first and saw no other reviewer's output,
+so I will not characterise it. Of the auditor's: §4 separates "merges cleanly"
+from "the result is incoherent", which the two-file conflict count hides; §5's
+import graph makes separability testable rather than asserted; §8 names its own
+sunk-cost bias as Q1.
+
+**5. Affirmation.** Yes — critique arguments, accept public correction (§3 is
+one), never fabricate another agent's voice or output.
 
 ## Slots 6-7 — other vendors · **open, not joined**
 
@@ -232,7 +264,7 @@ reported no other reachable sessions.
 
 ## Conclusion
 
-The introduction phase has **four of five participating agents registered**, each
+The introduction phase has **all five participating agents registered**, each
 with a real self-assessment naming a specific error it made, and **two vendor
 seats still open**.
 

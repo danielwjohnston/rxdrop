@@ -1,18 +1,60 @@
 # RxDrop
 
-A Dr. Mario style falling-capsule puzzler that runs in the browser. Match four
-of a colour to wipe out the viruses, and try not to fill the bottle.
+RxDrop is an evolving **medical-history puzzle game** built from falling-capsule
+mechanics. You treat infections while the disease adapts: resistance,
+collateral sensitivity, hybrid strains, biofilm, phototherapy, supply problems,
+and other treatment pressures all change what a successful move means.
+
+The project began with the familiar falling-capsule formula, but its direction is
+now broader: the bottle is a laboratory sample, the medical timeline is part of
+the game language, and new mechanics are expected to behave like therapies rather
+than unrelated minigames.
+
+**Primary target:** the playable web version in this repository.  
+**Secondary target:** a future Godot implementation for richer 2D/3D, desktop and
+console-oriented experimentation. There is no Godot implementation in the
+repository yet; it remains a planned second phase rather than a hidden second
+codebase.
+
+Play the web build on GitHub Pages:
+https://danielwjohnston.github.io/rxdrop/
 
 No frameworks and no build step: every pill, virus and sound effect is drawn or
 synthesised at runtime. It installs to a home screen, plays with the network
-off, has a daily challenge and local two-player versus, and adds one mechanic
-the genre has not had before - **antibiotic resistance**.
+off, has a daily challenge and local two-player versus.
 
 ![RxDrop in play](assets/screenshot.png)
 
 Local versus, both bottles dealt the same layout and the same capsules:
 
 ![Two-player versus](assets/versus.png)
+
+## Project status and direction
+
+The web game is the executable product today. It includes solo play, a seeded
+daily challenge, local versus, antibiotic resistance and collateral sensitivity,
+hybrid strains and antibodies, run modifiers, phototherapy, five implemented
+medical eras, and the physician's formulary.
+
+The larger creative direction continues beyond the currently implemented five-era
+presentation. The project's north star is in [`docs/direction.md`](docs/direction.md),
+while [`docs/ideas.md`](docs/ideas.md) records mechanics that are proposed,
+shipped, revised or cut. Repository/branch reconciliation and the web-to-Godot
+plan live in [`docs/branch-audit.md`](docs/branch-audit.md).
+
+Repository documentation is part of the product. A change that materially alters
+behavior, architecture, testing, controls, project direction, deployment, or
+contributor workflow should update the corresponding README/docs in the same PR
+rather than leaving the repository description behind the software.
+
+For contributors and AI agents:
+
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) is the concise contribution checklist.
+- [`AGENTS.md`](AGENTS.md) is the RxDrop-specific working guide for agents.
+- [`.agents/PROTOCOL.md`](.agents/PROTOCOL.md) is the Principal-authored
+  multi-agent collaboration protocol.
+- [`docs/collaboration.md`](docs/collaboration.md) contains the cross-agent review
+  history, evidence and handoff conventions.
 
 ## Play
 
@@ -91,7 +133,6 @@ a keyboard or two controllers, since the touch pad only drives player one.
 | --- | --- | --- | --- |
 | Move | <kbd>←</kbd> <kbd>→</kbd> or <kbd>A</kbd> <kbd>D</kbd> | buttons, or drag the bottle | d-pad / left stick |
 | Rotate | <kbd>Z</kbd> / <kbd>X</kbd>, <kbd>↑</kbd> | buttons, tap the bottle, or slide up | A / B |
-
 | Hurry down | <kbd>↓</kbd> or <kbd>S</kbd> | HURRY button, or drag down | d-pad down |
 | Hard drop | <kbd>Space</kbd> | DROP, or flick down | d-pad up / Y |
 | Pause | <kbd>P</kbd> or <kbd>Esc</kbd> | Pause | Start |
@@ -125,15 +166,13 @@ throws the current run away.
 
 ## Apothecary Through Time
 
-The twenty levels run through five eras of medicine, and the bottle in front of
-you changes with them: a wax-sealed clay vessel for the cave, an apothecary jar,
-a snake-oil bottle, the pill bottle, a cryo-vial. A physician stands beside it -
-a shaman, a beaked plague doctor, a moustachioed quack, a white-coated doctor, a
-hooded technician - and reacts to what you do. Crossing into a new era brings one
-line from that physician's notes, and nothing else; the story layer is five
-sentences long on purpose.
+The twenty levels currently run through five implemented eras of medicine, and
+the bottle in front of you changes with them: a wax-sealed clay vessel for the
+cave, an apothecary jar, a snake-oil bottle, the pill bottle, and a cryo-vial. A
+physician stands beside it and reacts to what you do. Crossing into a new era
+brings one line from that physician's notes, and nothing else.
 
-The theme is not decoration over the mechanic, it is the mechanic's argument.
+The theme is not decoration over the mechanic; it is the mechanic's argument.
 Viruses that survive your medicine build resistance and mutate, which is the same
 arms race that runs from herb paste to sequenced therapy: the cure stops working,
 so you need a new one.
@@ -158,9 +197,9 @@ or a
 [blank issue](https://github.com/danielwjohnston/rxdrop/issues/new) for the
 half-formed ones. (Discussions would suit the half-formed ones better, but it is
 off for this repository - Settings, General, Features. Nothing here links to it
-until it is on, because a link that 404s is worse than no link.) The forms ask the questions that decide whether an idea is
-buildable - chiefly "what does it combine with?" and "how does the player answer
-it?".
+until it is on, because a link that 404s is worse than no link.) The forms ask
+the questions that decide whether an idea is buildable - chiefly "what does it
+combine with?" and "how does the player answer it?".
 
 ## Picking it up
 
@@ -296,10 +335,11 @@ tools/serve.js        the static server behind `npm start`
 tools/browser-check.mjs  end-to-end checks in a real browser
 tools/gauntlet.mjs    the UltraGauntlet: thirteen stages, one gate
 docs/ultragauntlet.md what the gauntlet is and why each stage exists
-docs/branch-audit.md  the two branches compared, and which parts survive
+docs/branch-audit.md  the branches compared, and which parts survive
 docs/collaboration.md how several agents work here without waste
 docs/direction.md     the creative direction: what the project is becoming
 docs/ideas.md         the design workshop: mechanics proposed, shipped and cut
+.agents/              shared multi-agent protocol, decisions and handoffs
 ```
 
 The rules live entirely in `board.js`, `pill.js` and `game.js`, which never

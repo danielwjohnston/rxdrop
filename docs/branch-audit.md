@@ -372,4 +372,122 @@ URL — never by handing it a token.
 Reviewers: append a dated section. State what you disagree with, not just what
 you would add. An empty review is worse than none.
 
+### Cycle 2 — 12 September 2026 — Devin (Cognition), external reviewer
+
+**Who.** Devin, Cognition AI's software-engineering agent, in its own session
+and its own container. Not a Claude sub-agent: a different vendor reading this
+document cold, with write access to a branch and none to `main`. That makes this
+the first cross-vendor review in the log, so it is deliberately heavy on
+re-verification and light on new opinion.
+
+**Method.** Every factual claim in §§1–7b was re-run from scratch at `main`
+782d324, the overhaul at 40ebd8e and this branch at 7c1bc7d: Node 22.23.2,
+`npm test`, the full gauntlet, a scratch `git merge --no-commit`, and grep
+against the files named. Reproduction commands are in the PR that carries this
+section, not here.
+
+**Attested — reproduced exactly as stated.**
+
+- `main`: 273 unit tests green; gauntlet **13/13 in 250 s**, 42 browser checks.
+  This branch: 276 green. Overhaul: 264 green.
+- Divergence: merge base `35eb061`; `main` 7 ahead, overhaul 16 ahead.
+- §4: overhaul `src/phototherapy.js:3` imports `DARK_AT`; `main`'s
+  `constants.js` has no such export. The post-merge `SyntaxError` claim stands.
+- §5: overhaul `src/doctors.js:1-4` is the guarded
+  `import('./runtime-overhaul.js')`. The 436 → 140 line regression on merge is
+  real and conflict-free.
+- §6: scratch merge conflicts in exactly `src/modifiers.js` and `sw.js`.
+- Phase B premise: `board.js pill.js game.js light.js modifiers.js rng.js
+  versus.js eras.js constants.js` contain zero references to `window`,
+  `document`, `navigator` or `localStorage`, and every `src/*.js` passes
+  `node --check`.
+- A3: `src/audio.js:390-403` — `startMusic` starts a 25 ms `setInterval`,
+  `schedule()` is the 150 ms look-ahead. The transport correction is right.
+- 7b: `screenshot.png` 483 KB and `versus.png` 480 KB, referenced only from the
+  README, not precached. `shot-tmp.mjs` was dead on `main`; deleted here. Good.
+- 7b: the finale is exactly as narrowed — `main.js:739` "Bottle empty!",
+  `main.js:743` "Play level 20 again".
+- Q2 resolution: era ids identical across branches, `periods.js` imports
+  `eras.js`. Saved notebooks survive.
+- `test/rng-golden.test.js` pins seeds `0` and `4294967295` explicitly, which is
+  the right pair for a signed/unsigned 32-bit port bug.
+
+**Disagree / correct.**
+
+1. **A0 misplaces the war bonnet.** It says both historical-credibility problems
+   are "in `src/eras.js`". Only the plague band is: `eras.js:71-81` opens the
+   era at 1347 with a beak "packed with rosemary and clove". `main` has no
+   bonnet, feather or headdress anywhere in `src/`. The bonnet is in the
+   overhaul's **sprite sheet** (`assets/medical-era-sprites.svg`), as
+   `direction.md:1198` itself says ("several sheet panels"). Consequence: the
+   bonnet fix is an *art* fix that belongs inside A2 step 1, not a text fix in
+   A0. The 1347 fix stays in A0 and is a one-line edit.
+2. **A0's PRECACHE guard is done, not proposed.** `tools/browser-check.mjs:1610`
+   only asserts `cached >= 15`, so the gap was real. This PR adds
+   `test/precache.test.js`: every `src/*.js`, `src/styles.css`, every script and
+   stylesheet in `index.html` and every manifest icon must be in `PRECACHE`,
+   and every `PRECACHE` entry must exist on disk. Falsified by deleting an entry
+   and watching it fail. It runs under `npm test`, so it costs nothing per
+   iteration — better than a gauntlet stage for a list that changes with every
+   new module.
+3. **§9 / the strengths matrix is stated with more confidence than its sources
+   carry.** I ran an independent search. Third-party 2026 comparisons
+   contradict each other on the very rows the matrix decides: one names
+   GPT-5 "best for coding", another names Claude, a third hands
+   algorithmic reasoning to Gemini. The rows are defensible; the column header
+   "Best-regarded" is not. Suggested wording: *"Leads at least one widely-cited
+   benchmark or review"*, with the caveat promoted from footnote to header. The
+   practical conclusion — Claude for rules and prose, GPT/Gemini for asset
+   generation and multimodal review, everyone for auditing each other — is the
+   part that survives the disagreement, and it is the part this project needs.
+4. **§7 step 5 "retire the branch" needs an owner and a trigger.** As written
+   it is advice. Make it a checklist item on the A2 PR: `git tag
+   archive/openai-medical-eras 40ebd8e && git push origin
+   archive/openai-medical-eras :openai/medical-eras-visual-overhaul`. Until that
+   runs, `docs/direction.md §29` should carry a one-line "do not merge; see
+   branch-audit §4" so the trap is labelled where people will read.
+
+**Add — gaps neither pass mentioned.**
+
+5. **CI does not run on feature-branch pushes** (`ci.yml` `on.push.branches:
+   [main]`; PRs only). Every one of the 27 merged PRs came from one long-lived
+   branch, so the first CI signal for a commit is the PR. Harmless with one
+   author; with several agents pushing to `vendor/topic` branches it means a
+   broken push sits unnoticed until someone opens a PR. Add `branches: ['**']`
+   or drop the filter; the gauntlet is the cost, and it is already paid per PR.
+6. **No lint or format configuration** — no eslint, prettier or `.editorconfig`.
+   With one author the style is consistent by habit. With three vendors it will
+   drift within a week. A single `.editorconfig` (2-space, LF, final newline) is
+   zero-dependency and honours the no-tooling constraint; hold the line there.
+7. **The Pages deploy publishes the whole repository** (`path: '.'`), including
+   `test/`, `tools/`, `docs/` and the two ~480 KB PNGs. Not a defect — the game
+   is static — but the offline budget question in Q5 is answered by *not*
+   caching them, and the deploy-size question by an `upload-pages-artifact`
+   path list or a `.nojekyll`-style exclusion once assets grow.
+8. **`window.rxdrop` is the test seam and is undocumented** (`main.js:1410`).
+   The browser checks and the deleted `shot-tmp.mjs` both drive the game
+   through it. Say so in the README layout table so nobody "cleans it up".
+9. **Godot: nothing exists yet, on any branch** — no `project.godot`, `*.gd` or
+   `*.tscn`. Phase B is a plan, not a branch. The brief's "Godot branch"
+   is this document's Phase B. State that at the top of Phase B so an agent
+   sent to "audit the Godot branch" does not go looking for one.
+
+**On the plan itself.** Phase A ordering is right and I would change one thing:
+run **A2 step 1 (the 130 px test) before A0**, not after. It is the only item
+that can triple the cost of the phase, it takes an hour, and nothing in A0
+depends on its result. Learn the expensive fact first.
+
+**Phase B, one addition.** The differential oracle compares board hashes per
+frame. Define the hash *now*, in JS, as a pure function in `board.js`
+(`Board.prototype.hash()`), and add it to the determinism stage so it is
+already exercised and stable before anyone writes GDScript against it. A hash
+invented on the Godot side first will encode Godot's cell layout, and the
+oracle becomes a port of the port.
+
+**Verdict.** Approve the audit and the harvest-not-merge recommendation. Q1 is
+answered by §4 alone: a merge produces a build that silently loads nothing, and
+"merge then delete" would spend its first day discovering what §4 already
+states. Request revision on items 1, 3 and 4 above before this is treated as the
+consensus plan; items 5–9 are additions, not blockers.
+
 <!-- REVIEW CYCLES APPENDED BELOW -->

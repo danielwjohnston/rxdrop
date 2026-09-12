@@ -105,6 +105,7 @@ the record should say which part.
 | Claude sub-agents on assigned review briefs | yes | spawned per cycle, distinct roles |
 | OpenAI models | **no** | not reachable from this session |
 | Google Gemini | **no** | not reachable from this session |
+| Devin (Cognition), as external reviewer | yes | its own session and container; cycle 2 of the review log |
 | The human author | yes | sets direction, plays the game |
 
 **No agent in this exercise spoke for a vendor it is not.** Where a review
@@ -126,7 +127,7 @@ The brief asserted a division of talent. Research **partly** confirms it and
 contradicts one part, so the corrected version is below. Every row is sourced;
 none is from memory.
 
-| Capability | Best-regarded | Evidence and caveats |
+| Capability | Leads at least one widely-cited benchmark or review | Evidence and caveats |
 | --- | --- | --- |
 | Real-world bug fixing | **Claude** | Leads independent SWE-bench Verified evaluations. GPT-5.x is within single points. |
 | Agentic tool use | **GPT-5.x** | Reported as pushing furthest on agentic tooling and ecosystem breadth. |
@@ -164,7 +165,11 @@ Sources:
 [tech-insider](https://tech-insider.org/claude-vs-chatgpt-vs-gemini-2026/) ·
 [Git AutoReview](https://gitautoreview.com/blog/claude-vs-gemini-vs-chatgpt-code-review) ·
 [Tactiq](https://tactiq.io/learn/claude-vs-gemini-vs-chatgpt-for-writing) ·
-[SiteGround](https://www.siteground.com/academy/chatgpt-vs-claude-vs-gemini-which-to-use)
+[SiteGround](https://www.siteground.com/academy/chatgpt-vs-claude-vs-gemini-which-to-use) ·
+[Tech Buzz](https://techbuzzai.com/article/chatgpt-vs-gemini-vs-claude-2026) and
+[Pikvue](https://pikvue.com/gpt-5-4-vs-claude-4-6-vs-gemini-3-1-2026-ai-model-comparison/)
+(cycle 2; these two disagree with each other on the coding row, which is the
+point)
 
 ## 3. On credentials
 
@@ -275,4 +280,42 @@ over five gameplay eras — the architecture the direction document asked for.
 **Reviewer B (adversarial brief) did not report in cycle 1.** Recorded rather
 than hidden; the brief was reissued in cycle 2.
 
-<!-- CYCLE 2 AND 3 APPENDED BELOW -->
+### Cycle 2 — 12 September 2026 — Devin (Cognition)
+
+**Who.** A second vendor's agent, in its own session, reading `branch-audit.md`
+and this file cold and re-running every measurable claim. Full review is
+appended to `branch-audit.md`; this entry records what changed in *this* file
+as a result.
+
+- **§1 table** now lists Devin as present. The exercise is cross-vendor from
+  this cycle on, asynchronously and through the handoff packet in §4 exactly as
+  intended — no credentials were requested or offered.
+- **§2 column header** softened from "Best-regarded" to "Leads at least one
+  widely-cited benchmark or review". An independent search found 2026
+  comparisons that contradict each other on the coding row in particular; the
+  rows stand, the certainty did not.
+- **A0's PRECACHE guard shipped** as `test/precache.test.js` rather than a
+  gauntlet stage, so it runs in the ~1 s `npm test` loop.
+- **Process gap found:** `ci.yml` runs on pushes to `main` only. With several
+  agents on `vendor/topic` branches, a broken push is invisible until a PR
+  opens. Proposed: run CI on every branch push.
+- **Process gap found:** no `.editorconfig`. Proposed as the only formatting
+  tooling, since it needs no dependency.
+
+**Token-efficiency notes from the outside.** The single highest-leverage item
+in this repository for an incoming agent is `AGENTS.md`'s cost table: eleven
+gauntlet stages in 1.4 s versus `modifiers` at 240 s. Two additions:
+
+1. **Verify by re-running, not by re-reading.** Every claim above was checked
+   with one grep or one test run, not by reading the file it named. Reviewing
+   a 375-line audit cost roughly the tokens of reading it twice; reading the
+   nine source files it cites would have cost ten times that.
+2. **Fix small findings in the review PR itself.** A finding that takes fewer
+   tokens to fix than to describe (the PRECACHE test, deleting `shot-tmp.mjs`)
+   should land with the review, not be queued for a later cycle.
+
+**Verdict on the collective plan.** Approved with the revisions requested in
+`branch-audit.md` cycle 2, items 1, 3 and 4. The harvest-not-merge strategy and
+the Phase A → Phase B ordering are agreed.
+
+<!-- CYCLE 3 APPENDED BELOW -->

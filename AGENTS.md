@@ -51,7 +51,7 @@ The same goes for any file over ~800 lines — see the token budget below.
 
 ```
 npm start                     # serve at localhost:8080
-npm test                      # 276 unit tests, ~0.9s   <- cheapest useful check
+npm test                      # 279 unit tests, ~0.9s   <- cheapest useful check
 node tools/playtest.mjs       # the bot plays; reports on feel, not legality
 node tools/gauntlet.mjs       # the full gate, ~5 minutes
 ```

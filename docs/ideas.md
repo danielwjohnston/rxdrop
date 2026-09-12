@@ -368,6 +368,160 @@ board and renderer were already cleanly separated, so it was a real piece of
 work and not a rewrite - the awkward part was that `Game` owned exactly one
 falling piece.
 
+### The macro-organism - `proposed`
+
+*The idea:* "A macro organism comprised of reformulated virus proteins and
+nanobots that have been corrupted by viruses to have med resistance, and make
+the mechwarrior virus possible. Could be a final boss fight?"
+
+Yes, and it is the strongest piece of new content proposed for this game so far.
+Not because a boss is novel - puzzle games have done it for thirty years, and
+*Panel de Pon*, *Puyo Puyo*, *Puzzle Quest* and *Dr. Mario World* all built
+story modes on boss opponents - but because of what this one is **made of**.
+
+#### Why it is earned
+
+Every other idea on this page adds a rule. This one collects a debt.
+
+The spine of RxDrop is a nine-hundred-year arms race: you dose, it survives, it
+builds tolerance, it takes the colour of the drug you left on it, it recombines.
+The player spends twenty levels teaching the disease. A macro-organism assembled
+out of reformulated viral protein and **your own corrupted nanobots** is what
+that teaching produces.
+
+The boss is the player's medical history, walking. Nothing else in the game
+could carry that meaning, because nothing else has spent twenty levels earning
+it - and it lands exactly where the era ladder ends, at the point the direction
+document says the vessel should "feel almost computational".
+
+It also fills a real structural gap. The ladder currently runs 0-20 and then
+stops. There is no destination.
+
+#### The shape, built only from what exists
+
+The discipline this page is held to is that a mechanic must change the meaning
+of an existing mechanic rather than sit beside it. A boss is where puzzle games
+usually stop being themselves, so the test here is strict: **if it needs a new
+verb, it is the wrong design.** Everything below is an arrangement of rules the
+player already knows.
+
+**1. The first thing in the bottle that is not one cell.** Everything to date is
+1x1. A contiguous multi-cell body is genuinely new *shape* without being a new
+system, and it makes the bottle's geometry the puzzle in a way nothing else has.
+
+**2. Plated, with a core.** The outer segments answer to ordinary colours and
+clear like anything else. The core is hybrid-coloured and needs both parents in
+one breath - combination therapy, the hardest thing the game already teaches,
+as the final exam.
+
+**3. Resistance on a visible clock.** Its tolerance rotates through the colours
+on a cycle you can read, so you time doses to it. That is collateral sensitivity
+turned into rhythm - and it is the same shape as the sonotherapy proposal above,
+which is a point in favour of building that first.
+
+**4. It regenerates.** Cleared plating grows back unless pressure is kept up, so
+it is a race against your own placement speed rather than a puzzle that can be
+solved slowly. This is the part that makes it a *fight*.
+
+**5. It films hard.** It generates biofilm fast enough that phototherapy stops
+being optional, which finally gives the lamp a reason to exist at the climax and
+pays off the whole light system at the moment it matters most.
+
+**6. It eats your bad batches.** Inert halves from the contaminated batch are its
+raw material: dump one carelessly near it and you have fed it. That takes the
+game's most annoying piece and makes it frightening, which is the best thing a
+boss can do to an existing mechanic.
+
+#### The bound
+
+The constraint that outranks everything on this page: **nothing may make a virus
+unanswerable.** For a multi-cell organism that becomes:
+
+> At every moment, at least one segment is answerable by a colour currently in
+> the deal - and the core is always reachable once the plating over it is gone.
+
+Enforced by sweep across seeds, levels and modifier combinations, not by
+intention. Regeneration must never outrun the fastest legal placement rate, or
+the fight is a wall rather than a race.
+
+#### What is deliberately not decided
+
+- **Where it sits.** A twenty-first level, an endless-mode finale, or a rare
+  event on the ladder. Each makes it a different kind of thing.
+- **Whether it is the only one.** One final boss, or a boss per era that gets
+  harder as medicine improves - the second is far more work and would make the
+  era ladder a campaign rather than a backdrop.
+- **What beating it means.** The formulary is the obvious home for the payoff:
+  the last page, written in the voice of whichever era finally managed it.
+
+*What it would cost to build:* multi-cell entities in `board.js` (the single
+largest assumption in the codebase is that a cell is a cell), regeneration and
+a rotation clock in `game.js`, a renderer that can draw a body rather than a
+grid of dots, and a gauntlet stage of its own for the bound above. This is the
+biggest thing on the page and should not start until sonotherapy's transport
+question is settled, because the rotation clock wants the same beat.
+
+### Heat, and over-treatment - `workshop`
+
+*The idea, offered tentatively:* "Light makes heat. Maybe doing multiple
+concurrent 17-row full tetris clears, like twice full bottle amounts, makes the
+bottle glow and the viruses get the ability to make more film neutralised - or
+maybe it lightly irradiates the viruses and makes them mutate. I'm not sure if
+positive or negative, or maybe find differing scenarios depending on era,
+scenario, virus type, difficulty level - not crazy behaviour swings, but
+differences that actually have weight."
+
+Filed at `workshop` rather than `proposed` because the author is not confident
+in it and neither is this page. What follows is the argument for why it is worth
+keeping, and the one thing that would have to be true.
+
+#### What it is reaching for
+
+The lamp currently has a floor and no ceiling. You clean the sample and stop;
+there is nothing above "clean". Heat gives the mechanic a second half - a reason
+to keep going past sterile, and a reason not to.
+
+That shape is good. **Over-treatment is real medicine**, and it is the honest
+counterpart to everything else in this game: the whole theme is that doing the
+right thing badly - underdosing - teaches the disease. Doing the right thing
+*too much* having a different cost is the same lesson from the other side, and
+no mechanic in the game currently says it.
+
+#### The fork the author already spotted
+
+Positive or negative? Both are defensible and they are different games:
+
+- **Neutralising** (heat suppresses film production for a spell) makes heat a
+  reward for excellence, and the lamp a thing you master rather than survive.
+- **Irradiating** (heat mutates the colonies) makes it a genuine risk, and turns
+  the lamp into a tool that can hurt the patient - which is much more interesting
+  thematically and much more likely to feel unfair.
+
+The instinct to vary it by era, strain and difficulty is right, and the caveat
+attached to it is the important half: *differences that have weight, not crazy
+behaviour swings.* A mechanic whose sign flips unpredictably is not depth, it is
+noise. If it varies, the variation has to be **legible before you commit** -
+the era tells you, or the strain does, and the player can read it.
+
+#### What would have to be true
+
+- **The player can see it coming.** A heat gauge, or the bottle visibly glowing,
+  before anything happens. A consequence that arrives unannounced from doing well
+  is the worst outcome available here.
+- **It cannot make a virus unanswerable.** A heat-driven mutation must land
+  inside the existing hybrid rules, which already guarantee both parents cure it.
+- **It is never mandatory.** Same bound as the rest of phototherapy: a run must
+  be winnable without ever reaching it.
+- **Twice the bottle is the right threshold, roughly.** Thirty-four lines is a
+  long session and a real achievement. Cheap heat would be noise.
+
+#### The reason to wait
+
+Phototherapy has been rebuilt twice on play evidence, and both rebuilds came from
+someone holding a controller rather than reading a spec. Heat should be tuned
+against a version of the lamp that people have actually played for a while. It
+is the right idea at the wrong time, which is what `workshop` means here.
+
 ### Sonotherapy - `proposed`
 
 *The idea:* "Sonic therapy, and the gameplay could be beat matching like Tap Tap
@@ -666,6 +820,18 @@ which is a fact about the bot, not about the game.
 | Offline play | Installs as a PWA and plays with the network off. |
 
 ## What is open
+
+**The macro-organism** is proposed and not built - see above. A final boss made
+of reformulated viral protein and the player's own corrupted nanobots: the arms
+race's logical endpoint, and the only proposal here that collects a debt the
+game has already spent twenty levels running up. It is also the biggest, and it
+wants the same beat clock sonotherapy needs.
+
+**Heat and over-treatment** is at `workshop` - the right idea at the wrong time.
+It gives the lamp a ceiling and says the thing no mechanic here says yet, that
+doing the right thing too much has its own cost. It should be tuned against a
+version of phototherapy people have played for a while, and phototherapy has
+been rebuilt twice on play evidence already.
 
 **Sonotherapy** is proposed and not built - see above. It is the sibling of the
 phototherapy that shipped: light cuts the biofilm hiding the disease, sound

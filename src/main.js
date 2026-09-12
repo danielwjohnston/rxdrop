@@ -27,6 +27,8 @@ const LEGACY_FORMULARY_KEY = 'rxdrop.formulary.v1';
 const SPEED_ORDER = ['LOW', 'MEDIUM', 'HIGH'];
 const CONFIRM_LOCKOUT = 550;
 const LOCKOUT_SCREENS = new Set(['over', 'clear', 'daily', 'versus']);
+let toastTimer = null;
+let discoveryToastActive = false;
 
 const el = (id) => document.getElementById(id);
 
@@ -299,16 +301,25 @@ function announceDiscovery(id) {
   dom.toastTitle.textContent = 'Written up';
   dom.toastText.textContent = discovery.title;
   dom.toast.hidden = false;
-  clearTimeout(announceDiscovery.timer);
-  announceDiscovery.timer = setTimeout(() => { dom.toast.hidden = true; }, 2600);
+  clearTimeout(toastTimer);
+  discoveryToastActive = true;
+  toastTimer = setTimeout(() => {
+    dom.toast.hidden = true;
+    discoveryToastActive = false;
+    toastTimer = null;
+  }, 2600);
 }
 
 function announce(text) {
+  if (discoveryToastActive) return;
   dom.toastTitle.textContent = text;
   dom.toastText.textContent = '';
   dom.toast.hidden = false;
-  clearTimeout(announce.timer);
-  announce.timer = setTimeout(() => { dom.toast.hidden = true; }, 1200);
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    dom.toast.hidden = true;
+    toastTimer = null;
+  }, 1200);
 }
 
 function syncFormularyCount() {

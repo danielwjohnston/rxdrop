@@ -165,7 +165,7 @@ export const SCORE_DOUBLING_CAP = 5;
 export const CHAIN_BONUS_BASE = 3;
 export const CHAIN_STAGE_CAP = 6;
 
-/** Simultaneous multi-line clears send extra garbage in versus. */
+/** Simultaneous multi-line clears award an extra virusScore-based bonus. */
 export const MULTI_LINE_BONUS = 2;
 export const ATTACK_CAP = 6;
 

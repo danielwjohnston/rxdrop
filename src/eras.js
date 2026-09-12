@@ -1,7 +1,7 @@
 /**
  * Apothecary Through Time.
  *
- * The twenty levels run through five eras of medicine, from mud and herb paste
+ * The twenty levels run through ten eras of medicine, from mud and herb paste
  * to sequenced therapy. Each era changes the vessel, the light, the shape of
  * the viruses and the physician holding the capsules - but never the rules, and
  * never the legibility of the three colours.
@@ -50,8 +50,8 @@ export const ERAS = Object.freeze([
     id: 'protomedicine',
     from: 0,
     name: 'Protomedicine',
-    period: 'before record',
-    subtitle: 'Mud, herb paste and hope',
+    period: 'before 3000 BCE',
+    subtitle: 'Ochre, herb paste and hope',
     doctor: 'shaman',
     accent: '#d9a05b',
     backdrop: ['#2a1c14', '#150f0d'],
@@ -59,34 +59,106 @@ export const ERAS = Object.freeze([
     vessel: { shoulder: 0.85, radius: 1.15, neckWidth: 2.2, spout: 1.2, cap: 'wax', surface: 'clay' },
     virus: { arms: 5, armShape: 'blob', bodyShape: 'lumpy' },
     note: {
-      place: 'A cave mouth, no date',
+      place: 'A cave mouth, before writing',
       text: 'The paste of crushed leaves quiets the fever in some and not in others. '
         + 'I cannot say which, nor why, and so I make more of it.',
     },
   },
   {
-    id: 'apothecary',
+    id: 'egyptian',
+    from: 2,
+    name: 'The Swnw',
+    period: '2600 - 1000 BCE',
+    subtitle: 'Papyrus, linen and measured remedies',
+    doctor: 'swnw',
+    accent: '#d7b44f',
+    backdrop: ['#17363d', '#08191d'],
+    tint: { saturation: 74, lightness: 58 },
+    vessel: { shoulder: 0.74, radius: 0.9, neckWidth: 2.4, spout: 1.22, cap: 'stopper', surface: 'clay' },
+    virus: { arms: 6, armShape: 'blob', bodyShape: 'lumpy' },
+    note: {
+      place: 'Thebes, c. 1550 BCE',
+      text: 'I have copied the remedy onto the roll: the plant, the measure, the days. '
+        + 'The next swnw need not remember me to use it.',
+    },
+  },
+  {
+    id: 'hippocratic',
     from: 4,
+    name: 'Hippocratic',
+    period: '450 BCE - 200 CE',
+    subtitle: 'Four humours, and a case written down',
+    doctor: 'hippocratic',
+    accent: '#dac993',
+    backdrop: ['#302d2a', '#111110'],
+    tint: { saturation: 72, lightness: 60 },
+    vessel: { shoulder: 0.62, radius: 0.82, neckWidth: 2.45, spout: 1.18, cap: 'stopper', surface: 'clay' },
+    virus: { arms: 6, armShape: 'blob', bodyShape: 'round' },
+    note: {
+      place: 'Kos, c. 400 BCE',
+      text: 'Fourth day: the fever broke at dawn, as it did in the fisherman last spring. '
+        + 'I write the days down because the days, not the gods, are what repeat.',
+    },
+  },
+  {
+    id: 'bimaristan',
+    from: 6,
+    name: 'The Bimaristan',
+    period: '800 - 1200',
+    subtitle: 'Wards, pharmacies and translated books',
+    doctor: 'bimaristan',
+    accent: '#63c7b5',
+    backdrop: ['#173e39', '#081a1a'],
+    tint: { saturation: 78, lightness: 60 },
+    vessel: { shoulder: 0.44, radius: 0.68, neckWidth: 2.7, spout: 1.08, cap: 'stopper', surface: 'glass' },
+    virus: { arms: 7, armShape: 'blob', bodyShape: 'round' },
+    note: {
+      place: 'Baghdad, c. 1000',
+      text: 'Hung meat in four quarters of the city and built the hospital where it spoiled slowest. '
+        + 'The Greeks are on the shelf beside us, translated. We add to them.',
+    },
+  },
+  {
+    id: 'apothecary',
+    from: 8,
     name: 'The Apothecary',
-    period: '1347 - 1799',
-    subtitle: 'Tinctures, theriac and a beaked mask',
+    period: '1231 - 1600',
+    subtitle: 'Mortar, theriac and the drug jar',
+    doctor: 'apothecary',
+    accent: '#c9a26a',
+    backdrop: ['#2e2416', '#130f0a'],
+    tint: { saturation: 78, lightness: 59 },
+    vessel: { shoulder: 0.5, radius: 0.72, neckWidth: 2.5, spout: 1.15, cap: 'cork', surface: 'glass' },
+    virus: { arms: 6, armShape: 'blob', bodyShape: 'round' },
+    note: {
+      place: 'Florence, 1420',
+      text: 'The Emperor split us from the physicians two centuries ago: they prescribe, we grind. '
+        + 'The theriac has sixty ingredients. I could not tell you which one works.',
+    },
+  },
+  {
+    id: 'plague',
+    from: 10,
+    name: 'The Plague Years',
+    period: '1619 - 1799',
+    subtitle: 'Waxed coat, aromatic beak, quarantine',
     doctor: 'plague',
     accent: '#6f9fd8',
     backdrop: ['#1a2338', '#0c1018'],
     tint: { saturation: 80, lightness: 59 },
     vessel: { shoulder: 0.18, radius: 0.5, neckWidth: 3, spout: 1.15, cap: 'stopper', surface: 'glass' },
-    virus: { arms: 7, armShape: 'blob', bodyShape: 'round' },
+    virus: { arms: 7, armShape: 'spike', bodyShape: 'round' },
     note: {
-      place: 'Marseille, 1348',
+      place: 'Marseille, 1720',
       text: 'The beak is packed with rosemary and clove against the bad air. '
         + 'I do not know that it answers. I know that I am still here to write.',
     },
   },
   {
     id: 'patent',
-    from: 8,
+    from: 12,
     name: 'Patent Medicine',
-    period: '1800 - 1905',
+    period: '1800 - 1906',
     subtitle: 'Elixirs, tonics and outright snake oil',
     doctor: 'quack',
     accent: '#e0803c',
@@ -101,8 +173,26 @@ export const ERAS = Object.freeze([
     },
   },
   {
+    id: 'antisepsis',
+    from: 14,
+    name: 'Germ Theory',
+    period: '1867 - 1927',
+    subtitle: 'Carbolic spray, the microscope, a named enemy',
+    doctor: 'surgeon',
+    accent: '#79c8d7',
+    backdrop: ['#16333b', '#081419'],
+    tint: { saturation: 90, lightness: 61 },
+    vessel: { shoulder: 0.28, radius: 0.72, neckWidth: 2.55, spout: 1.08, cap: 'cap', surface: 'glass' },
+    virus: { arms: 6, armShape: 'blob', bodyShape: 'round' },
+    note: {
+      place: 'Glasgow, 1867',
+      text: 'Carbolic on the wound, the instruments and the hands. The ward smells of tar and the '
+        + 'compound fractures are living. Pasteur was right: it is not the air, it is what is in it.',
+    },
+  },
+  {
     id: 'pharmaceutical',
-    from: 12,
+    from: 16,
     name: 'Pharmaceutical',
     period: '1928 - 1999',
     subtitle: 'The mould, the capsule, the arms race',
@@ -121,8 +211,8 @@ export const ERAS = Object.freeze([
   },
   {
     id: 'genetic',
-    from: 16,
-    name: 'Gene Therapy',
+    from: 18,
+    name: 'Genomic Medicine',
     period: '2000 - onward',
     subtitle: 'Sequenced, printed, delivered',
     doctor: 'technician',
@@ -139,6 +229,8 @@ export const ERAS = Object.freeze([
     },
   },
 ]);
+
+export const DEFAULT_ERA = ERAS.find((era) => era.id === 'pharmaceutical');
 
 /**
  * The era a level belongs to. Total over every integer level - anything below
@@ -161,7 +253,7 @@ const paletteCache = new Map();
 export function paletteFor(era) {
   const key = era?.id ?? 'pharmaceutical';
   if (!paletteCache.has(key)) {
-    const resolved = ERAS.find((e) => e.id === key) ?? ERAS[3];
+    const resolved = ERAS.find((e) => e.id === key) ?? DEFAULT_ERA;
     const all = [...HUES, ...HYBRID_HUES];
     paletteCache.set(key, Object.freeze(all.map((hue) => tone(hue, resolved.tint))));
   }

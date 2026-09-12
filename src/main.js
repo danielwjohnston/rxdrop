@@ -22,7 +22,8 @@ import { InputController, KEY_MAP, VERSUS_KEY_MAP } from './input.js';
 
 const STORAGE_KEY = 'rxdrop.settings.v1';
 const DAILY_KEY = 'rxdrop.daily.v1';
-const FORMULARY_KEY = 'rxdrop.formulary.v1';
+const FORMULARY_KEY = 'rxdrop.formulary.v2';
+const LEGACY_FORMULARY_KEY = 'rxdrop.formulary.v1';
 const SPEED_ORDER = ['LOW', 'MEDIUM', 'HIGH'];
 const CONFIRM_LOCKOUT = 550;
 const LOCKOUT_SCREENS = new Set(['over', 'clear', 'daily', 'versus']);
@@ -241,13 +242,7 @@ function saveDailyResult(result) {
  * discoveries are rare enough that the write cost is nothing and losing one to
  * a closed tab would be the whole point of the feature missed.
  */
-const formulary = (() => {
-  try {
-    return Formulary.from(localStorage.getItem(FORMULARY_KEY));
-  } catch {
-    return Formulary.from(null);
-  }
-})();
+let formulary;
 
 function saveFormulary() {
   try {
@@ -256,6 +251,23 @@ function saveFormulary() {
     /* private browsing - the notebook lasts the session */
   }
 }
+
+formulary = (() => {
+  try {
+    const current = localStorage.getItem(FORMULARY_KEY);
+    if (current !== null) return Formulary.from(current);
+    const legacy = localStorage.getItem(LEGACY_FORMULARY_KEY);
+    if (legacy !== null) {
+      const migrated = Formulary.fromLegacy(legacy);
+      formulary = migrated;
+      saveFormulary();
+      return migrated;
+    }
+    return Formulary.from(null);
+  } catch {
+    return Formulary.from(null);
+  }
+})();
 
 /**
  * Reads one game event for anything worth writing down.
@@ -766,7 +778,7 @@ function finishLevel(event) {
 
 /**
  * A physician's note, shown only on the level that carries you into a new era.
- * Twenty sentences is the whole story layer; it earns its place by being short.
+ * Ten sentences are the whole story layer; they earn their place by being short.
  */
 function showNote(level) {
   if (!entersEra(level)) {

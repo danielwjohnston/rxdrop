@@ -3,6 +3,17 @@
 For any agent or contributor picking this repository up cold. Read this first;
 it is short on purpose.
 
+## Governing collaboration protocol
+
+The process-level authority for multi-agent work is **`.agents/README.md`**.
+This file is the project-specific quickstart: architecture constraints, test
+conventions, cost-aware commands, and handoff details. `docs/collaboration.md`
+remains the detailed project-specific review/history companion.
+
+If process guidance conflicts, follow the Principal's explicit direction and
+`.agents/README.md`. For claims about what the software actually does, prefer
+implementation and runtime evidence over prose.
+
 ## What this is
 
 A Dr. Mario–style falling-capsule game about treating an evolving infection.
@@ -12,16 +23,18 @@ framework, or a package dependency.
 
 ## Read in this order
 
-1. **`README.md`** — what the game is, how to run it, the file map.
-2. **`docs/ultragauntlet.md`** — the quality gate and why each stage exists.
+1. **`.agents/README.md`** — authority, branch safety, shared memory, review
+   depth, security, and the multi-agent operating protocol.
+2. **`README.md`** — what the game is, how to run it, the file map.
+3. **`docs/ultragauntlet.md`** — the quality gate and why each stage exists.
    Nothing else here makes sense before this one.
-3. **Only the section you need** of `docs/ideas.md` (mechanics, each with its
+4. **Only the section you need** of `docs/ideas.md` (mechanics, each with its
    status and its bound) and `docs/branch-audit.md` (branch state, delivery plan).
-4. **`docs/collaboration.md`** — multi-agent conventions and the handoff packet.
-   Its §0 is a standing introduction from the agent that wrote most of `main`,
-   including **a table of the errors it has actually made here and how each was
-   caught**. If you are reviewing its work, start there — it will tell you where
-   to look.
+5. **`docs/collaboration.md`** — project-specific multi-agent conventions,
+   review history, and handoff packet. Its §0 is a standing introduction from
+   the agent that wrote most of `main`, including **a table of the errors it has
+   actually made here and how each was caught**. If you are reviewing its work,
+   start there — it will tell you where to look.
 
 **Do not read `docs/direction.md` whole.** It is ~1200 lines of creative
 direction, much of it since superseded by play. Read its header, its
@@ -122,7 +135,13 @@ A handoff needs four things, and the fourth is the one people forget:
 
 ## Branches
 
-`main` is the truth. Feature branches are `vendor/topic` or
-`claude/topic`. A branch that loses an audit gets tagged `archive/<name>` and
-deleted the same day — a stale branch that looks mergeable is a trap, and this
-repository has already been bitten by one.
+`main` is the default integration baseline, not the only valid direction under
+consideration. Feature and experimental branches may contain legitimate
+competing work; inspect and compare them before making architectural conclusions
+or proposing consolidation.
+
+Feature branches use `vendor/topic` or `claude/topic`. Do not force-push,
+rewrite, delete, archive, or otherwise destructively alter shared branches
+without the Principal's explicit approval. If a branch loses an audit, document
+the evidence and recommend archival rather than performing destructive cleanup
+on your own.

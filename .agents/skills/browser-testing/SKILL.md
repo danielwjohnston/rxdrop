@@ -18,7 +18,7 @@ description: Run RxDrop locally and capture real canvas gameplay, practitioner r
 - `window.rxdrop` exposes runtime state. For user-authorized transition scenarios, consult `tools/browser-check.mjs`; label staged level-completion events separately from real wins.
 - Canvas portraits have no image element to inspect. Observe `drawImage` sources and capture screenshots during the short reaction window. An idle-return screenshot may accidentally capture the next spawn's toss; use timestamps plus an immediate canvas snapshot to distinguish them.
 - For a missing-asset scenario, use a fresh context with `serviceWorkers: 'block'` and route-abort the desired PNG so the cache cannot hide the fault. Browser `ERR_FAILED` output from the deliberate abort is expected; distinguish it from application exceptions. Unroute and reload to demonstrate restoration.
-- For formulary migration, back up both keys before seeding legacy storage; restore the originals afterward.
+- For formulary migration, back up both `rxdrop.formulary.v1` and `rxdrop.formulary.v2`, remove v2, seed v1, and reload (v2 is read first, so an existing v2 hides the migration). Afterwards restore each original value, or remove the key if it was originally absent.
 - Use 390×850 for the narrow layout and check both actual pixels and document scroll width.
 
 ## Devin Secrets Needed

@@ -347,6 +347,7 @@ docs/branch-audit.md  the branches compared, and which parts survive
 docs/collaboration.md how several agents work here without waste
 docs/direction.md     the creative direction: what the project is becoming
 docs/ideas.md         the design workshop: mechanics proposed, shipped and cut
+docs/legacy.md        the documentary record and archived project footage
 docs/music.md         the musical ideas and historical caveats for each era
 .agents/              shared multi-agent protocol, decisions and handoffs
 ```

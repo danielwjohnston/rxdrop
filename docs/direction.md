@@ -37,6 +37,23 @@ The visual and audio presentation should reinforce that same idea.
 RxDrop should increasingly feel like a medical puzzle game with its own identity
 rather than merely a technically competent Dr. Mario clone.
 
+## Chains and multi-line clears
+
+The scoring rule follows the original Dr. Mario shape: solo score counts
+viruses, and each additional virus destroyed during one capsule drop doubles
+the payout, including viruses removed by cascade stages. The Dr. Mario manual
+describes the virus-only scoring table:
+https://www.digitpress.com/library/manuals/nes/drmario.txt
+
+The Dr. Mario 64 rule adds garbage for chain clears in versus:
+https://www.mariowiki.com/Dr._Mario_(game)
+
+RxDrop keeps the cumulative virus payout and adds a visible chain bonus from
+stage two onward, even when a cascade clears capsule halves but no virus. Two
+or more simultaneous runs also earn a multi-line bonus, and versus sends
+garbage for both simultaneous lines and later chain stages, in the spirit of
+Dr. Mario 64.
+
 ## 1. The Bottle and the Fiction
 
 The game should stop talking as though the visible playfield is literally a

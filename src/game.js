@@ -1,9 +1,9 @@
 import {
   ATTACK_CAP,
-  ATTACK_PER_COMBO,
-  ATTACK_PER_EXTRA_CELL,
   BOARD_HEIGHT,
   BOARD_WIDTH,
+  CHAIN_BONUS_BASE,
+  CHAIN_STAGE_CAP,
   CLEAR_ANIMATION,
   COLLATERAL_BONUS,
   HYBRID_BONUS,
@@ -13,17 +13,18 @@ import {
   COLOR_COUNT,
   LOCK_DELAY,
   LOCK_RESETS,
-  MATCH_LENGTH,
   MAX_LEVEL,
   MUTATION_ANIMATION,
   PILLS_PER_SPEED_UP,
   RESISTANCE_INTERVAL,
   RESISTANCE_MAX,
+  SCORE_DOUBLING_CAP,
   SETTLE_INTERVAL,
   SPAWN_GRACE,
   SPAWN_X,
   SPAWN_Y,
   SPEEDS,
+  MULTI_LINE_BONUS,
   VIRUS,
   CONTAMINATION_EVERY,
   FOGGED_AT,
@@ -132,6 +133,8 @@ export class Game {
     this.lockResets = 0;
     this.phaseTimer = 0;
     this.combo = 0;
+    this.dropViruses = 0;
+    this.runs = 0;
     this.chain = {};
     this.clearingCells = [];
     this.resistedCells = [];
@@ -711,6 +714,7 @@ export class Game {
     this.pillsPlaced += 1;
     this.softDropping = false;
     this.combo = 0;
+    this.dropViruses = 0;
     this.emit('lock');
     if (this.pillsPlaced % PILLS_PER_SPEED_UP === 0) this.emit('speedUp');
     this.beginResolution();
@@ -718,7 +722,8 @@ export class Game {
 
   /** Looks for matches; animates them if found, otherwise spawns the next pill. */
   beginResolution() {
-    const matches = this.board.findMatches();
+    const runs = this.board.findRuns();
+    const matches = new Set(runs.flat());
     if (matches.size === 0) {
       this.finishResolution();
       return;
@@ -743,6 +748,7 @@ export class Game {
     this.resistedCells = this.outcome.resisted;
     this.phase = PHASE.CLEARING;
     this.phaseTimer = 0;
+    this.runs = runs.length;
 
     if (this.resistedCells.length > 0) {
       this.emit('resist', { count: this.resistedCells.length });
@@ -758,22 +764,33 @@ export class Game {
     const collateral = this.outcome.collateral.length;
     const fromAntibody = this.outcome.antibody.filter((c) => c.type === VIRUS).length;
     const killed = viruses + collateral + fromAntibody;
-    this.score += this.scoreFor(killed, this.combo);
+    const already = this.dropViruses;
+    this.score += this.scoreFor(killed, already);
+    this.dropViruses += killed;
     // A collateral kill pays its payout again. Going back to the older
     // medicine is the play this whole mechanic exists to reward.
     if (collateral > 0) {
-      this.score += this.scoreFor(collateral, this.combo) * (COLLATERAL_BONUS - 1);
+      this.score += this.scoreFor(collateral, already) * (COLLATERAL_BONUS - 1);
     }
     // Synthesising a compound is the hardest play in the game and pays like it.
     const antibodies = this.cured.filter((h) => h.antibody).length;
     if (antibodies > 0) {
-      this.score += this.scoreFor(antibodies, this.combo) * HYBRID_BONUS;
+      this.score += this.scoreFor(antibodies, already) * HYBRID_BONUS;
     }
     this.totalVirusesCleared += killed;
     this.virusesClearedThisLevel += killed;
 
-    const attack = this.attackFor(this.clearingCells, this.combo);
+    const attack = this.attackFor(this.clearingCells, this.runs, this.combo);
     this.pendingAttack.push(...attack);
+    const multiLinePoints = this.runs >= 2
+      ? this.speed.virusScore * MULTI_LINE_BONUS * (this.runs - 1)
+      : 0;
+    this.score += multiLinePoints;
+    const chainStage = Math.min(this.combo, CHAIN_STAGE_CAP);
+    const chainPoints = this.combo >= 2
+      ? this.speed.virusScore * CHAIN_BONUS_BASE ** (chainStage - 1)
+      : 0;
+    this.score += chainPoints;
     // A clear in either column beside a seal breaks it. That is the whole
     // interaction: quarantine narrows the bottle, and clearing next to the seal
     // is how you get the column back.
@@ -806,6 +823,7 @@ export class Game {
       resisted: this.resistedCells.length,
       cells: this.clearingCells.length,
       combo: this.combo,
+      runs: this.runs,
       attack: attack.length,
       cured: this.cured.length,
       antibodies,
@@ -813,30 +831,33 @@ export class Game {
       inTheDark,
       inLight: this.inLight,
     });
+    if (chainPoints > 0) this.emit('chain', { stage: chainStage, points: chainPoints });
     if (antibodies > 0) this.emit('antibody', { count: antibodies });
     if (inTheDark) this.emit('darkClear', { viruses: killed, total: this.darkClears });
   }
 
   /**
-   * Dr. Mario's virus payout doubles for each extra virus removed at once;
-   * cascades multiply it again.
+   * Dr. Mario's virus payout doubles for each extra virus removed in one
+   * uninterrupted capsule drop, including viruses removed by cascades.
    */
-  scoreFor(viruses, combo) {
+  scoreFor(viruses, already = 0) {
     if (viruses === 0) return 0;
     const base = this.speed.virusScore;
     let points = 0;
-    for (let i = 0; i < viruses; i += 1) points += base * 2 ** i;
-    return points * combo;
+    for (let i = already; i < already + viruses; i += 1) {
+      points += base * 2 ** Math.min(i, SCORE_DOUBLING_CAP);
+    }
+    return points;
   }
 
   /**
-   * Garbage a clear sends to an opponent: one capsule per cell past the
-   * minimum run, plus a bonus for each cascade stage. Colours match what was
-   * cleared, so the junk you receive tells you what your opponent is doing.
+   * Garbage a clear sends to an opponent: simultaneous runs and cascade stages
+   * both contribute, capped so one clear cannot flood the other bottle.
    */
-  attackFor(cells, combo) {
-    const extra = Math.max(0, cells.length - MATCH_LENGTH) * ATTACK_PER_EXTRA_CELL;
-    const count = Math.min(ATTACK_CAP, extra + (combo - 1) * ATTACK_PER_COMBO);
+  attackFor(cells, runs, stage) {
+    const multiLine = runs >= 2 ? Math.min(4, runs) : 0;
+    const chain = stage >= 2 ? stage - 1 : 0;
+    const count = Math.min(ATTACK_CAP, multiLine + chain);
     return Array.from({ length: count }, (_, i) => cells[i % cells.length].color);
   }
 

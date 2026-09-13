@@ -38,6 +38,13 @@ describe('findMatches', () => {
   });
 });
 
+describe('findRuns', () => {
+  it('reports crossing runs separately', () => {
+    const board = Board.from(['...r', '...r', '...r', 'rrrr']);
+    assert.equal(board.findRuns().length, 2);
+  });
+});
+
 describe('clearCells', () => {
   it('reports viruses and halves separately and empties the cells', () => {
     const board = Board.from(['RRrr']);

@@ -12,6 +12,7 @@ import {
 } from '../src/modifiers.js';
 import { Board, cell } from '../src/board.js';
 import { Game, PHASE } from '../src/game.js';
+import { LightChamber } from '../src/light.js';
 import { dailyModifiers, dailySeed, dailySetup } from '../src/daily.js';
 import { createRng } from '../src/rng.js';
 import { fits, createPill, hardDropPosition, pillCells } from '../src/pill.js';
@@ -19,11 +20,17 @@ import {
   COLORS,
   COLOR_COUNT,
   CONTAMINATION_EVERY,
+  BOARD_HEIGHT,
+  BOARD_WIDTH,
   FOG_MAX,
+  LIGHT_FALL,
+  LIGHT_FALL_FAST,
   LIGHT_SESSION,
   PILL,
   QUARANTINE_MAX,
   RATION_SPELL,
+  SOFT_DROP_FACTOR,
+  SOFT_DROP_MIN,
   SPAWN_X,
   VIRUS,
 } from '../src/constants.js';
@@ -368,6 +375,22 @@ describe('phototherapy: the fog, and the light you make to cut it', () => {
   });
 
   it('takes the chamber width it is given', () => {
+    const defaults = foggy();
+    assert.equal(defaults.lightWidth, BOARD_WIDTH);
+    defaults.enterLight();
+    assert.equal(defaults.chamber.width, BOARD_WIDTH);
+    assert.equal(defaults.chamber.fallInterval, defaults.dropInterval);
+    defaults.chamber.setHurry(true);
+    assert.equal(
+      defaults.chamber.fallInterval,
+      Math.max(SOFT_DROP_MIN, defaults.dropInterval / SOFT_DROP_FACTOR),
+    );
+
+    const bare = new LightChamber(8, BOARD_HEIGHT, createRng(4));
+    assert.equal(bare.fallInterval, LIGHT_FALL);
+    bare.setHurry(true);
+    assert.equal(bare.fallInterval, LIGHT_FALL_FAST);
+
     assert.equal(foggy({ lightWidth: 5 }).enterLight() && 5, 5);
     const wide = foggy({ lightWidth: 8 });
     wide.enterLight();

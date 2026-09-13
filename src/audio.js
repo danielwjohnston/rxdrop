@@ -2,7 +2,12 @@
  * All of RxDrop's sound is synthesised at runtime with the Web Audio API -
  * there are no audio files to download. The music is two original chiptune
  * loops; the effects are short envelopes on square, triangle and noise voices.
+ *
+ * Musical time comes from the Transport in transport.js: the engine renders
+ * notes onto it, gameplay reads beat/bar position from it, and neither side
+ * keeps its own clock.
  */
+import { Transport } from './transport.js';
 
 const NOTES = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 
@@ -18,7 +23,54 @@ export function noteToFreq(name) {
   return 440 * 2 ** ((midi - 69) / 12);
 }
 
-const SIXTEENTH = 0.125; // seconds at 120bpm
+const SUBS = 4; // sixteenth notes per beat, matching the [note, sixteenths] notation
+const LOOKAHEAD = 0.15; // how far ahead of the clock the scheduler works, in seconds
+
+const gcd = (a, b) => (b ? gcd(b, a % b) : a);
+const lcm = (a, b) => (a * b) / gcd(a, b);
+
+/** [note, sixteenths] pairs -> { events: [{step, note, len}], total }. */
+function accumulate(entries) {
+  const events = [];
+  let step = 0;
+  for (const [note, len] of entries) {
+    events.push({ step, note, len });
+    step += len;
+  }
+  return { events, total: step };
+}
+
+/**
+ * Expands a track into a slot per sixteenth of the loop, so the scheduler can
+ * index it directly by transport tick. Drum hits keep the original semantics:
+ * one drums-string character per bass note, counted globally across repeats.
+ */
+const flattened = {};
+function flattenTrack(name) {
+  if (flattened[name]) return flattened[name];
+  const track = TRACKS[name];
+  const lead = accumulate(track.lead);
+  const bass = accumulate(track.bass);
+  const loop = lcm(lead.total, bass.total);
+  const slots = Array.from({ length: loop }, () => []);
+  for (let base = 0; base < loop; base += lead.total) {
+    for (const event of lead.events) {
+      slots[base + event.step].push({ voice: 'lead', ...event });
+    }
+  }
+  let bassIndex = 0;
+  for (let base = 0; base < loop; base += bass.total) {
+    for (const event of bass.events) {
+      slots[base + event.step].push({ voice: 'bass', ...event });
+      if (track.drums[bassIndex % track.drums.length] === 'x') {
+        slots[base + event.step].push({ voice: 'drum' });
+      }
+      bassIndex += 1;
+    }
+  }
+  flattened[name] = { slots, loop };
+  return flattened[name];
+}
 
 /**
  * Tracks are [note, sixteenths] pairs. Both loops are written here rather than
@@ -68,9 +120,14 @@ export class AudioEngine {
     this.musicEnabled = true;
     this.trackName = 'fever';
     this.timer = null;
-    this.nextNoteTime = 0;
-    this.cursor = { lead: 0, bass: 0, step: 0 };
+    this.nextStep = 0;
     this.playing = false;
+    /**
+     * Authoritative musical time, created with the AudioContext. Gameplay
+     * reads beat/bar position and beat windows from here; it is null until
+     * the first user gesture lets the context exist.
+     */
+    this.transport = null;
   }
 
   /** Web Audio needs a user gesture; call this from the first click or key. */
@@ -88,6 +145,9 @@ export class AudioEngine {
       this.sfxGain = this.ctx.createGain();
       this.sfxGain.gain.value = 0.5;
       this.sfxGain.connect(this.master);
+    }
+    if (!this.transport) {
+      this.transport = new Transport({ clock: () => this.ctx.currentTime });
     }
     if (this.ctx.state === 'suspended') this.ctx.resume();
     return true;
@@ -383,64 +443,72 @@ export class AudioEngine {
     if (!this.ctx || this.playing || !this.musicEnabled) return;
     this.trackName = TRACKS[name] ? name : 'fever';
     this.playing = true;
-    this.cursor = { lead: 0, bass: 0, step: 0 };
-    this.nextNoteTime = this.ctx.currentTime + 0.1;
-    this.leadTime = this.nextNoteTime;
-    this.bassTime = this.nextNoteTime;
+    // tempo multiplies the 120bpm base the loops were written against.
+    this.transport.setTempo(120 * TRACKS[this.trackName].tempo);
+    this.transport.start(this.ctx.currentTime + 0.1);
+    this.nextStep = 0;
     this.timer = setInterval(() => this.schedule(), 25);
   }
 
   stopMusic() {
     this.playing = false;
+    this.transport?.stop();
     if (this.timer) clearInterval(this.timer);
     this.timer = null;
   }
 
+  /**
+   * Pausing freezes the transport instead of resetting it, so the tune picks
+   * up mid-phrase rather than starting over on every interruption.
+   */
+  pauseMusic() {
+    this.transport?.pause();
+  }
+
+  /** Resumes a paused transport. False when nothing was paused, so the
+   * caller can fall back to startMusic. */
+  resumeMusic() {
+    return this.transport?.resume() ?? false;
+  }
+
   /** Look-ahead scheduler: queue anything due in the next 150ms. */
   schedule() {
-    if (!this.ctx || !this.playing) return;
-    const track = TRACKS[this.trackName];
-    const beat = SIXTEENTH / track.tempo;
-    const horizon = this.ctx.currentTime + 0.15;
-
-    while (this.leadTime < horizon) {
-      const [note, length] = track.lead[this.cursor.lead % track.lead.length];
-      const duration = length * beat;
-      if (note) {
-        this.tone(noteToFreq(note), {
-          start: this.leadTime - this.ctx.currentTime,
-          duration: Math.max(0.05, duration * 0.85),
-          gain: 0.22,
-          type: 'square',
-          target: this.musicGain,
-        });
+    if (!this.ctx || !this.playing || !this.transport?.running) return;
+    const { slots, loop } = flattenTrack(this.trackName);
+    const now = this.ctx.currentTime;
+    const last = Math.floor(this.transport.beatAt(now + LOOKAHEAD) * SUBS + 1e-9);
+    for (let step = this.nextStep; step <= last; step += 1) {
+      const at = this.transport.timeOfBeat(step / SUBS) - now;
+      for (const event of slots[step % loop]) {
+        if (event.voice === 'lead') {
+          if (event.note) {
+            this.tone(noteToFreq(event.note), {
+              start: at,
+              duration: Math.max(0.05, event.len * (this.transport.beatDuration / SUBS) * 0.85),
+              gain: 0.22,
+              type: 'square',
+              target: this.musicGain,
+            });
+          }
+        } else if (event.voice === 'bass') {
+          this.tone(noteToFreq(event.note), {
+            start: at,
+            duration: Math.max(0.06, event.len * (this.transport.beatDuration / SUBS) * 0.8),
+            gain: 0.3,
+            type: 'triangle',
+            target: this.musicGain,
+          });
+        } else {
+          this.noise({
+            start: at,
+            duration: 0.05,
+            gain: 0.12,
+            frequency: 3200,
+            target: this.musicGain,
+          });
+        }
       }
-      this.leadTime += duration;
-      this.cursor.lead += 1;
     }
-
-    while (this.bassTime < horizon) {
-      const [note, length] = track.bass[this.cursor.bass % track.bass.length];
-      const duration = length * beat;
-      this.tone(noteToFreq(note), {
-        start: this.bassTime - this.ctx.currentTime,
-        duration: Math.max(0.06, duration * 0.8),
-        gain: 0.3,
-        type: 'triangle',
-        target: this.musicGain,
-      });
-      const step = this.cursor.bass % track.drums.length;
-      if (track.drums[step] === 'x') {
-        this.noise({
-          start: this.bassTime - this.ctx.currentTime,
-          duration: 0.05,
-          gain: 0.12,
-          frequency: 3200,
-          target: this.musicGain,
-        });
-      }
-      this.bassTime += duration;
-      this.cursor.bass += 1;
-    }
+    this.nextStep = Math.max(this.nextStep, last + 1);
   }
 }

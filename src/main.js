@@ -995,7 +995,7 @@ function pauseGame() {
     return;
   }
   audio.play('pause');
-  audio.stopMusic();
+  audio.pauseMusic();
   showScreen('paused');
 }
 
@@ -1005,7 +1005,10 @@ function resumeGame() {
   else return;
   audio.play('resume');
   audio.resume();
-  audio.startMusic(match ? 'fever' : dangerMusic ? 'fever' : 'chill');
+  // Pick the tune back up where it paused; only restart if nothing was playing.
+  if (!audio.resumeMusic()) {
+    audio.startMusic(match ? 'fever' : dangerMusic ? 'fever' : 'chill');
+  }
   showScreen('playing');
   lastFrame = performance.now();
 }

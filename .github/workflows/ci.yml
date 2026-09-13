@@ -32,5 +32,5 @@ jobs:
       # dependency of the game itself.
       - run: npm install --no-save playwright@1.56.1
       - run: npx playwright install --with-deps chromium
-      # Nine stages, one gate: see docs/ultragauntlet.md.
+      # Thirteen stages, one gate: see docs/ultragauntlet.md.
       - run: npm run gauntlet

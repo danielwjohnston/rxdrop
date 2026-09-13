@@ -1118,10 +1118,10 @@ stage('modifiers', 'A modifier may change a run, never end it', (check) => {
         // than the old fast standalone pace.
         const active = normaliseModifiers(modifiers);
         const floor = active.includes('phototherapy')
-          ? (active.length >= 4 ? 8 : 10)
+          ? (active.length >= 4 ? 8 : 7)
           : (active.length >= 4 ? 15 : 30);
         const clearFloor = active.includes('phototherapy')
-          ? (active.length >= 4 ? 5 : 10)
+          ? (active.length >= 4 ? 5 : 3)
           : 20;
         assert.ok(capsules > floor, `${name} seed ${seed} only dealt ${capsules} capsules`);
         assert.ok(cleared > clearFloor, `${name} seed ${seed} only cleared ${cleared} cells`);

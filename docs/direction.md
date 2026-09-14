@@ -37,6 +37,23 @@ The visual and audio presentation should reinforce that same idea.
 RxDrop should increasingly feel like a medical puzzle game with its own identity
 rather than merely a technically competent Dr. Mario clone.
 
+## Chains and multi-line clears
+
+The scoring rule follows the original Dr. Mario shape: solo score counts
+viruses, and each additional virus destroyed during one capsule drop doubles
+the payout, including viruses removed by cascade stages. The Dr. Mario manual
+describes the virus-only scoring table:
+https://www.digitpress.com/library/manuals/nes/drmario.txt
+
+The Dr. Mario 64 rule adds garbage for chain clears in versus:
+https://www.mariowiki.com/Dr._Mario_(game)
+
+RxDrop keeps the cumulative virus payout and adds a visible chain bonus from
+stage two onward, even when a cascade clears capsule halves but no virus. Two
+or more simultaneous runs also earn a multi-line bonus, and versus sends
+garbage for both simultaneous lines and later chain stages, in the spirit of
+Dr. Mario 64.
+
 ## 1. The Bottle and the Fiction
 
 The game should stop talking as though the visible playfield is literally a
@@ -78,34 +95,30 @@ The player sees the progression from:
 That creates a much stronger reason for the game's "Apothecary Through Time"
 concept to exist.
 
-## 2. Historical Progression Should Be Finer Than Five Large Eras
+## 2. Historical Progression Across Ten Eras
 
-The existing game has five broad medical eras.
+The game now has ten medical eras:
 
-Those five eras are useful structurally, especially because the Formulary
+1. Protomedicine, before 3000 BCE.
+2. Egyptian medicine, 2600 - 1000 BCE.
+3. Hippocratic medicine, 450 BCE - 200 CE.
+4. Bimaristan medicine, 800 - 1200.
+5. Apothecary medicine, 1231 - 1600.
+6. Plague medicine, 1619 - 1799.
+7. Patent medicine, 1800 - 1906.
+8. Antisepsis, 1867 - 1927.
+9. Pharmaceutical medicine, 1928 - 1999.
+10. Genomic medicine, 2000 - onward.
+
+Those ten eras are useful structurally, especially because the Formulary
 already stores historical observations by era.
 
-However, five visual changes over an entire campaign are not enough to make the
-historical progression feel rich.
+However, five visual changes over an entire campaign were not enough to make
+the historical progression feel rich.
 
-The better architecture is to preserve the five stable eras or chapters for
-gameplay data and Formulary compatibility while introducing a finer layer of
+The better architecture is to use the ten stable eras or chapters for gameplay
+data and Formulary compatibility while preserving the finer layer of
 **visual periods**.
-
-The current direction is approximately eleven visual periods spread across the
-campaign. They can include:
-
-1. Paleolithic or prehistoric healer.
-2. Ancient Egyptian physician.
-3. Greek or Hippocratic physician.
-4. Islamic Golden Age physician-scholar.
-5. Medieval or Renaissance barber-surgeon.
-6. Seventeenth-century plague physician.
-7. Patent-medicine showman or traveling medical salesman.
-8. Germ-theory surgeon or laboratory physician.
-9. Antibiotic-era doctor.
-10. Molecular researcher.
-11. Precision/genomic clinician.
 
 These periods should not merely swap costumes.
 
@@ -358,6 +371,11 @@ The solution is not to tune the blackout again.
 The solution is to replace it with a treatment system.
 
 That system is Phototherapy.
+
+The shipped light chamber uses the full bottle width and the capsule's current
+gravity, so the two falling-piece games share one pace. A narrow well and a
+faster fallback pace remain selectable for measurement, but they are no longer
+the default player experience.
 
 ## 12. Biofilm Is the Correct Cause of Lost Visibility
 
@@ -1176,30 +1194,26 @@ real bottle.** That test is cheap and it is the only one that matters.
 
 #### Consistency is the risk
 
-Eleven media across eleven periods can read as eleven different games. What holds
+Ten media across ten periods can read as ten different games. What holds
 it together has to be decided up front and enforced: one palette system (the era
 tints already exist and already do this job), one framing and silhouette rule,
 one canvas treatment. Section 9 already says the soundtrack must remain
 "recognizably part of one game" - the art needs the same sentence and the same
 discipline.
 
-### Historical credibility: two live instances
+### Historical credibility: two resolved instances
 
 Section 3 warns against iconic imagery placed centuries out of position. Both
 of the following are in the current work rather than hypothetical, and both are
 cheap to fix now and expensive after thirty assets exist.
 
-**The plague mask sits in a band labelled 1347–1799.** The beaked costume is
+**The plague mask now sits in a band labelled 1619–1799.** The beaked costume is
 documented from the 1600s - roughly three centuries after the Black Death it is
-popularly attached to. The band's opening date and its practitioner disagree.
-Either the band starts later, or the practitioner changes. This appears in the
-shipped procedural art *and* across all three exploration sheets.
+popularly attached to. The band's opening date and its practitioner now agree;
+the historical mismatch is resolved in `src/eras.js` and the practitioner
+sprites.
 
-**The paleolithic healer is wearing a Plains war bonnet.** Several sheet panels
-give the prehistoric practitioner a feathered headdress. That is specific 18th
-and 19th century Plains regalia, not paleolithic anything - and unlike the plague
-doctor it is a living culture's ceremonial dress standing in for "primitive",
-which is a different and worse category of error. Real paleolithic material
-culture - ochre, hide, bone, antler, shell, cordage - is more distinctive
-anyway, and carries none of that freight.
-
+**The paleolithic war bonnet has been removed.** The rendered sprites use
+ochre, hide, bone, antler, shell and cordage instead of Plains regalia. That
+keeps a living culture's ceremonial dress out of a prehistoric shorthand and
+uses real paleolithic material culture, which is more distinctive anyway.

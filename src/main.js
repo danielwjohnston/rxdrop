@@ -5,6 +5,7 @@ import {
   SPEEDS,
   TOLERANCE_AT,
   VIRUS,
+  LIGHT_WIDTH_FULL,
 } from './constants.js';
 import { Game } from './game.js';
 import { VersusMatch } from './versus.js';
@@ -14,17 +15,21 @@ import { ERAS, eraFor, entersEra } from './eras.js';
 import { collateralOf, hybridOf, isHybrid } from './board.js';
 import { MODIFIERS, describeModifiers, modifierFor, normaliseModifiers } from './modifiers.js';
 import { DISCOVERIES, Formulary, discoveriesIn } from './formulary.js';
-import { drawDoctor, POSE_HOLD } from './doctors.js';
+import { drawDoctor, DOCTOR_IDS, POSE_HOLD } from './doctors.js';
+import { loadPractitionerArt, POSE_MOTION, practitionerSprite } from './art.js';
 import { pillCells } from './pill.js';
 import { AudioEngine } from './audio.js';
 import { InputController, KEY_MAP, VERSUS_KEY_MAP } from './input.js';
 
 const STORAGE_KEY = 'rxdrop.settings.v1';
 const DAILY_KEY = 'rxdrop.daily.v1';
-const FORMULARY_KEY = 'rxdrop.formulary.v1';
+const FORMULARY_KEY = 'rxdrop.formulary.v2';
+const LEGACY_FORMULARY_KEY = 'rxdrop.formulary.v1';
 const SPEED_ORDER = ['LOW', 'MEDIUM', 'HIGH'];
 const CONFIRM_LOCKOUT = 550;
 const LOCKOUT_SCREENS = new Set(['over', 'clear', 'daily', 'versus']);
+let toastTimer = null;
+let discoveryToastActive = false;
 
 const el = (id) => document.getElementById(id);
 
@@ -151,7 +156,7 @@ function loadSettings() {
     hasPlayed: false,
     modifiers: [],
     /** Phototherapy variants, all three unsettled and all three toggleable. */
-    lightWidth: 5,
+    lightWidth: LIGHT_WIDTH_FULL,
     lightExit: 'manual',
     lightView: 'switch',
     mode: 'solo',
@@ -175,7 +180,9 @@ function loadSettings() {
   if (params.has('seed')) merged.seed = Number(params.get('seed')) >>> 0;
   if (params.has('resistance')) merged.resistance = params.get('resistance') !== '0';
   if (params.has('mods')) merged.modifiers = params.get('mods').split(',');
-  if (params.has('lightWidth')) merged.lightWidth = Number(params.get('lightWidth')) || 5;
+  if (params.has('lightWidth')) {
+    merged.lightWidth = Number(params.get('lightWidth')) || LIGHT_WIDTH_FULL;
+  }
   if (params.has('lightExit')) merged.lightExit = params.get('lightExit');
   if (params.has('lightView')) merged.lightView = params.get('lightView');
   merged.modifiers = normaliseModifiers(merged.modifiers);
@@ -240,13 +247,7 @@ function saveDailyResult(result) {
  * discoveries are rare enough that the write cost is nothing and losing one to
  * a closed tab would be the whole point of the feature missed.
  */
-const formulary = (() => {
-  try {
-    return Formulary.from(localStorage.getItem(FORMULARY_KEY));
-  } catch {
-    return Formulary.from(null);
-  }
-})();
+let formulary;
 
 function saveFormulary() {
   try {
@@ -255,6 +256,23 @@ function saveFormulary() {
     /* private browsing - the notebook lasts the session */
   }
 }
+
+formulary = (() => {
+  try {
+    const current = localStorage.getItem(FORMULARY_KEY);
+    if (current !== null) return Formulary.from(current);
+    const legacy = localStorage.getItem(LEGACY_FORMULARY_KEY);
+    if (legacy !== null) {
+      const migrated = Formulary.fromLegacy(legacy);
+      formulary = migrated;
+      saveFormulary();
+      return migrated;
+    }
+    return Formulary.from(null);
+  } catch {
+    return Formulary.from(null);
+  }
+})();
 
 /**
  * Reads one game event for anything worth writing down.
@@ -286,8 +304,25 @@ function announceDiscovery(id) {
   dom.toastTitle.textContent = 'Written up';
   dom.toastText.textContent = discovery.title;
   dom.toast.hidden = false;
-  clearTimeout(announceDiscovery.timer);
-  announceDiscovery.timer = setTimeout(() => { dom.toast.hidden = true; }, 2600);
+  clearTimeout(toastTimer);
+  discoveryToastActive = true;
+  toastTimer = setTimeout(() => {
+    dom.toast.hidden = true;
+    discoveryToastActive = false;
+    toastTimer = null;
+  }, 2600);
+}
+
+function announce(text) {
+  if (discoveryToastActive) return;
+  dom.toastTitle.textContent = text;
+  dom.toastText.textContent = '';
+  dom.toast.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    dom.toast.hidden = true;
+    toastTimer = null;
+  }, 1200);
 }
 
 function syncFormularyCount() {
@@ -440,8 +475,9 @@ function startGame(options = {}) {
   game = new Game(setup);
   input.setKeyMap(KEY_MAP);
   dangerMusic = false;
-  audio.setTrack('chill');
-  audio.startMusic('chill');
+  setEra(eraFor(game.level));
+  audio.setTrack(era.id);
+  audio.startMusic();
   audio.play('start');
   showScreen('playing');
   syncHud(true);
@@ -461,8 +497,9 @@ function startVersus() {
   dom.playfield2.hidden = false;
   for (const hud of dom.vsHud) hud.hidden = false;
   dangerMusic = false;
-  audio.setTrack('fever');
-  audio.startMusic('fever');
+  setEra(eraFor(match.players[0].level));
+  audio.setTrack(era.id);
+  audio.startMusic();
   audio.play('start');
   showScreen('playing');
   syncHud(true);
@@ -496,9 +533,14 @@ let era = eraFor(0);
 let appliedEra = null;
 let pose = 'idle';
 let poseUntil = 0;
+let art = new Map();
+loadPractitionerArt(DOCTOR_IDS).then((loaded) => {
+  art = loaded;
+});
 
 function setEra(next) {
   era = next;
+  audio.setTrack(next.id);
   // Guard on what has actually been applied, not on `era` - the first call is
   // for the era the page starts on, and it still has to paint everything.
   if (appliedEra === next) return;
@@ -532,7 +574,21 @@ function drawPhysician(now) {
   ctx.scale(dpr, dpr);
   ctx.clearRect(0, 0, rect.width, rect.height);
   const size = Math.min(rect.width, rect.height);
-  drawDoctor(ctx, { x: (rect.width - size) / 2, y: rect.height - size, size, era, pose, now });
+  const img = practitionerSprite(art, era?.doctor, pose);
+  if (img) {
+    const shape = POSE_MOTION[pose] ?? POSE_MOTION.idle;
+    const breath = Math.sin(now / 700) * 1.1;
+    const sway = Math.sin(now / 1100) * 0.02;
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.translate(rect.width / 2, rect.height);
+    ctx.translate(0, breath + shape.lift);
+    ctx.rotate(shape.lean + sway);
+    ctx.drawImage(img, -size / 2, -size, size, size);
+    ctx.restore();
+  } else {
+    drawDoctor(ctx, { x: (rect.width - size) / 2, y: rect.height - size, size, era, pose, now });
+  }
   ctx.restore();
 }
 
@@ -649,7 +705,7 @@ function updateMusicMood() {
   }
   if (danger !== dangerMusic) {
     dangerMusic = danger;
-    audio.setTrack(danger ? 'fever' : 'chill');
+    audio.setDanger(danger);
   }
 }
 
@@ -666,6 +722,15 @@ function handleGameEvents() {
         renderers[0].addShake(2 + Math.min(6, event.viruses * 2 + event.combo));
         if (event.viruses > 0) react('cheer');
         if (event.collateral > 0) renderers[0].addShake(4);
+        if (event.runs >= 2) {
+          announce(event.runs === 2 ? 'DOUBLE LINE' : event.runs === 3 ? 'TRIPLE LINE' : 'QUAD LINE');
+        }
+        break;
+      case 'chain':
+        announce(`CHAIN ×${event.stage}`);
+        react('cheer');
+        renderers[0].addShake(3 + event.stage);
+        audio.play('chain', event);
         break;
       case 'antibody':
         audio.play('antibody', event);
@@ -747,7 +812,7 @@ function finishLevel(event) {
 
 /**
  * A physician's note, shown only on the level that carries you into a new era.
- * Twenty sentences is the whole story layer; it earns its place by being short.
+ * Ten sentences are the whole story layer; they earn their place by being short.
  */
 function showNote(level) {
   if (!entersEra(level)) {
@@ -964,7 +1029,7 @@ function pauseGame() {
     return;
   }
   audio.play('pause');
-  audio.stopMusic();
+  audio.pauseMusic();
   showScreen('paused');
 }
 
@@ -974,7 +1039,8 @@ function resumeGame() {
   else return;
   audio.play('resume');
   audio.resume();
-  audio.startMusic(match ? 'fever' : dangerMusic ? 'fever' : 'chill');
+  // Pick the tune back up where it paused; only restart if nothing was playing.
+  if (!audio.resumeMusic()) audio.startMusic();
   showScreen('playing');
   lastFrame = performance.now();
 }
@@ -1032,12 +1098,16 @@ document.addEventListener('click', (event) => {
   else if (target.dataset.quit !== undefined) quitToTitle();
   else if (target.dataset.rematch !== undefined) {
     match.rematch();
-    audio.startMusic('fever');
+    setEra(eraFor(match.players[0].level));
+    audio.setTrack(era.id);
+    audio.startMusic();
     showScreen('playing');
   } else if (target.dataset.retry !== undefined || target.dataset.restart !== undefined) {
     if (match) {
       match.rematch();
-      audio.startMusic('fever');
+      setEra(eraFor(match.players[0].level));
+      audio.setTrack(era.id);
+      audio.startMusic();
       showScreen('playing');
     } else {
       startGame({ level: game?.level ?? settings.level, speed: game?.speedName ?? settings.speed });
@@ -1047,8 +1117,9 @@ document.addEventListener('click', (event) => {
     settings.level = game.level;
     saveSettings();
     dangerMusic = false;
-    audio.setTrack('chill');
-    audio.startMusic('chill');
+    setEra(eraFor(game.level));
+    audio.setTrack(era.id);
+    audio.startMusic();
     showScreen('playing');
     syncHud(true);
   } else if (target.dataset.copy !== undefined) copyShare(target);
@@ -1248,9 +1319,9 @@ function syncLightVariants() {
       button.classList.toggle('is-selected', button.getAttribute(attr) === value);
     }
   }
-  const width = settings.lightWidth === 5
-    ? 'A narrow chamber: fewer cells to a line, so each one is worth something.'
-    : 'The full bottle: lines are rare and big.';
+  const width = settings.lightWidth === LIGHT_WIDTH_FULL
+    ? 'The full bottle: lines are rare and big.'
+    : 'A narrow chamber: fewer cells to a line, so each one is worth something.';
   const exit = settings.lightExit === 'manual'
     ? 'You leave when you say - a straight trade.'
     : 'A timer ends the session - a commitment you can regret.';

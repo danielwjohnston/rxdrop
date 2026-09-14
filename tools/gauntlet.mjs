@@ -1113,10 +1113,18 @@ stage('modifiers', 'A modifier may change a run, never end it', (check) => {
         // means more time at the lamp means fewer capsules placed. The floor
         // here is "playable", not "as long as a plain bottle" - it is set to
         // catch a wedge or an instant death, not to encode an expectation
-        // about how hard five modifiers at once ought to be.
-        const floor = normaliseModifiers(modifiers).length >= 4 ? 15 : 30;
+        // about how hard five modifiers at once ought to be. Phototherapy now
+        // shares capsule gravity, so a chamber visit consumes fewer capsules
+        // than the old fast standalone pace.
+        const active = normaliseModifiers(modifiers);
+        const floor = active.includes('phototherapy')
+          ? (active.length >= 4 ? 8 : 10)
+          : (active.length >= 4 ? 15 : 30);
+        const clearFloor = active.includes('phototherapy')
+          ? (active.length >= 4 ? 5 : 10)
+          : 20;
         assert.ok(capsules > floor, `${name} seed ${seed} only dealt ${capsules} capsules`);
-        assert.ok(cleared > 20, `${name} seed ${seed} only cleared ${cleared} cells`);
+        assert.ok(cleared > clearFloor, `${name} seed ${seed} only cleared ${cleared} cells`);
         assert.ok(game.isOver || game.phase === PHASE.FALLING, `${name} seed ${seed} wedged`);
       }
     }

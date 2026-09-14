@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { Board } from '../src/board.js';
-import { ATTACK_CAP, MATCH_LENGTH } from '../src/constants.js';
+import { ATTACK_CAP } from '../src/constants.js';
 import { PHASE } from '../src/game.js';
 import { VersusMatch } from '../src/versus.js';
 import { createRng } from '../src/rng.js';
@@ -87,19 +87,31 @@ describe('garbage', () => {
   it('caps a single clear\'s payload', () => {
     const match = new VersusMatch({ seed: 2 });
     const huge = Array.from({ length: 40 }, () => ({ color: 0 }));
-    assert.equal(match.players[0].attackFor(huge, 5).length, ATTACK_CAP);
+    assert.equal(match.players[0].attackFor(huge, 4, 6).length, ATTACK_CAP);
   });
 
   it('sends nothing for a plain four-in-a-row', () => {
     const match = new VersusMatch({ seed: 2 });
-    const minimal = Array.from({ length: MATCH_LENGTH }, () => ({ color: 1 }));
-    assert.deepEqual(match.players[0].attackFor(minimal, 1), []);
+    const minimal = Array.from({ length: 4 }, () => ({ color: 1 }));
+    assert.deepEqual(match.players[0].attackFor(minimal, 1, 1), []);
+  });
+
+  it('sends one garbage piece per simultaneous run', () => {
+    const match = new VersusMatch({ seed: 2 });
+    const cells = Array.from({ length: 8 }, (_, i) => ({ color: i % 2 }));
+    assert.equal(match.players[0].attackFor(cells, 3, 1).length, 3);
+  });
+
+  it('adds chain garbage after the first stage', () => {
+    const match = new VersusMatch({ seed: 2 });
+    const cells = Array.from({ length: 8 }, (_, i) => ({ color: i % 2 }));
+    assert.equal(match.players[0].attackFor(cells, 2, 3).length, 4);
   });
 
   it('carries the colours that were cleared', () => {
     const match = new VersusMatch({ seed: 2 });
     const cells = Array.from({ length: 8 }, (_, i) => ({ color: i % 2 }));
-    const attack = match.players[0].attackFor(cells, 1);
+    const attack = match.players[0].attackFor(cells, 3, 1);
     assert.ok(attack.length > 0);
     for (const color of attack) assert.ok(color === 0 || color === 1);
   });

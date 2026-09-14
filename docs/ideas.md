@@ -522,6 +522,81 @@ someone holding a controller rather than reading a spec. Heat should be tuned
 against a version of the lamp that people have actually played for a while. It
 is the right idea at the wrong time, which is what `workshop` means here.
 
+### The October ward - seasonal pathogens - `workshop`
+
+*The idea, from the author:* "seasonal halloween ghost / undead / vampire /
+zombie viruses" - workshop the design cues and the mechanics.
+
+Filed at `workshop`. The costume half is cheap and safe; the mechanic half is
+four candidates, each of which bends one rule the game already has, and each
+of which needs its bound falsified in the gauntlet before it is `proposed`.
+
+#### What it is reaching for
+
+Every mechanic above changes what a virus *is*. A season should do the same
+thing with a wink: the same three colours, the same bottle, but for one week
+the pathogens are the monsters people already know the rules of. That is the
+design cue - **the player already knows what a ghost does.** Do not explain it;
+let the folklore be the tutorial, and pick the folklore rule that maps onto a
+rule the game has.
+
+#### The four, each mapped onto an existing rule
+
+| Monster | Folklore rule | Game rule it bends | The bound |
+| --- | --- | --- | --- |
+| **Ghost** | passes through walls | *Placement.* On alternate turns the ghost is intangible: a capsule falls **through** it and lands below. On solid turns it matches and clears as normal. | Phase is period-2 and shown (translucent vs. solid), so it is solid every other capsule; a ghost is never intangible two turns running. |
+| **Zombie** | bites, spreads | *Clearing.* When a zombie is cleared, one orthogonally adjacent capsule half of the *same colour* becomes a zombie virus. | At most one bite per clear, same colour only, never into the top two rows or the neck. A bite that has no same-colour neighbour does nothing. It rides the outbreak rule, so `virusesLeft` stays honest. |
+| **Vampire** | dies in light, strong in dark | *Phototherapy.* A vampire ignores matching while unlit; a light row that touches it kills it outright. | The lamp already exists and is already bounded; a vampire is answerable by exactly the resource the era hands you, and it becomes an ordinary virus once lit. Cap: two vampires per bottle. |
+| **Revenant** (undead) | comes back once | *Clear-permanence.* A cleared revenant returns one turn later, one cell lower, as an ordinary virus - unless it was cleared in a line of five or more. | One return only, telegraphed (the cell stays marked for the turn between), and it drops one row, so it is never further from the player than it was. |
+
+Two of these are the strongest and should go first: **ghost** (a new
+placement rule, pure `board.js`) and **vampire** (it makes the lamp mean
+something new, which is the depth test this page applies to everything).
+Zombie is an outbreak reskin with a twist; revenant is the weakest, because
+"clear it again" is length, not depth.
+
+#### Design cues
+
+- **It is a modifier pair, not a mode.** During 24 Oct - 1 Nov the daily picks
+  one monster plus one ordinary modifier, the way it picks any pair. Outside
+  the window the monsters sit in the picker under "October ward" once seen.
+  Nothing else changes, so nothing else needs re-verifying.
+- **The era does the costume, not new sprites per colour.** Each monster is a
+  *state* overlay on the three colours (a sheet of 4 monsters x 3 colours, the
+  same states the renderer already draws: idle, agitated, shrug, dying), not a
+  sixth virus family. Hybrids get a jack-o'-lantern face; the colours stay.
+- **The apothecary era is the host.** The plague doctor already reads as
+  Halloween. Lean in: the era note during the window is his; the bottle glass
+  goes violet-grey, the neck row grows a cobweb, the lamp becomes a candle.
+- **A holy practitioner for the week** (author's addition). Before germ theory
+  the healer and the priest were often one person: the druid, the exorcist, the
+  hedge-witch, the monk with the herbal. During the window the portrait swaps
+  to a seasonal holy healer - one sprite set in the same ligne claire, four
+  poses - and it is the right foil for the monsters, because the folklore
+  already says what answers a vampire or a revenant. Keep it a costume: the
+  `doctor` id on the era does not change, so saved Formulary notes survive.
+- **Sound:** minor-key variant of the era track on the existing scheduler -
+  one tempo, one mode change, no new engine work.
+- **The Formulary notices it.** Four entries in "the October notebook", so the
+  week leaves something behind when it ends.
+
+#### What must be true first
+
+1. Ghost intangibility interacts with gravity and with the lamp's "light stands
+   until you clear it" rule. Both need a falsified check before anything else.
+2. Zombie + outbreak in the same bottle must not compound past the outbreak
+   cap. One shared cap, not two.
+3. Vampire + phototherapy off (an era before the lamp) is a contradiction: the
+   modifier must refuse to pair with a lampless era, the way quarantine refuses
+   pairs today.
+
+#### Rejected
+
+- **A separate Halloween rule set.** Doubles the gauntlet for one week a year.
+- **Gore or body horror.** The game's register is a wink, not a shock; the
+  monsters are the friendly kind on the mascot sheets, or they are not in.
+- **A werewolf.** The only mapping is "changes on a timer", which is
+  resistance, which is already in.
 ### Sonotherapy - `proposed`
 
 *The idea:* "Sonic therapy, and the gameplay could be beat matching like Tap Tap

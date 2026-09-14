@@ -166,11 +166,14 @@ throws the current run away.
 
 ## Apothecary Through Time
 
-The twenty levels currently run through five implemented eras of medicine, and
-the bottle in front of you changes with them: a wax-sealed clay vessel for the
-cave, an apothecary jar, a snake-oil bottle, the pill bottle, and a cryo-vial. A
-physician stands beside it and reacts to what you do. Crossing into a new era
-brings one line from that physician's notes, and nothing else.
+The twenty levels run through ten eras of medicine, and the bottle in front of
+you changes with them: protomedicine, Egyptian, Hippocratic, bimaristan,
+apothecary, plague, patent medicine, antisepsis, pharmaceutical and genetic.
+A physician stands beside it - a shaman, swnw, Hippocratic physician, bimaristan
+scholar, apothecary, plague doctor, moustachioed quack, surgeon, white-coated
+doctor and hooded technician - and reacts to what you do. Crossing into a new
+era brings one line from that physician's notes, and nothing else; the story
+layer is ten sentences long on purpose.
 
 The theme is not decoration over the mechanic; it is the mechanic's argument.
 Viruses that survive your medicine build resistance and mutate, which is the same
@@ -226,10 +229,14 @@ clipped inside.
   more** of one colour in a row or column and they are destroyed - viruses
   included.
 - Clearing part of a capsule leaves the other half behind, and loose halves
-  fall. If they complete another line the chain keeps going, and each extra
-  stage in a cascade multiplies the score.
-- Each virus in a single clear is worth double the last: at LOW speed one virus
-  scores 100, two score 300, three score 700, and so on. MED and HI pay more.
+  fall. If they complete another line the chain keeps going: every virus in the
+  same capsule drop, including cascade stages, continues the doubling table,
+  and every cascade stage from the second also pays a chain bonus.
+- Each virus in a single drop is worth double the last: at LOW speed one virus
+  scores 100, two score 300, three score 700, four score 1500, five score 3100,
+  and six score 6300. The doubling row caps after six viruses; MED and HI pay
+  more. A simultaneous second line is a double-line bonus, and capsule-only
+  cascades still earn their chain bonus.
 - Gravity gets faster every ten capsules.
 - **Hurrying** a capsule holds it at a multiple of the level's own gravity, with
   a floor, so it is always fast enough to save time and never so fast you cannot
@@ -264,7 +271,7 @@ clipped inside.
   | Modifier | What it does | Why it is survivable |
   | --- | --- | --- |
   | Outbreak | Viruses replicate into empty cells; gravity halves to pay for it | A virus spreads once and never again, never above the virus ceiling, never past 1.6x the starting population |
-  | Phototherapy | The sample films over row by row, worst where the disease is; press Shift or L to put it under the light, where tetromino-shaped light falls and every completed line scrubs the lowest dirty row clean. The disease is held while the lamp is on | The film plateaus rather than compounding and a row never goes fully black, the lamp can always be switched on, and a run can be won without ever using it |
+  | Phototherapy | The sample films over row by row, worst where the disease is; press Shift or L to put it under the light, where tetromino-shaped light falls at capsule gravity across the full bottle by default and every completed line scrubs the lowest dirty row clean. The disease is held while the lamp is on | The film plateaus rather than compounding and a row never goes fully black, the lamp can always be switched on, and a run can be won without ever using it |
   | Rationing | Only two medicines in stock; viruses of the missing colour build tolerance every capsule while it is gone | The withheld colour rotates on a fixed timer, and tolerance always answers to the older medicine cleared beside it |
   | Contaminated batch | Some capsule halves are inert and belong to no run | An inert half washes out with any clear it is touching |
   | Quarantine | A column is sealed and refuses capsules | Clearing beside it breaks the seal, and it lifts on its own regardless; spawn columns are never sealed |
@@ -286,7 +293,7 @@ clipped inside.
 ## Development
 
 ```sh
-npm test           # 279 unit tests, no dependencies, well under a second
+npm test           # 308 unit tests, no dependencies, well under a second
 npm run test:watch # re-run on change
 
 # End-to-end checks in a real browser (Playwright is not a dependency):
@@ -317,15 +324,17 @@ src/game.js           the state machine: lock, clear, cascade, spawn, score
 src/light.js          the light chamber: phototherapy, played as falling light
 src/modifiers.js      the run modifiers, and the bound each one states
 src/formulary.js      the notebook: which interactions you have triggered
-src/eras.js           the five eras of medicine, and what each one calls things
+src/eras.js           the ten eras of medicine, and what each one calls things
 src/doctors.js        the physician who signs each era's notes
+src/art.js            ligne-claire practitioner sprites and resilient loading
 src/versus.js         two games, garbage routed between them
 src/daily.js          the date-seeded daily challenge
 src/renderer.js       canvas drawing
-src/audio.js          Web Audio synthesis: two chiptune loops and the effects
+src/audio.js          Web Audio synthesis: ten era chiptune loops and the effects
 src/input.js          keyboard, touch, swipe and gamepad
 src/main.js           screens, HUD, persistence and the animation loop
 src/styles.css        every pixel of chrome around the canvas
+assets/practitioners/ rendered practitioner poses, with one set per era
 test/                 unit tests for the rules, plus randomised soak runs
 tools/bot.mjs         the shared bot: the gate and the report play the same way
 tools/playtest.mjs    the bot plays, and reports on how the game FEELS
@@ -339,6 +348,7 @@ docs/branch-audit.md  the branches compared, and which parts survive
 docs/collaboration.md how several agents work here without waste
 docs/direction.md     the creative direction: what the project is becoming
 docs/ideas.md         the design workshop: mechanics proposed, shipped and cut
+docs/music.md         the musical ideas and historical caveats for each era
 .agents/              shared multi-agent protocol, decisions and handoffs
 ```
 
@@ -346,6 +356,9 @@ The rules live entirely in `board.js`, `pill.js` and `game.js`, which never
 touch the DOM. That is what lets the test suite play thousands of frames
 headlessly and assert that the board never floats a capsule half or leaves a
 match unresolved.
+
+Portraits are rendered ligne-claire practitioner sprites, with the procedural
+doctor drawing retained as a fallback when art is unavailable.
 
 ## Deploying
 

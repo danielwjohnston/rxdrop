@@ -8,7 +8,7 @@ import {
 } from './constants.js';
 import { pillCells } from './pill.js';
 import { PHASE } from './game.js';
-import { ERAS, eraFor, paletteFor } from './eras.js';
+import { DEFAULT_ERA, eraFor, paletteFor } from './eras.js';
 import { collateralOf, isHybrid, parentsOf } from './board.js';
 import { isTolerant } from './board.js';
 
@@ -17,7 +17,7 @@ import { isTolerant } from './board.js';
  * game had before there were eras. Anything drawing inside a bottle should use
  * the renderer's own `palette`, which follows the level.
  */
-export const PALETTE = paletteFor(ERAS[3]);
+export const PALETTE = paletteFor(DEFAULT_ERA);
 
 /**
  * How much of the way the drawn fall offset closes toward the true one each
@@ -58,12 +58,12 @@ export class Renderer {
     this.dpr = 1;
     this.shake = 0;
     this.layout = null;
-    this.setEra(ERAS[3]);
+    this.setEra(DEFAULT_ERA);
   }
 
   /** Points the renderer at an era: its palette, vessel and virus shapes. */
   setEra(era) {
-    this.era = era ?? ERAS[3];
+    this.era = era ?? DEFAULT_ERA;
     this.palette = paletteFor(this.era);
   }
 
@@ -953,7 +953,7 @@ export class Renderer {
 }
 
 /** Draws a small preview of a pill, used for the "next" window. */
-export function drawPillPreview(canvas, colors, era = ERAS[3]) {
+export function drawPillPreview(canvas, colors, era = DEFAULT_ERA) {
   const ctx = canvas.getContext('2d');
   const dpr = Math.min(window.devicePixelRatio || 1, 3);
   const rect = canvas.getBoundingClientRect();
@@ -984,7 +984,7 @@ export function drawPillPreview(canvas, colors, era = ERAS[3]) {
  * someone is taught is by construction the thing they will see. A hand-drawn
  * diagram would be free to drift; this one cannot.
  */
-export function drawMatchDiagram(canvas, era = ERAS[3], now = 0) {
+export function drawMatchDiagram(canvas, era = DEFAULT_ERA, now = 0) {
   const ctx = canvas.getContext('2d');
   const dpr = Math.min(window.devicePixelRatio || 1, 3);
   const rect = canvas.getBoundingClientRect();
@@ -1032,7 +1032,7 @@ export function drawMatchDiagram(canvas, era = ERAS[3], now = 0) {
   ctx.restore();
 }
 
-export function drawVirusTally(canvas, counts, now, era = ERAS[3]) {
+export function drawVirusTally(canvas, counts, now, era = DEFAULT_ERA) {
   const ctx = canvas.getContext('2d');
   const dpr = Math.min(window.devicePixelRatio || 1, 3);
   const rect = canvas.getBoundingClientRect();

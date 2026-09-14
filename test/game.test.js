@@ -12,6 +12,7 @@ import {
   NECK_ROWS,
   PILL,
   PILLS_PER_SPEED_UP,
+  CHAIN_BONUS_BASE,
   SPAWN_GRACE,
   SPAWN_X,
   SPAWN_Y,
@@ -262,11 +263,12 @@ describe('locking and clearing', () => {
   it('doubles the payout for each extra virus in one clear', () => {
     const game = newGame({ speed: 'MEDIUM' });
     const base = SPEEDS.MEDIUM.virusScore;
-    assert.equal(game.scoreFor(1, 1), base);
-    assert.equal(game.scoreFor(2, 1), base * 3);
-    assert.equal(game.scoreFor(3, 1), base * 7);
-    assert.equal(game.scoreFor(3, 2), base * 14);
-    assert.equal(game.scoreFor(0, 4), 0);
+    assert.equal(game.scoreFor(1), base);
+    assert.equal(game.scoreFor(2), base * 3);
+    assert.equal(game.scoreFor(3), base * 7);
+    assert.equal(game.scoreFor(2, 2), base * (4 + 8));
+    assert.equal(game.scoreFor(1, 9), base * 32);
+    assert.equal(game.scoreFor(0), 0);
   });
 
   it('separates a pill when only one half is matched, and the rest falls', () => {
@@ -299,7 +301,7 @@ describe('locking and clearing', () => {
     assert.equal(game.board.toStrings()[15], '...y...B');
   });
 
-  it('awards a combo multiplier for a cascade', () => {
+  it('awards a chain bonus for a cascade', () => {
     const game = newGame();
     game.board = Board.from([
       '........',
@@ -326,6 +328,37 @@ describe('locking and clearing', () => {
     game.runUntilStable();
     assert.equal(game.combo, 2, 'the falling yellows should trigger a second clear');
     assert.equal(game.virusesLeft, 1);
+    assert.ok(game.drainEvents().some((event) => event.type === 'chain' && event.stage === 2));
+  });
+
+  it('pays a chain bonus when a cascade only clears capsules', () => {
+    const game = newGame();
+    game.board = Board.from([
+      '........',
+      '........',
+      '........',
+      '........',
+      '........',
+      '........',
+      '........',
+      '........',
+      '........',
+      '........',
+      'y.......',
+      'y.......',
+      'y.......',
+      'rrr.....',
+      'y..b....',
+      '...B....',
+    ]);
+    game.pill = { x: 3, y: 0, orientation: 1, colors: [0, 0] };
+    game.hardDrop();
+    game.score = 0;
+    game.runUntilStable();
+    assert.equal(game.combo, 2);
+    assert.equal(game.totalVirusesCleared, 0);
+    assert.equal(game.score, SPEEDS.LOW.virusScore * CHAIN_BONUS_BASE);
+    assert.ok(game.drainEvents().some((event) => event.type === 'chain' && event.stage === 2));
   });
 });
 

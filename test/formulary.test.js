@@ -125,6 +125,22 @@ describe('the notebook', () => {
     assert.equal(back.found.antibody.first, 'patent');
   });
 
+  it('migrates five-era apothecary saves without remapping new saves', () => {
+    const payload = JSON.stringify({
+      cascade: { first: 'apothecary', eras: ['protomedicine', 'apothecary'] },
+      seal: { first: 'patent', eras: ['patent'] },
+    });
+    const legacy = Formulary.fromLegacy(payload);
+    assert.equal(legacy.found.cascade.first, 'plague');
+    assert.deepEqual(legacy.found.cascade.eras, ['protomedicine', 'plague']);
+    assert.equal(legacy.found.seal.first, 'patent');
+    assert.deepEqual(legacy.found.seal.eras, ['patent']);
+
+    const current = Formulary.from(payload);
+    assert.equal(current.found.cascade.first, 'apothecary');
+    assert.deepEqual(current.found.cascade.eras, ['protomedicine', 'apothecary']);
+  });
+
   it('shrugs off a store that is missing, broken or tampered with', () => {
     assert.equal(Formulary.from(null).count, 0);
     assert.equal(Formulary.from('not json at all').count, 0);

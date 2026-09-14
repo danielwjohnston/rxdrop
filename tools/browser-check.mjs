@@ -13,6 +13,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { DISCOVERIES } from '../src/formulary.js';
+import { LIGHT_WIDTH_FULL } from '../src/constants.js';
 
 const require = createRequire(import.meta.url);
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -286,7 +287,7 @@ try {
 
   await page.close();
 
-  // The apothecary layer: the era has to follow the level, and the physician
+  // The era layer: the era has to follow the level, and the physician
   // has to actually paint - an empty canvas would look identical to a missing
   // one at a glance.
   const eraPage = await browser.newPage({ viewport: { width: 1024, height: 820 } });
@@ -313,8 +314,8 @@ try {
         pixels: data.length / 4,
       };
     });
-    assert.equal(state.name, 'Gene Therapy');
-    assert.equal(state.eraAttr, 'genetic');
+    assert.equal(state.name, 'Pharmaceutical');
+    assert.equal(state.eraAttr, 'pharmaceutical');
     assert.ok(state.period.length > 0, 'the era should show its period');
     assert.notEqual(state.accent, '', 'the era accent should be set on the body');
     assert.ok(
@@ -466,7 +467,7 @@ try {
       place: document.getElementById('note-place').textContent,
     }));
     assert.equal(shown.hidden, false, 'crossing into level 4 should show the note');
-    assert.match(shown.era, /Apothecary/);
+    assert.match(shown.era, /Hippocratic/);
     assert.ok(shown.text.length > 40);
     assert.ok(shown.place.length > 0);
   });
@@ -605,7 +606,7 @@ try {
     });
     assert.equal(entered.inLight, true, 'the lamp key should open the chamber');
     assert.ok(entered.piece, 'the chamber should deal light to steer');
-    assert.equal(entered.width, 5, 'and take the chosen chamber width');
+    assert.equal(entered.width, LIGHT_WIDTH_FULL, 'and use the default full chamber width');
 
     // Going suspends the bench: the dose in hand is exactly where it was.
     assert.equal(entered.column, before.column, 'the dose should not have moved');
@@ -709,7 +710,7 @@ try {
       // clearing the store under a running bottle just gets it rewritten before
       // the reload lands.
       window.rxdrop.quit();
-      localStorage.removeItem('rxdrop.formulary.v1');
+      localStorage.removeItem('rxdrop.formulary.v2');
     });
     await modPage.reload({ waitUntil: 'networkidle' });
     const blank = await modPage.evaluate(() => {

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   ERAS,
+  DEFAULT_ERA,
   HUES,
   HYBRID_HUES,
   entersEra,
@@ -11,6 +12,7 @@ import {
 } from '../src/eras.js';
 import { DOCTOR_IDS } from '../src/doctors.js';
 import { MAX_LEVEL } from '../src/constants.js';
+import { PALETTE } from '../src/renderer.js';
 
 /** Pulls the numbers back out of an `hsl(h, s%, l%)` string. */
 function parseHsl(value) {
@@ -20,6 +22,54 @@ function parseHsl(value) {
 }
 
 describe('the eras', () => {
+  it('contains the ten eras in historical order with exact periods', () => {
+    assert.deepEqual(
+      ERAS.map((era) => era.id),
+      [
+        'protomedicine',
+        'egyptian',
+        'hippocratic',
+        'bimaristan',
+        'apothecary',
+        'plague',
+        'patent',
+        'antisepsis',
+        'pharmaceutical',
+        'genetic',
+      ],
+    );
+    assert.deepEqual(
+      ERAS.map((era) => era.period),
+      [
+        'before 3000 BCE',
+        '2600 - 1000 BCE',
+        '450 BCE - 200 CE',
+        '800 - 1200',
+        '1231 - 1600',
+        '1619 - 1799',
+        '1800 - 1906',
+        '1867 - 1927',
+        '1928 - 1999',
+        '2000 - onward',
+      ],
+    );
+  });
+
+  it('maps every level to the latest era whose band has started', () => {
+    assert.equal(ERAS.length, 10);
+    for (let level = 0; level <= MAX_LEVEL; level += 1) {
+      const expected = ERAS.filter((era) => era.from <= level).at(-1);
+      assert.equal(eraFor(level), expected, `level ${level} chose the wrong era`);
+    }
+    assert.equal(eraFor(19).id, 'genetic');
+    assert.equal(eraFor(20).id, 'genetic');
+  });
+
+  it('uses Pharmaceutical as the presentation default', () => {
+    assert.equal(DEFAULT_ERA.id, 'pharmaceutical');
+    assert.equal(PALETTE, paletteFor(DEFAULT_ERA));
+  });
+
   it('start at level 0 and run in ascending order', () => {
     assert.equal(ERAS[0].from, 0);
     for (let i = 1; i < ERAS.length; i += 1) {

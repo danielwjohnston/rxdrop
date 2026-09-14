@@ -253,10 +253,12 @@ Order matters, and each step gates the next:
 Explicitly do not port: `phototherapy.js`, `sonic-therapy.js`, the `doctors.js`
 import hunk. Resolve `sw.js` **upward** to `main`'s cache version.
 
-**A3. Expose the beat (independent of A1/A2 — can run in parallel).**
-`src/audio.js` already has the look-ahead scheduler. Expose beat index, bar
-position and next-beat time, and make the clock injectable for headless tests.
-Smaller than previously documented, and it is the only item with two dependents.
+**A3. Expose the beat — `delivered on main`, 14 September 2026.**
+Planned here as "expose beat index, bar position and next-beat time, and make
+the clock injectable for headless tests". `src/transport.js` now does exactly
+that: `beatAt()`, `position()`, `beatWindow()`, `timeOfBeat()`, and a `clock`
+injected at construction so headless tests drive a virtual one. See
+`docs/transport.md`. **A4 is therefore unblocked on this side.**
 
 **A4. Music per period.** Blocked on A3 *and* A2's period map.
 

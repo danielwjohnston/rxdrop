@@ -348,9 +348,10 @@ Worth writing down, because none of it was visible from the design:
   and the report now ask about the same player.
 - **One line a session is a bad exchange rate.** The first tuning had a five-
   piece session buying a single row out of seventeen. Light falls more than
-  twice as fast now (`LIGHT_FALL` 520 → 190) and a line **spills** into its
-  neighbours, further the more lines land together - the same shape as a
-  cascade, and the reason to stack rather than take every single line.
+  twice as fast now (`LIGHT_FALL` 520 → 190). The spill that once widened a
+  line into its neighbours is **cut**: the respec made one line clear one row -
+  the *lowest filmed* row, wherever the line was made - so the exchange rate is
+  now flat and legible rather than bonus-shaped (`game.js:scrubFilm`).
 - **An unbounded visit is not a visit.** A bot told to leave when the worst row
   was clear never left: with viruses across a dozen rows there is always a row
   re-fogging. Visits are bounded by lines won or time spent, whichever comes
@@ -760,18 +761,15 @@ makes a good thing better, and the mechanic has to be complete without them.
 
 More than phototherapy, and the expensive part is not the gameplay:
 
-- **A transport.** *Corrected on audit, 12 September 2026 - the original claim
-  here was that the audio engine has no transport, and that was wrong.*
-  `src/audio.js:387-404` already runs the textbook look-ahead scheduler:
-  `nextNoteTime = currentTime + 0.1`, a 25ms `setInterval` tick, and a 150ms
-  scheduling horizon off `AudioContext.currentTime`. The clock is right and does
-  not drift.
-  What is actually missing is smaller: the scheduler keeps its beat position to
-  itself. A rhythm mechanic needs that position **queryable** - beat index, bar
-  position, time until the next beat - and needs the clock **injectable** so
-  tests and the bot can drive a virtual one. That is an afternoon's work
-  exposing state that already exists, not a rebuild, which makes sonotherapy
-  materially cheaper than this page previously said.
+- ~~**A transport.**~~ *`shipped` 14 September 2026 - `src/transport.js`.*
+  This entry twice claimed the audio engine had no transport. That was wrong
+  both times: `src/audio.js:387-404` already ran the textbook look-ahead
+  scheduler. The audit narrowed the real gap to the beat *position* being
+  private and the clock not being injectable - and that gap is now closed.
+  `Transport` exposes `beatAt()`, `position()` (beat index and bar position),
+  `beatWindow()` and `timeOfBeat()`, and takes a `clock` at construction so
+  tests and the bot drive a virtual one. See `docs/transport.md`.
+  **Sonotherapy no longer waits on audio infrastructure.**
 - **Music as data.** Eras would each need a score - a timeline the transport
   reads - rather than imperative loops. That is the same refactor the
   eleven-period music direction needs anyway, so it gets paid for twice.
@@ -782,13 +780,13 @@ More than phototherapy, and the expensive part is not the gameplay:
   of the gauntlet is "a seed reproduces a game exactly", and wall-clock audio
   time is not reproducible. The answer is that the *score* is seeded and the
   player's hits are inputs like any other - but it means the beat clock must be
-  **injectable**, so tests and the bot can run on a virtual transport. Cheap to
-  design in now; expensive to bolt on later. Nothing about this should be built
-  until that decision is made.
+  **injectable**, so tests and the bot can run on a virtual transport. That
+  injectable clock now exists (`Transport({ clock })`), so the design-in has
+  been paid for; what remains is the decision about seeding the *score*.
 
 The bottle, the board and the renderer are already separated enough that the
-gameplay side is tractable. It is the audio engine that is not ready, and that is
-worth knowing before anyone starts.
+gameplay side is tractable, and the audio engine now has its clock. What is left
+here is score-as-data and input timestamping, not infrastructure.
 
 ### Rationing - `shipped`
 

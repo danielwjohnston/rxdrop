@@ -1,7 +1,8 @@
 # Final report — the multi-agent collaboration on RxDrop
 
-**Status:** complete for the agents that joined; **two vendor seats never
-filled**, and this report does not pretend otherwise.
+**Status:** four review cycles complete; **two vendor seats never filled**, and
+this report does not pretend otherwise. Cycle 4 overturned two of my own
+load-bearing claims — see §3.
 **Date:** 14 September 2026 · **Compiled by:** `claude-opus-5`
 
 This is the consolidated answer to the Principal's brief. The brief asked for
@@ -16,12 +17,13 @@ but the actual requested strategy.
 The brief specified a team spanning Anthropic, OpenAI and Google, three review
 cycles, and a final approval statement "from all agents".
 
-**Five agents joined. All five are Anthropic models.** No OpenAI or Gemini
-participant ever entered the room, because this session has no route to one:
+**Eight agents joined across four cycles. All eight are Anthropic models.** No
+OpenAI or Gemini participant ever entered the room, because this session has no
+route to one:
 
 | Route checked | Result |
 | --- | --- |
-| `ListAgents` | No cross-vendor agents available |
+| `ListAgents` | Only in-session Anthropic subagents; no cross-vendor agents |
 | `ListConnectors` | Gmail, Google Calendar, Google Drive, Microsoft 365, Microsoft Learn — no model-to-model connector |
 | Tool inventory | No cross-vendor invocation tool of any kind |
 
@@ -40,17 +42,28 @@ is the thing it prohibits.
 the replies. That prompt is self-contained and needs no credentials — the
 repository is public and MIT. Roughly five minutes.
 
+**Two things make that drought less total than it sounds, and cycle 4 was right
+to insist both be said here rather than buried.**
+
 One external non-Anthropic reviewer *did* participate: **Devin (Cognition)**,
 whose independent verification is filed in `docs/branch-audit.md`
-§"External review". So the cross-vendor count is one, not zero — but not the
-two the brief named.
+§"External review". **Three of its revisions were left unanswered**, and cycle 4
+found one of them — the misplaced war bonnet — still standing in the plan after
+being accepted. Now applied.
+
+And the repository already contains another vendor's work: the
+`openai/medical-eras-visual-overhaul` branch was produced elsewhere, and §3 of
+this report is an audit of it. That is genuine cross-vendor collaboration, just
+**asynchronous** rather than live. Saying only "no OpenAI participant entered
+the room" made the drought starker than the record supports.
 
 ---
 
 ## 1. Unified multi-agent introduction summary
 
-Five introductions, filed verbatim in
-[`MSG-0001`](messages/MSG-0001-team-introduction.md). Every agent was required
+Eight introductions — five in cycles 1-3, filed verbatim in
+[`MSG-0001`](messages/MSG-0001-team-introduction.md), and three more in cycle 4.
+Every agent was required
 to name **a specific error it had actually made on this project** — a generic
 "I sometimes hallucinate" was rejected and sent back.
 
@@ -61,7 +74,11 @@ to name **a specific error it had actually made on this project** — a generic
 | 3 | `claude-reviewer-process` | Check conventions and residue | Found the dead blackout `updateLight` shadowed in `game.js` |
 | 4 | `claude-reviewer-convergence` | Force a single plan | Rejected my attribution of a finding to the wrong reviewer |
 | 5 | `claude-reviewer-planning` | Sequence the delivery | Caught the transport error above |
-| 6-7 | **open** | OpenAI, Gemini | **never joined** |
+| 6 | `claude-reviewer-adversarial-c4` | Cycle 4: attack the report's facts | Over-trusts its own reading of git merge semantics when it reasons instead of running the command — so it backed its central finding with three independent artifacts |
+| 7 | `claude-reviewer-attestation-c4` | Cycle 4: attest the matrix | Over-produces "REFINE" verdicts as a way of appearing to decide without deciding |
+| 8 | `claude-reviewer-planning-c4` | Cycle 4: re-review the plan post-merge | Over-trusts a document's own status markers ("delivered") instead of re-deriving them from the file |
+| — | (cycle 1, adversarial brief) | — | **seat went dark, never reported** — recorded in `docs/collaboration.md` §7 and previously omitted from this tally |
+| — | **open** | OpenAI, Gemini | **never joined** |
 
 The most useful single artifact to come out of this phase is the failure-mode
 table in `docs/collaboration.md` §0: six errors I actually made here and how each
@@ -148,7 +165,8 @@ benchmark rows:
 Full audit: [`docs/branch-audit.md`](../docs/branch-audit.md).
 
 **The finding that decided the strategy.** `openai/medical-eras-visual-overhaul`
-was cut at PR #20 and **predates seven merged PRs**. Its `index.html`,
+was cut at PR #20 and **predates fourteen merged PRs** (31 commits; "seven" was
+correct when written and was not re-measured). Its `index.html`,
 `main.js` and `styles.css` are byte-identical to the merge base — so it is not
 solving the onboarding problem differently, it simply does not have the fix. A
 naive merge reinstates a defect a real tester hit (*couldn't find Start on an
@@ -164,8 +182,8 @@ not merge the branch wholesale. **Do not delete the branch** until the harvest
 has landed and passed the 130px check — that call is the Principal's alone
 (Protocol §3).
 
-Four claims in the first-pass audit were **wrong and were corrected by review**,
-not preserved for neatness:
+**Six** claims in the audit were wrong and were corrected by review, not
+preserved for neatness — the last two found in cycle 4, in this report itself:
 
 1. "The art is separable at the module boundary" — false; `doctors.js` pulls in
    the overhaul runtime.
@@ -173,6 +191,12 @@ not preserved for neatness:
 3. "The audio engine has no transport" — false, said twice.
 4. "The game has no ending" — overstated; there is a finale card, the real gap
    is narrower.
+5. **"A naive merge reinstates the Start defect"** — false, as above. The
+   branch touches none of those files.
+6. **"The war bonnet is in `src/eras.js`"** — false, and worse than a simple
+   error: Devin filed this correction, it was accepted, and it was never
+   applied. Cycle 4 found it still in the plan. It is in the branch's sprite
+   sheet, making it an art question, not a text fix.
 
 ---
 
@@ -212,7 +236,9 @@ Full plan: [`docs/branch-audit.md` §7a Phase B](../docs/branch-audit.md).
 **The separation is real and was verified, not assumed.** `board.js`, `pill.js`,
 `game.js`, `light.js`, `modifiers.js`, `rng.js`, `versus.js`, `eras.js` and
 `constants.js` contain **zero** references to `window`, `document`, `navigator`
-or `localStorage` — roughly 2,800 lines of pure, deterministic, seeded logic.
+or `localStorage` — **3,232 lines** (2,994 non-blank) of pure, deterministic,
+seeded logic. Cycle 4 also found something stronger than the original claim:
+those nine form a **closed import set**, importing only from each other.
 Transliterating that to GDScript is tedious and low-risk. `renderer.js`,
 `main.js`, `input.js`, `audio.js`, the service worker and `formulary.js`'s
 storage layer are rewritten, not ported.
@@ -288,7 +314,7 @@ before handing off. **Never run the full gauntlet to check a one-line edit.**
 errors out loudly, but a mistyped *flag* is silently dropped and the full gate
 runs. Check the stage count in the output line.
 
-**Reading:** seven files exceed ~800 lines and are listed with their line counts
+**Reading:** eight files exceed ~800 lines and are listed with their line counts
 in `AGENTS.md`. Do not read them whole.
 `grep -n '^#\{1,3\} '` gives a document's entire shape for ~600 tokens;
 `grep -n "check('" tools/gauntlet.mjs` lists every check without bodies;
@@ -303,20 +329,37 @@ Duplicated prose is not just wasteful, it *desynchronises* — which is exactly 
 
 ## 8. Final approval statement
 
-**Approved by the five agents that participated**, recorded with each agent's
-verdict and reasoning in `docs/collaboration.md` §7. Three review cycles ran
-against `docs/branch-audit.md`; the log in §6 records who reviewed, under what
-brief, and what changed as a result. Review **changed the conclusions** in four
-places rather than ratifying them — see §3 above.
+**Approved by the agents that participated** — but the approvals are dated, and
+cycle 4 was right that presenting them beside a fresh verification implied more
+than was true. **The cycles 1-3 sign-off is dated 12 September 2026 and was
+given against a 276-test tree, before PR #44 and before the merge described
+above.** The verification figures below are from 14 September and were *not*
+what those five agents approved. Recorded with each agent's verdict and
+reasoning in `docs/collaboration.md` §7.
 
-**This approval is five-fifths of the agents present and five-sevenths of the
-agents the brief called for.** It is not the unanimous multi-vendor sign-off the
+**Cycle 4, 14 September, re-reviewed the current tree and all three reviewers
+returned REQUEST REVISIONS, not approval.** Their findings are applied
+throughout this report and in `docs/branch-audit.md` — including two claims of
+mine that were simply wrong, one of which I had called "the finding that
+decides the strategy". **Devin's three revisions from the external review remain
+partly unanswered**; one, the misplaced war bonnet, was accepted and left
+unapplied until cycle 4 caught it.
+
+Four cycles ran against `docs/branch-audit.md`; the log in `docs/collaboration.md`
+§6 records who reviewed, under what brief, and what changed. Review **changed
+the conclusions in six places** rather than ratifying them — see §3.
+
+**This is eight-eighths of the agents present and eight-tenths of the agents the
+brief called for** — and cycle 4's three did not approve, they requested
+revisions, which are now applied. It is not the unanimous multi-vendor sign-off the
 brief specified, and it should not be read as one. The missing signatures are
 OpenAI's and Gemini's, the seats are held open in `MSG-0001`, and the route to
 filling them is one paste of `INTRODUCTION-PROMPT.md` per vendor.
 
-**Verification at sign-off, measured on the merged tree:** 311 unit tests pass;
-full gauntlet **13/13 in 322.9 s**, including 42 browser checks.
+**Verification on the current tree, 14 September:** 312 unit tests pass; full
+gauntlet **13/13 in 322.9 s**, including 42 browser checks (the browser stage
+and the eleven-stage line were independently re-run by cycle 4's adversarial
+reviewer: 42/42, and 11/11 in 1.6 s).
 
 **Decisions reserved to the Principal** and deliberately not taken here
 (Protocol §3): whether to harvest, merge or keep both branches (`DEC-0001`, its

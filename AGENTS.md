@@ -51,7 +51,7 @@ The same goes for any file over ~800 lines — see the token budget below.
 
 ```
 npm start                     # serve at localhost:8080
-npm test                      # 311 unit tests, ~1.0s   <- cheapest useful check
+npm test                      # 312 unit tests, ~1.0s   <- cheapest useful check
 node tools/playtest.mjs       # the bot plays; reports on feel, not legality
 node tools/gauntlet.mjs       # the full gate, ~5 minutes
 ```
@@ -81,7 +81,7 @@ once, before handing off. Never run the full gauntlet to check a one-line edit.
 `node tools/gauntlet.mjs --list` prints every stage and what it is for.
 
 **Two traps in that command line.** A mistyped *stage name* errors out, but a
-mistyped *flag* is silently dropped (`gauntlet.mjs:1469` filters anything
+mistyped *flag* is silently dropped (`gauntlet.mjs:1477` filters anything
 starting with `-`) and the full five-minute gate runs instead — exactly the
 mistake this section is trying to save you. Check the stage count in the output
 line matches what you asked for.
@@ -98,9 +98,13 @@ launch fails; pin to the installed revision rather than downloading.
 
 Do not read these whole; grep and slice instead:
 
-`tools/browser-check.mjs` (1748) · `tools/gauntlet.mjs` (1521) ·
-`src/main.js` (1468) · `docs/direction.md` (1205) · `src/renderer.js` (1153) ·
-`src/game.js` (1085) · `docs/ideas.md` (886)
+`tools/browser-check.mjs` (1749) · `tools/gauntlet.mjs` (1529) ·
+`src/main.js` (1539) · `src/styles.css` (1477) · `docs/direction.md` (1219) ·
+`src/renderer.js` (1153) · `src/game.js` (1111) · `docs/ideas.md` (959)
+
+*Counts re-measured 14 September 2026. They drift — the previous set was stale
+in six of seven rows and omitted `styles.css` entirely. Re-measure rather than
+trust these.*
 
 Useful moves:
 - `grep -n '^#\{1,3\} ' docs/whatever.md` — the whole shape of a doc for ~600

@@ -521,6 +521,35 @@ gauntlet stages in 1.4 s versus `modifiers` at 240 s. Two additions:
 `branch-audit.md` cycle 2, items 1, 3 and 4. The harvest-not-merge strategy and
 the Phase A → Phase B ordering are agreed.
 
+### Cycle 4 — 14 September 2026 — three reviewers, post-merge
+
+Run after `main` merged in (ten eras, practitioner art, chain scoring, era
+chiptunes, `transport.js`), because the audit had been written against a
+repository that had since moved. **All three returned REQUEST REVISIONS.**
+Between them they overturned two claims this project had been repeating.
+
+| Reviewer | Brief | What it found |
+| --- | --- | --- |
+| `claude-reviewer-adversarial-c4` | Verify every factual claim in `.agents/FINAL-REPORT.md` against the repo | **"A naive merge reinstates the Start-button defect and deletes the browser check" is false.** The branch changes thirteen files; `index.html`, `main.js`, `styles.css` and `browser-check.mjs` are byte-identical to the merge base, so a merge takes main's side. Also: the war bonnet correction Devin filed was accepted and never applied; "~2,800 lines" is 3,232; "seven merged PRs" is fourteen; "the runtime never loads" dropped its *on merge* qualifier — the branch exports `DARK_AT` itself. **And it broke `test/guides.test.js` two ways.** |
+| `claude-reviewer-attestation-c4` | Independently attest the strengths matrix | The matrix was overconfident and its sources are seven marketing pages, one of which **contradicts the row it was cited for**. "Narrative does not hold for OpenAI" overshot — prose and voice, yes; structural narrative, no. And the remedy was wrong: vendor self-report is the weakest evidence class, so the open seats were never going to fix it. |
+| `claude-reviewer-planning-c4` | Does the plan survive the merge? | **A2's premise collapsed.** `main` shipped its own practitioner art, so three of A2's five steps are superseded and step 4 would now layer a coarser period map over a finer one. A4 is delivered. The 130px test **misdiagnosed its own risk** — 264px art in a 132px box at dpr 2 is correct HiDPI practice, not a defect. Era ids are a *migration contract*, not an invariant. |
+
+**Why this cycle was worth running.** The first three cycles reviewed a
+document. This one reviewed the document *against the repository*, after the
+repository had changed — and that is where the errors were. Two of the three
+findings above contradict things the compiling agent had stated to the Principal
+more than once.
+
+**One reviewer finding was rejected.** The attester's top-priority revision was
+to disclose that EQ-Bench is adjudicated by an Anthropic model. The finding is
+real; the attribution is not — this matrix has never cited EQ-Bench. Kept as a
+forward-looking warning instead, since EQ-Bench is the obvious upgrade for a
+prose claim and would trade a weak source for a vendor-compromised one.
+
+**Falsified as a result:** `test/guides.test.js` gained a nested-guide check and
+a paraphrase-proof assertion; both were seen to fail against the exact attacks
+the reviewer demonstrated, then restored.
+
 ## 7. Approval record
 
 Closing statement for the audit exercise of 12 September 2026. Per protocol §36,

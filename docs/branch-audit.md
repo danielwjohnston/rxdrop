@@ -47,8 +47,27 @@ Browser checks present on `main` and absent from the branch:
 
 Those two checks are not hygiene. They were written because **a tester could not
 find the Start button on an iPhone**, and a second tester was "overwhelmed on
-open instead of intrigued and onboarded into play". Merging this branch naively
-reintroduces both failures *and* deletes the checks that would catch them.
+open instead of intrigued and onboarded into play".
+
+**Corrected in cycle 4 — the original wording here was wrong.** It said
+*"merging this branch naively reintroduces both failures and deletes the checks
+that would catch them."* That is not what a merge does. The branch changes
+thirteen files and **none of them is `index.html`, `src/main.js`,
+`src/styles.css` or `tools/browser-check.mjs`** — all four are byte-identical to
+the merge base (`index.html` `20102a8`, `src/main.js` `57aa671`,
+`src/styles.css` `12e8d5e`, `browser-check.mjs` `c134397`). Where the branch
+side equals the base, a three-way merge resolves to **ours**, so main's
+onboarding fold and both browser checks survive a merge untouched.
+
+This document already applied the correct reasoning two sections later — §4:
+*"The branch never touched `game.js` or `constants.js`, so a merge takes
+`main`'s versions of both."* The same logic was not applied here.
+
+**What is true, and still sufficient:** the branch **as a standalone artifact**
+lacks the onboarding fixes and the checks. That matters for a checkout, for
+shipping the branch, or for any harvest that replaces main's files — not for a
+merge. The recommendation below is unchanged, but it rests on the module-load
+failure and the prototype patching in §4, **not** on this.
 
 The branch does carry the PR #20 fixes (`rescaleDropTimer`, `fallOffset`,
 `lastFallInterval` all present), because those landed at the merge base.
@@ -217,13 +236,37 @@ Converged across three review cycles. Sequenced by dependency, not by appeal.
 
 ### Phase A — finish the web version
 
-**A0. Groundwork (hours, no dependencies, do first).**
-- Fix the two historical-credibility problems in `src/eras.js` **before** any art
-  work: the plague band opens at 1347 with a beaked mask documented from the
-  1600s, and the paleolithic healer wears a Plains war bonnet. Cheap now,
-  expensive after thirty assets exist.
-- Tag `archive/openai-medical-eras` and delete the branch once harvested. A
-  stale branch that looks mergeable is a trap, and it very nearly was one.
+**A0. Groundwork — mostly closed by `main`; two items remain.**
+
+- ~~Fix the two historical-credibility problems in `src/eras.js`.~~ **Closed.**
+  The plague band is now its own era at `src/eras.js:140-144`, `1619 - 1799`,
+  and `test/eras.test.js:25` pins the full id and period lists verbatim, so
+  reverting the date fails a unit test in about a second. The **war bonnet was
+  never in `src/eras.js`** — `grep -rniE 'bonnet|feather|headdress' src/`
+  returns nothing, and has not returned anything on `main` at any point. It is
+  in the overhaul branch's `assets/medical-era-sprites.svg`, which makes it an
+  **art** question inside A2, not a text fix here. *Devin filed this correction
+  in the external review below and it was accepted and then never applied to
+  the plan; cycle 4 found it still standing. Applied now.*
+  The premise "cheap now, expensive after thirty assets exist" inverted
+  harmlessly: forty assets now exist, but the corrections shipped **with** that
+  art (`03293c1`, `d35db82`), so there is no wrongly-dated sprite to re-render.
+- **Tag `archive/openai-medical-eras` at `40ebd8e` now — unconditionally.**
+  This bullet previously read "tag *and delete* the branch once harvested",
+  which is **stricter than `DEC-0001`** and has been holding back a zero-risk
+  action. DEC-0001 items 2-4 separate them: create the tag now, keep the branch
+  until the harvest is verified, delete only after. No tag currently exists
+  (`git ls-remote --tags origin` is empty). Deletion remains the Principal's
+  call under Protocol §3.
+- **Precache guard — partially done.** `test/precache.test.js` covers every
+  `src/*.js`, `styles.css`, and everything referenced from `index.html` and the
+  manifest. It does **not** cover assets referenced from JavaScript, and
+  `src/art.js:10-11` builds its URLs by template
+  (`./assets/practitioners/${doctor}-${pose}.png`). Add an eleventh era and
+  `test/art.test.js` will demand the four PNGs exist on disk while **nothing**
+  requires them in `PRECACHE` — offline play silently degrades to the
+  procedural fallback with no test failing. Close it by iterating
+  `ERAS x POSES` through the same URL builder and asserting membership.
 - Add a gauntlet check that every `src/*.js` and every referenced asset is in
   `sw.js`'s `PRECACHE`. The list is hand-maintained and nothing guards it.
 
@@ -232,26 +275,68 @@ Converged across three review cycles. Sequenced by dependency, not by appeal.
 caseload needs a last case. Add a terminal state and a gauntlet check that
 level 20 reaches it. This is the only item that changes what the game *is*.
 
-**A2. Harvest the art (depends on A0).**
-Order matters, and each step gates the next:
+**A2. Harvest the virus theatre — all that is left. `main` overtook the rest.**
 
-1. **The 130px test first, before any glue.** Render the branch's atlases at
-   the size they actually appear — ~130px in a side panel — against the real
-   bottle. *This is the riskiest assumption in the whole plan*: the assets were
-   generated at roughly double their display size. If they fail here, A2 is a
-   commission, not a harvest, and Phase A's cost triples.
-2. `art.js` + one atlas + **the fallback path and a check for it** — a missing
-   atlas must degrade to procedural drawing, not break offline play.
-3. **New glue, written from scratch.** Do not port `runtime-overhaul.js`: it
-   monkey-patches nine `Game` methods and pulls itself in through `doctors.js`.
-   Wire the art to `main`'s renderer and event stream instead.
-4. `periods.js` as a presentation map over the five gameplay eras. **Keep the
-   era ids** — the formulary keys saved notebooks by them.
-5. `virus-theatre.js`, **with its event switch rewritten** for `main`'s
-   vocabulary (`lightOn`/`lightOff`/`lit`/`flooded`/`sterile`).
+*Rewritten in cycle 4. The previous version had five steps; `main` has since
+shipped equivalents for three of them, and executing step 4 as written would
+now make `main` **worse**.*
 
-Explicitly do not port: `phototherapy.js`, `sonic-therapy.js`, the `doctors.js`
-import hunk. Resolve `sw.js` **upward** to `main`'s cache version.
+`main` commissioned its own practitioner art — ten eras x four poses in
+`assets/practitioners/`, loaded by `src/art.js` with a tested fallback chain
+(`src/art.js:57-60` degrades pose → idle → `null`; `src/main.js:575-587` falls
+through to the procedural `drawDoctor()`), guarded by `test/art.test.js`. So:
+
+| old step | status |
+| --- | --- |
+| 1. 130px test on the branch's atlas | **largely answered — and it misdiagnosed its own risk.** See below. |
+| 2. `art.js` + atlas + fallback + check | **superseded**, and a same-name collision with a better-tested incumbent |
+| 3. new glue from scratch | **superseded** for practitioners |
+| 4. `periods.js` over the five eras, keeping era ids | **superseded, and actively harmful now** |
+| 5. `virus-theatre.js`, event switch rewritten | **the only survivor** |
+
+**Why step 4 is now harmful.** The overhaul's `periods.js` lays eleven visual
+periods over the *old five* chapters, assigning a generic `physician` to four
+bands because it had no art for them. `main` took the same two-level cadence
+and made those bands **first-class eras** with correct dates and dedicated
+art — `swnw`, `hippocratic`, `bimaristan` and `surgeon` all have sprites.
+Layering `periods.js` on top would put a coarser, worse-dated map over a finer
+correct one.
+
+**And the invariant step 4 rested on is already gone.** "Keep the era ids" is no
+longer true: `apothecary` **changed meaning** — it was the plague band, it is
+now the guild apothecary. `main` handled it by *migration*, not immutability:
+`src/formulary.js:216` `LEGACY_ERA_IDS = { apothecary: 'plague' }` and
+`:291-312` `fromLegacy()` remap saved notebooks on load. Era ids are now a
+**migration contract**, and changing one is a three-place edit — `eras.js`, the
+legacy map, and the pinned list in `test/eras.test.js` — plus four PNGs and four
+`sw.js` lines. A Godot port reimplementing save loading will trip on this.
+
+**On the 130px test, which this document called "the riskiest assumption in the
+whole plan".** That framing was wrong. `index.html:48` is a 132x132 canvas,
+`src/styles.css:757-763` caps it at 132 CSS px, and main's sprites are
+**264x264** — exactly 2x, which at `devicePixelRatio: 2` is *correct HiDPI
+practice, not a defect*. "Generated at roughly double display size" described
+the requirement, not the risk. The residual real question — does this much line
+detail survive at 132 CSS px — has been answered affirmatively by the
+ligne-claire PNGs that shipped and are on screen now.
+
+**What actually remains unharvested:** `src/virus-theatre.js` (212 lines) and
+`assets/virus-mascots.svg` — virus reaction faces
+(`idle/taunt/hurt/panic/smug/mutate/celebrate/stunned`). `main` has no
+equivalent; its only reaction system is the *practitioner's* four poses. Gate it
+on **its own** legibility test — mascot frames at board-cell scale, which is a
+different test from the portrait one — and on a **tone decision from the
+Principal**, since DEC-0001's "harvest the valuable art" was decided when "the
+art" meant portraits. Faces on the viruses change what this game feels like.
+
+Also largely moot now: the branch's `music.js`. `src/audio.js:121-275` defines
+ten era-keyed tracks and `src/transport.js` supplies the clock.
+`assets/medical-era-sprites.svg` is superseded by the forty PNGs — and it is the
+file that actually contains the war bonnet.
+
+Explicitly do not port: `phototherapy.js`, `sonic-therapy.js`,
+`runtime-overhaul.js`, the `doctors.js` import hunk. Resolve `sw.js` **upward**
+to `main`'s cache version.
 
 **A3. Expose the beat — `delivered on main`, 14 September 2026.**
 Planned here as "expose beat index, bar position and next-beat time, and make
@@ -260,7 +345,20 @@ that: `beatAt()`, `position()`, `beatWindow()`, `timeOfBeat()`, and a `clock`
 injected at construction so headless tests drive a virtual one. See
 `docs/transport.md`. **A4 is therefore unblocked on this side.**
 
-**A4. Music per period.** Blocked on A3 *and* A2's period map.
+**A4. Music per period — `delivered in substance`.** `src/audio.js:121-275`
+defines ten `makeTrack` entries keyed to the ten era ids, dispatched at
+`src/main.js:542` on era change. **Its second dependency no longer exists:** the
+music is keyed to era ids, not to A2's period map, and that map is not being
+ported. What remains is the branch's evolving-arrangement idea, which is
+optional and separable.
+
+**A0.4. Answer the asset-weight question with the number that now exists.**
+`PRECACHE` is 66 entries totalling ~2.95 MB, of which ~2.6 MB is
+`assets/practitioners/`. Every install downloads that before the game is
+offline-ready. Not a defect — it is the cost of the art, and the art is good —
+but §7b previously dismissed asset weight as "22 KB of SVG… noise", which is no
+longer the case. Record a decision: accept, ship WebP, or drop non-idle poses
+from precache and lazy-load them.
 
 **A5. Freeze.** Full gauntlet, ship, add no mechanics.
 
@@ -286,6 +384,29 @@ GDScript and lose the accumulated catch history, **keep the JS rules as a
 differential oracle**: run one seed and one input log through both engines and
 compare board hashes per frame. That reduces "did the port change the rules" to
 a single automated question.
+
+**Three amendments from cycle 4:**
+
+1. **`src/transport.js` is in neither list, and belongs in the pure one.** It is
+   254 lines with an injected clock (`:45-49` throws if it is not a function),
+   no timer and no frame loop of its own, and nothing in the rules imports it —
+   only `src/audio.js:359` and its test. It **ports as a pure module**. But its
+   own header advertises `beatWindow()` as the sonotherapy hook, so note now:
+   **the moment any rule reads it, musical time becomes a rules input and the
+   differential oracle's input log must carry a clock trace.**
+2. **Name the oracle's comparison unit.** The plan promises a board hash; there
+   is no `hash` in `src/board.js` or `tools/gauntlet.mjs`. The determinism stage
+   actually compares `Board.toStrings()` snapshots
+   (`tools/gauntlet.mjs:266-268`). That is arguably the better primitive — a
+   mismatch shows you *where* — but say so, or implement the hash. Leaving it
+   unstated means the port invents its own, which is the exact failure this
+   section exists to prevent.
+3. **Three rules modules default their seed to wall-clock time**:
+   `src/rng.js:5`, `src/game.js:84`, `src/versus.js:12` all take
+   `seed = Date.now()`. Harmless today because every check passes a seed
+   explicitly, and it is not a DOM reference — but a GDScript port that
+   reproduces the default will produce non-reproducible runs that look like
+   rules divergence. **Require an explicit seed in the port.**
 
 It rests entirely on the ported PRNG being bit-exact, which is why
 `test/fixtures/rng-golden.json` now exists. **Port `src/rng.js` first, check it

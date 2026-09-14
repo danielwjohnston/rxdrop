@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { lstatSync, readFileSync, readlinkSync } from 'node:fs';
+import { globSync, lstatSync, readFileSync, readlinkSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
@@ -20,8 +20,32 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
  * A symlink makes that drift impossible rather than merely discouraged. This
  * check exists so that converting it back to a copy fails loudly instead of
  * quietly re-forking the day-one guide.
+ *
+ * Cycle 4 broke the first version of this check two ways, and both are now
+ * closed:
+ *   1. A NESTED guide. The first version only ever looked at ROOT/CLAUDE.md, so
+ *      adding src/CLAUDE.md or .claude/CLAUDE.md forked the guide with all
+ *      three tests still green. Claude Code loads directory-scoped guide files,
+ *      so an agent working under src/ would have read the fork - exactly the
+ *      harm this file exists to prevent. Now globbed.
+ *   2. A PARAPHRASE. The first version asserted against the literal sentence
+ *      commit 9933ef5 happened to use, so rewording the identical bad advice
+ *      passed. Now matched on the token that actually matters.
  */
 describe('the day-one guide has exactly one copy', () => {
+  it('has no second CLAUDE.md anywhere in the tree', () => {
+    // Cycle 4's attack 1: a nested guide forks the day-one text without ever
+    // touching the root symlink. Claude Code reads directory-scoped guides.
+    const found = globSync('**/CLAUDE.md', {
+      cwd: ROOT,
+      exclude: (name) => name === 'node_modules' || name === '.git',
+    });
+    assert.deepEqual(
+      found.sort(), ['CLAUDE.md'],
+      `the root CLAUDE.md symlink must be the only one - found: ${found.join(', ')}`,
+    );
+  });
+
   it('keeps CLAUDE.md a symlink to AGENTS.md', () => {
     const stats = lstatSync(resolve(ROOT, 'CLAUDE.md'));
     assert.ok(
@@ -42,10 +66,16 @@ describe('the day-one guide has exactly one copy', () => {
     // deliberately has no executablePath and relies on the env var.
     const guide = readFileSync(resolve(ROOT, 'AGENTS.md'), 'utf8');
     assert.match(guide, /PLAYWRIGHT_BROWSERS_PATH/);
-    assert.doesNotMatch(
-      guide,
-      /launch with `executablePath/,
-      'the guide must not resurrect the executablePath advice',
+    // Cycle 4's attack 2: the first version matched the one sentence 9933ef5
+    // used, so a paraphrase of the identical bad advice passed. Match the
+    // thing itself. The repo's tooling deliberately sets no executablePath and
+    // relies on PLAYWRIGHT_BROWSERS_PATH, so any mention outside a prohibition
+    // is the regression.
+    const mentions = [...guide.matchAll(/executablePath/g)];
+    assert.equal(
+      mentions.length, 1,
+      `executablePath should appear exactly once, in the sentence forbidding it - found ${mentions.length}`,
     );
+    assert.match(guide, /do not add an `executablePath`/);
   });
 });

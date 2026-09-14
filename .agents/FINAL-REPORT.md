@@ -70,38 +70,76 @@ look.
 
 ---
 
-## 2. Verified strengths matrix
+## 2. Researched strengths matrix, with known gaps
 
-Full matrix with sources: [`docs/collaboration.md` §2](../docs/collaboration.md).
-Researched rather than recalled; every row is sourced.
+Full section, with the cycle-4 corrections: [`docs/collaboration.md` §2](../docs/collaboration.md).
+**Snapshot date: 14 September 2026** — frontier standings move within a quarter,
+so treat any undated row here as expired.
 
-The brief asked agents to "verify these perceptions through research". Verified.
-**One of its three claims holds, one splits, one is too coarse:**
+It was titled "Verified strengths matrix" until review cycle 4. **"Verified"
+claimed more than the evidence delivers**, and the retitle is the honest
+version.
+
+**The brief's three claims, as attested:**
 
 | Claim in the brief | Verdict |
 | --- | --- |
-| Claude excels at reasoning, analysis, code structure | **Too coarse.** Leads independent SWE-bench Verified, but GPT-5.x matches it on raw bug-fixing and Gemini 3.1 Pro leads GPQA and ARC-AGI-2. The flagships sit within single percentage points, and SWE-bench is reported contaminated for frontier models. |
-| OpenAI excels at creativity, **visuals, narrative**, flexible problem-solving | **Splits.** Visuals and flexible problem-solving hold. **Narrative does not** — Claude is the model most consistently rated strongest for prose and long-form voice. |
-| Gemini excels at multimodal reasoning, research breadth, factual synthesis | **Holds.** Leads native multimodal capability, GPQA and ARC-AGI-2; bundles Imagen and Veo. |
+| Claude excels at reasoning, analysis, code structure | **Too coarse.** The flagships sit within single percentage points and each leads a different coding benchmark. |
+| OpenAI excels at creativity, **visuals, narrative**, flexible problem-solving | **Splits — and not where the first version said.** See below. |
+| Gemini excels at multimodal reasoning, research breadth, factual synthesis | **Supported, scope narrowed** — leads *video and audio* specifically, not multimodality as a category. |
 
-**The honest caveat.** Three of the four reviewers **declined** to attest to
-vendors whose output they had not observed. That is the right answer to an
-observation question and the wrong one to a research question — the brief asked
-the latter — but it means this matrix rests on **one agent's research, not
-five**. The subject of each row is the missing attester, which is precisely what
-the two open seats were for.
+**Cycle 4 corrected my own work in four places, three of them against
+Anthropic's interest:**
 
-**What it means for RxDrop**, which is the only part that pays rent:
+1. **I overshot on narrative.** I wrote that "narrative does not hold" for
+   OpenAI. Refined: **prose, voice and long-form consistency** do not belong to
+   OpenAI, but **structural narrative — outlining, pacing, plot coherence —
+   substantially does.** "Narrative" ordinarily includes structure, so the
+   Principal was more right than I allowed.
+2. **"Claude, not OpenAI" was selective.** Gemini also outranks GPT on
+   human-preference writing. Naming only the half that favours Claude was
+   self-serving.
+3. **Three supporting facts were stale or wrong** and are now deleted rather
+   than replaced — including the Claude-favourable "leads real-world bug
+   fixing" row, which was the most flattering claim in the table and the one
+   that checked out worst. They were deleted rather than swapped for cycle 4's
+   newer numbers because those were sourced to aggregators the reviewer itself
+   labelled unverified.
+4. **The evidence base is materially weaker than the tone was.** Not one of the
+   seven original citations is a benchmark maintainer, model card, vendor eval
+   post or peer-reviewed paper — all seven are content marketing. One of them
+   **contradicts the row it was cited for.**
+
+**The most important correction, because it changes what this project is
+waiting on.** I had described the two open vendor seats as the keystone this
+work needed. Cycle 4 rejected that, correctly: a GPT agent asserting it is good
+at narrative is **vendor self-report, the least reliable evidence class
+available** — below the marketing blogs it would replace. The gap here is
+evidence quality, and **primary sources close it today, with no new agents.**
+The vendor seats remain valuable for the 130px art test (§4), which needs
+multimodal capability rather than self-description. They were never going to
+fix this section.
+
+**Three exposures, where I had disclosed only the first:** the research rests on
+one agent; that agent shares a vendor with the model its boldest verdict
+favours; and cycle 4's reviewer was a fourth Anthropic model, which makes the
+second exposure worse rather than better. It volunteered that itself.
+
+**Where I pushed back on the reviewer:** its top-priority revision was to
+disclose that EQ-Bench is adjudicated by an Anthropic model. The finding is
+real and useful, but **this matrix has never cited EQ-Bench** — the reviewer
+researched it independently and then attributed it to us. That attribution is
+rejected; the warning is kept, as a trap for whoever next tries to strengthen
+the prose sourcing.
+
+**What it means for RxDrop**, unchanged because it never rested on the
+benchmark rows:
 
 - **Claude** — rules code, the gauntlet, design docs, in-game prose.
 - **Gemini or GPT** — asset generation, and multimodal review of how the game
   *looks at real size*.
-- **Any of them** — auditing each other. That is where multi-vendor value
-  actually shows up.
-
-That split is what the evidence already shows: the overhaul branch's lasting
-value is its **generated art**; its weakness is **mechanics never tested against
-a hand**.
+- **Any of them** — auditing each other. Cycle 4 is the evidence for that: it
+  corrected its own vendor's work in four places.
 
 ---
 

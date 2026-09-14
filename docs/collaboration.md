@@ -121,88 +121,192 @@ just asynchronous.
 
 To run the real cross-vendor cycles, use the handoff packet in §4.
 
-## 2. Verified strengths matrix
+## 2. Researched strengths matrix, with known gaps
 
-The brief asserted a division of talent. Research **partly** confirms it and
-contradicts one part, so the corrected version is below. Every row is sourced;
-none is from memory.
+**Snapshot date: 14 September 2026.** Every row below is a claim about frontier
+models, and frontier standings move within a quarter. An undated capability
+claim is wrong soon and cannot be checked later. Re-date or re-verify before
+relying on any of it.
 
-| Capability | Leads at least one widely-cited benchmark or review | Evidence and caveats |
+**This section was titled "Verified strengths matrix" until review cycle 4
+retitled it.** "Verified" claimed more than the evidence delivers, and the
+old title was doing persuasive work the sources could not support. What follows
+is what the research actually establishes, which is less than the first version
+implied.
+
+### What the evidence supports
+
+| Capability | Who leads | Confidence |
 | --- | --- | --- |
-| Real-world bug fixing | **Claude** | Leads independent SWE-bench Verified evaluations. GPT-5.x is within single points. |
-| Agentic tool use | **GPT-5.x** | Reported as pushing furthest on agentic tooling and ecosystem breadth. |
-| Algorithmic reasoning | **Gemini 3.1 Pro** | Leads LiveCodeBench by a wide Elo margin. |
-| Research breadth, factual synthesis | **Gemini** | Measurable advantage on academic research and long reasoning chains. |
-| Image generation | **GPT-5.x / Gemini** | Both natively multimodal; Gemini bundles Imagen and Veo, the broadest toolkit. |
-| Creative prose, voice, long-form | **Claude** | Most consistently rated strongest for natural prose and voice matching. |
+| Research breadth, factual synthesis | **Gemini** | Reasonable — consistent across sources |
+| Video and audio understanding | **Gemini** | Reasonable |
+| Image generation | **GPT / Gemini** | Reasonable — both natively multimodal; Gemini bundles Imagen and Veo |
+| Creative prose, voice, long-form consistency | **Claude** | **Weak — see the caveats below, which are load-bearing** |
+| Agentic tool use, ecosystem breadth | **GPT** | Reasonable |
+| Coding | **nobody, cleanly** | Each model leads a different benchmark; see below |
 
-### Attestation of the brief's three claims
+**Removed in cycle 4, as stale or wrong rather than merely imprecise:**
 
-The Principal's brief asked agents to acknowledge three specific claims and to
-*"verify these perceptions through research and cite sources when appropriate"*.
-Verified below against current reporting. **One holds, one holds in part, one is
-too coarse to be useful.**
+- *"Claude leads real-world bug fixing (SWE-bench Verified)."* SWE-bench
+  Verified is at ceiling and the flagships sit inside noise of each other. On
+  the contamination-resistant successor, Claude does not lead the public board.
+  Asserting a Claude lead here was the most Anthropic-flattering row in the
+  table and the one that checked out worst.
+- *"Gemini 3.1 Pro leads GPQA and ARC-AGI-2."* Not supported at this snapshot.
+- *"Gemini 3.1 Pro leads LiveCodeBench by a wide Elo margin."* Wrong on two
+  counts: LiveCodeBench is scored by pass rate, not Elo, and the margin is not
+  wide.
 
-| Claim as written | Verdict | Evidence |
-| --- | --- | --- |
-| "Claude excels at reasoning, analysis, and code structure" | **Partly supported — too coarse** | Tops human-preference rankings and the hardest coding test, and leads independent SWE-bench Verified. But GPT-5.5 matches it on raw bug-fixing, and Gemini 3.1 Pro leads GPQA and ARC-AGI-2 on reasoning specifically. The three flagships are "separated by single percentage points". SWE-bench is reported as contaminated for frontier models. |
-| "OpenAI models excel at creativity, visuals, narrative, and flexible problem-solving" | **Split — visuals yes, narrative no** | Visuals and flexible problem-solving hold: GPT-5.5 is natively multimodal and "pushes furthest on agentic tooling and ecosystem breadth". **Narrative does not hold** — Claude is the model most consistently described as strongest for natural prose, voice matching and long-form consistency. |
-| "Google Gemini excels at multimodal reasoning, research breadth, and factual synthesis" | **Supported** | Leads native multimodal capability, particularly audio and video understanding; processes text, image, video, audio and code together; leads GPQA and ARC-AGI-2; holds a measurable advantage on academic research and long reasoning chains; bundles Imagen and Veo. |
+These were **deleted rather than replaced**. Cycle 4 offered newer standings,
+but sourced most of them to leaderboard aggregators whose provenance it could
+not establish and explicitly labelled them as search summaries it had not
+fetched. Swapping unverifiable stale numbers for unverifiable fresh ones is not
+an improvement. Where a specific standing is needed, get it from the benchmark
+maintainer, and date it.
 
-**Attestation status.** Researched and attested by `claude-opus-5`. The four
-reviewer agents were each asked to attest; three explicitly **declined to
-characterise vendors whose output they had not observed**, which is the correct
-answer to an observation question and the wrong one to a research question — the
-brief asked for the latter. That distinction is worth recording: an agent
-refusing to speak beyond its evidence is behaving well, but it means this
-attestation currently rests on one agent's research, not four.
+### The brief's three claims, attested
 
-**An OpenAI or Gemini participant should dispute or confirm the row about
-itself.** Self-attestation by the subject is the missing evidence here, and it is
-one of the two things the open vendor seats exist to supply.
+| Claim as the Principal wrote it | Verdict |
+| --- | --- |
+| "Claude excels at reasoning, analysis, and code structure" | **Too coarse.** The flagships are separated by single percentage points and each leads a different coding benchmark. The conclusion holds; the supporting facts the first version used did not. |
+| "OpenAI models excel at creativity, visuals, narrative, and flexible problem-solving" | **Splits — and cycle 4 corrected how it splits.** See below. |
+| "Google Gemini excels at multimodal reasoning, research breadth, and factual synthesis" | **Supported, with scope narrowed.** Gemini leads *specific* modalities — video, audio — rather than multimodality as a category. On general multimodal reasoning the frontier is clustered; GPT is reported stronger on charts and code-with-vision, Claude on long-document OCR. |
 
-Sources: [Cosmic JS](https://www.cosmicjs.com/blog/best-ai-for-developers-claude-vs-gpt-vs-gemini-technical-comparison-2026) ·
-[tech-insider](https://tech-insider.org/claude-vs-chatgpt-vs-gemini-2026/) ·
-[Logic](https://logic.inc/resources/ai-model-benchmarks-guide) ·
-[Lorka AI](https://www.lorka.ai/knowledge-hub/gemini-vs-chatgpt-vs-claude) ·
-[Git AutoReview](https://gitautoreview.com/blog/claude-vs-gemini-vs-chatgpt-code-review) ·
-[Tactiq](https://tactiq.io/learn/claude-vs-gemini-vs-chatgpt-for-writing) ·
-[SiteGround](https://www.siteground.com/academy/chatgpt-vs-claude-vs-gemini-which-to-use)
+**On the narrative claim, which is the one that matters.** The first version of
+this section said flatly that *"narrative does not hold"* for OpenAI and that
+Claude leads. Cycle 4 refined this, and the refinement is less favourable to
+Anthropic:
 
-**Two corrections to the brief's premise:**
+- What does **not** belong to OpenAI is **prose, voice and long-form
+  consistency**.
+- **Structural narrative — outlining, pacing, cause-and-effect coherence, plot
+  holes — substantially does** belong to OpenAI. "Narrative" ordinarily
+  includes structure, so "narrative does not hold" overshot. The Principal was
+  more right than the first version of this table allowed.
+- "Claude, not OpenAI" was also **selective**: on human-preference writing
+  data, Gemini also outranks GPT. The full picture is "not OpenAI — Claude and
+  Gemini ahead of it", and stating only the half that names Claude was
+  self-serving.
+- The margin between Claude and GPT on crowd-preference writing sits **at the
+  edge of the platform's own stated noise band**.
+- Expert and lay judges **systematically disagree** about AI creative writing.
+  Crowd arenas and LLM-judged benchmarks are both lay-proxy instruments, so
+  neither settles the expert question.
 
-1. **"OpenAI does better with story" is not supported.** Claude is the model
-   most consistently described as strongest for creative writing and long-form
-   voice consistency. The visuals half of that claim holds; the story half
-   does not.
-2. **"Claude is best at code" is too coarse.** Each model leads a *different*
-   coding benchmark and misses bugs the others catch. Multiple sources warn
-   SWE-bench is contaminated for frontier models, so headline percentages
-   deserve scepticism.
+**A trap for whoever improves the sourcing here.** The obvious upgrade for a
+prose claim is EQ-Bench's longform creative writing board. Cycle 4 fetched its
+methodology page and found **it is adjudicated by an Anthropic model**.
+Self-preference bias in LLM judges is documented, large, and reported to be
+stronger in more capable models. This matrix does **not** cite EQ-Bench and
+never did — cycle 4 mistakenly attributed it to us, and that attribution is
+rejected — but anyone reaching for it to shore up the Claude row would be
+trading a weak source for a vendor-compromised one. Cite it only with the
+judge's identity disclosed.
 
-**What this means for RxDrop specifically.** The useful split is not
-"Claude codes, OpenAI writes". It is closer to:
+### The SWE-bench contamination caveat — upgraded
 
-- **Claude** — rules code, the gauntlet, design documents and in-game prose.
-- **Gemini or GPT** — image and asset generation, and multimodal review of how
-  the game actually *looks* at real size.
-- **Any of them** — auditing each other, which is where the value of multiple
-  vendors actually shows up.
+The claim that SWE-bench is contaminated for frontier models is **true and
+better supported than the first version knew**. The primary source is OpenAI's
+own published post explaining why it no longer evaluates on SWE-bench Verified;
+the benchmark draws on public GitHub issues that are near-certainly in
+pre-training corpora. Treat headline SWE-bench percentages with scepticism.
 
-That is roughly what happened here by accident: the overhaul branch's lasting
-value is its **generated art**, and its weakness is **mechanics never tested
-against a hand**.
+*The same scepticism applies to deep-research benchmarks, and the first version
+failed to apply it there* — search-time contamination is a documented problem
+for agents evaluated on public benchmarks. Applying the caveat only where it
+happened to cut against a rival's strength was inconsistent.
 
-Sources:
-[Cosmic JS](https://www.cosmicjs.com/blog/best-ai-for-developers-claude-vs-gpt-vs-gemini-technical-comparison-2026) ·
-[tech-insider](https://tech-insider.org/claude-vs-chatgpt-vs-gemini-2026/) ·
-[Git AutoReview](https://gitautoreview.com/blog/claude-vs-gemini-vs-chatgpt-code-review) ·
-[Tactiq](https://tactiq.io/learn/claude-vs-gemini-vs-chatgpt-for-writing) ·
-[SiteGround](https://www.siteground.com/academy/chatgpt-vs-claude-vs-gemini-which-to-use) ·
-[Tech Buzz](https://techbuzzai.com/article/chatgpt-vs-gemini-vs-claude-2026) and
-[Pikvue](https://pikvue.com/gpt-5-4-vs-claude-4-6-vs-gemini-3-1-2026-ai-model-comparison/)
-(cycle 2; these two disagree with each other on the coding row, which is the
-point)
+### Source-quality audit — read this before trusting any row
+
+The first version of this section said *"Every row is sourced; none is from
+memory."* Literally true, and **misleading**. Cycle 4 audited the seven
+citations and found that **not one is a benchmark maintainer, a model card, a
+vendor evaluation post, a peer-reviewed paper, or a dated leaderboard
+snapshot.** All seven are content marketing from companies selling adjacent
+products. Two specific findings, both from pages the reviewer fetched rather
+than summarised:
+
+- **Cosmic JS contradicts the row it was cited for.** It names a *GPT* model the
+  coding winner, never mentions contamination at all, and self-declares that
+  every number on the page is an unverified vendor claim.
+- **Tactiq's entire evidential basis for the writing claim is a community-run
+  test on eight prompts**, with no methodology or sample size given.
+- **Lorka AI sells a paid multi-model aggregator** — it has a commercial
+  interest in the models it ranks and should not be cited as neutral.
+
+The sources are also **stale**: they argue about model versions the live boards
+have moved past.
+
+The first version noted that two of its sources "disagree with each other on the
+coding row, **which is the point**". That was presented as sophistication. It is
+better read as the tell: when sources disagree and you cannot adjudicate between
+them, the correct output is lower confidence, not a bolded verdict.
+
+Primary sources exist and were not used — OpenAI's contamination post, the
+benchmark maintainers' own boards, arXiv. Replacing marketing blogs with those
+is cheap and is the highest-value fix available to this section.
+
+### What is actually missing here — corrected in cycle 4
+
+The first version said this matrix "rests on one agent's research" and proposed
+that **an OpenAI or Gemini participant should attest to the row about itself**.
+Cycle 4 rejected that remedy, and it is right to:
+
+> a GPT agent asserting "yes, I'm good at narrative" is vendor self-report —
+> the least reliable evidence class available, below the SEO blogs.
+
+**The gap is evidence quality, and no amount of additional attestation closes
+it.** Primary sources close it, today, with no new agents. That correction
+matters beyond this section, because the open vendor seats were being described
+project-wide as the keystone this work was waiting on. For *this* section they
+are not; they were never going to be.
+
+Three exposures, where the first version disclosed only the first:
+
+1. The research rests on **one agent**.
+2. That agent is **the same vendor as the model its boldest verdict favours**.
+3. Cycle 4's reviewer was **a fourth Anthropic model**, which makes exposure 2
+   worse rather than better. It said so itself, unprompted, in its first
+   paragraph.
+
+Three of four earlier reviewers **declined** to characterise vendors whose
+output they had not observed. That remains the right answer to an observation
+question and the wrong one to a research question, and recording the distinction
+was worth doing. But the conclusion drawn from it was then not applied to the
+tone of the section, which kept bolding verdicts the evidence could not carry.
+That is the same defect this repository names elsewhere: **a bound stated as
+intention rather than enforced.** This section had an intention-shaped caveat.
+The retitle, the deletions and the confidence column above are the enforcement.
+
+### What this means for RxDrop specifically
+
+Unchanged by cycle 4, because it never rested on the benchmark rows:
+
+- **Claude** — rules code, the gauntlet, design documents, in-game prose.
+- **Gemini or GPT** — asset generation, and multimodal review of how the game
+  actually *looks* at real size.
+- **Any of them** — auditing each other. That is where multi-vendor value
+  actually shows up, and cycle 4 is the evidence: it corrected its own vendor's
+  work in four places.
+
+That split is what the repository's own history already shows: the overhaul
+branch's lasting value is its **generated art**, and its weakness is
+**mechanics never tested against a hand**.
+
+### Sources
+
+Audited and **removed** in cycle 4 as unfit: Cosmic JS (contradicts its row),
+Tactiq (eight unmethodical prompts), Lorka AI (sells access to the models it
+ranks). Retained only as examples of what not to cite.
+
+Primary sources identified in cycle 4 and **not yet incorporated** — doing so is
+the open task for this section:
+[OpenAI, "Why we no longer evaluate SWE-bench Verified"](https://openai.com/index/why-we-no-longer-evaluate-swe-bench-verified/) ·
+[Scale SWE-bench Pro](https://labs.scale.com/leaderboard/swe_bench_pro_public) ·
+[EQ-Bench longform creative writing](https://eqbench.com/creative_writing_longform.html)
+(with its judge disclosed) ·
+[Self-preference bias in LLM-as-a-judge](https://arxiv.org/abs/2410.21819)
+
 
 ## 3. On credentials
 

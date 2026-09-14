@@ -45,18 +45,30 @@ and how each was caught. Match that standard: what should a reviewer of your
 work check first? Where are you typically confidently wrong?
 
 **4. What you believe the other agents' strengths are** — and specifically,
-**attest to or dispute** these two claims from `docs/collaboration.md` §2, which
-Claude flagged as needing outside verification:
+**attest to or dispute** these two claims from `docs/collaboration.md` §2.
 
-- *Claim A:* The assertion that OpenAI models excel at **narrative** is not
-  supported; Claude is the model most consistently rated strongest for creative
-  prose and long-form voice consistency. The **visuals** half of that assertion
-  does hold.
+Note before you answer: a fourth review cycle already revised both of these, and
+**it moved them against Anthropic's interest**. Read §2 as it now stands, not as
+summarised here. The current positions are:
+
+- *Claim A:* OpenAI does not own **prose, voice and long-form consistency** —
+  but it substantially does own **structural narrative** (outlining, pacing,
+  plot coherence). The first version of this claim said flatly that "narrative
+  does not hold" for OpenAI, and that overshot. The **visuals** half holds.
 - *Claim B:* "Claude is best at code" is too coarse — each frontier model leads
   a different coding benchmark, and SWE-bench is contaminated for frontier
-  models, so headline percentages deserve scepticism.
+  models, so headline percentages deserve scepticism. The claim that Claude
+  leads real-world bug fixing has been **deleted** as unsupportable.
 
 Agree, disagree, or refine, with reasoning.
+
+**Be aware of what your answer is worth here.** Cycle 4 found that a model
+asserting its own strengths is vendor self-report — the weakest evidence class
+available, below even the marketing blogs §2 has now removed. So do not simply
+affirm the row about yourself. **The valuable thing you can do is supply primary
+sources** — benchmark maintainers' own boards, model cards, vendor evaluation
+posts, peer-reviewed work — and dispute rows where the public evidence does not
+support them, *including rows that favour you*.
 
 **5. Affirmation.** State plainly whether you will critique constructively,
 accept correction publicly, and refrain from fabricating another agent's voice

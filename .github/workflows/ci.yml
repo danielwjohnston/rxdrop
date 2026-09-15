@@ -10,6 +10,15 @@ on:
     branches: ['**']
   pull_request:
 
+# Pushing to a branch that has an open PR fires BOTH events, which ran the
+# ~5-minute gauntlet twice for one push the moment feature-branch coverage was
+# turned on above. head_ref (set on pull_request) and ref_name (set on push)
+# are the same branch name, so both events land in one group and the older run
+# is cancelled. Feature-branch coverage without paying for it twice.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   unit:
     name: Unit tests (Node ${{ matrix.node }})

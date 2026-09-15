@@ -474,10 +474,7 @@ function startGame(options = {}) {
   topScoreAtStart = settings.topScore;
   game = new Game(setup);
   input.setKeyMap(KEY_MAP);
-  dangerMusic = false;
-  setEra(eraFor(game.level));
-  audio.setTrack(era.id);
-  audio.startMusic();
+  startEraMusic(game.level);
   audio.play('start');
   showScreen('playing');
   syncHud(true);
@@ -496,10 +493,7 @@ function startVersus() {
   input.setKeyMap(VERSUS_KEY_MAP, { padsArePlayers: true });
   dom.playfield2.hidden = false;
   for (const hud of dom.vsHud) hud.hidden = false;
-  dangerMusic = false;
-  setEra(eraFor(match.players[0].level));
-  audio.setTrack(era.id);
-  audio.startMusic();
+  startEraMusic(match.players[0].level);
   audio.play('start');
   showScreen('playing');
   syncHud(true);
@@ -553,6 +547,13 @@ function setEra(next) {
   dom.eraName.textContent = era.name;
   dom.eraPeriod.textContent = era.period;
   drawPillPreview(dom.next, game ? game.nextColors : null, era);
+}
+
+function startEraMusic(level) {
+  dangerMusic = false;
+  audio.setDanger(false);
+  setEra(eraFor(level));
+  audio.startMusic();
 }
 
 /** Holds a reaction pose for a beat, then it falls back to idle on its own. */
@@ -711,6 +712,22 @@ function updateMusicMood() {
 
 // ---- events ---------------------------------------------------------------
 
+function handleResolutionFeedback(event, renderer, player = 0) {
+  if (event.type === 'clear') {
+    if (event.runs >= 2) {
+      announce(event.runs === 2 ? 'DOUBLE LINE' : event.runs === 3 ? 'TRIPLE LINE' : 'QUAD LINE');
+    }
+    if (event.viruses > 0 && player === 0) react('cheer');
+    return;
+  }
+  if (event.type === 'chain') {
+    announce(`CHAIN ×${event.stage}`);
+    audio.play('chain', event);
+    renderer.addShake(3 + event.stage);
+    if (player === 0) react('cheer');
+  }
+}
+
 function handleGameEvents() {
   for (const event of game.drainEvents()) {
     // The notebook reads every event before anything reacts to it, so a
@@ -720,17 +737,11 @@ function handleGameEvents() {
       case 'clear':
         audio.play('clear', event);
         renderers[0].addShake(2 + Math.min(6, event.viruses * 2 + event.combo));
-        if (event.viruses > 0) react('cheer');
+        handleResolutionFeedback(event, renderers[0]);
         if (event.collateral > 0) renderers[0].addShake(4);
-        if (event.runs >= 2) {
-          announce(event.runs === 2 ? 'DOUBLE LINE' : event.runs === 3 ? 'TRIPLE LINE' : 'QUAD LINE');
-        }
         break;
       case 'chain':
-        announce(`CHAIN ×${event.stage}`);
-        react('cheer');
-        renderers[0].addShake(3 + event.stage);
-        audio.play('chain', event);
+        handleResolutionFeedback(event, renderers[0]);
         break;
       case 'antibody':
         audio.play('antibody', event);
@@ -872,6 +883,10 @@ function handleMatchEvents() {
       case 'clear':
         audio.play('clear', event);
         renderer.addShake(2 + Math.min(6, event.viruses * 2 + event.combo));
+        handleResolutionFeedback(event, renderer, event.player);
+        break;
+      case 'chain':
+        handleResolutionFeedback(event, renderer, event.player);
         break;
       case 'garbage':
         audio.play('lock');
@@ -1098,16 +1113,12 @@ document.addEventListener('click', (event) => {
   else if (target.dataset.quit !== undefined) quitToTitle();
   else if (target.dataset.rematch !== undefined) {
     match.rematch();
-    setEra(eraFor(match.players[0].level));
-    audio.setTrack(era.id);
-    audio.startMusic();
+    startEraMusic(match.players[0].level);
     showScreen('playing');
   } else if (target.dataset.retry !== undefined || target.dataset.restart !== undefined) {
     if (match) {
       match.rematch();
-      setEra(eraFor(match.players[0].level));
-      audio.setTrack(era.id);
-      audio.startMusic();
+      startEraMusic(match.players[0].level);
       showScreen('playing');
     } else {
       startGame({ level: game?.level ?? settings.level, speed: game?.speedName ?? settings.speed });
@@ -1116,10 +1127,7 @@ document.addEventListener('click', (event) => {
     game.advanceLevel();
     settings.level = game.level;
     saveSettings();
-    dangerMusic = false;
-    setEra(eraFor(game.level));
-    audio.setTrack(era.id);
-    audio.startMusic();
+    startEraMusic(game.level);
     showScreen('playing');
     syncHud(true);
   } else if (target.dataset.copy !== undefined) copyShare(target);

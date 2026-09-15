@@ -342,6 +342,7 @@ sw.js                 service worker: precache everything, play offline
 manifest.webmanifest  installable app metadata
 tools/serve.js        the static server behind `npm start`
 tools/browser-check.mjs  end-to-end checks in a real browser
+window.rxdrop         the test seam: how the browser checks drive the game
 tools/gauntlet.mjs    the UltraGauntlet: thirteen stages, one gate
 docs/ultragauntlet.md what the gauntlet is and why each stage exists
 docs/branch-audit.md  the branches compared, and which parts survive

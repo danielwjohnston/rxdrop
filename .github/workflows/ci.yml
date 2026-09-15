@@ -1,8 +1,13 @@
 name: CI
 
 on:
+  # Every branch, not just main. With one author the first CI signal for a
+  # commit could safely be the PR; with several agents pushing to vendor/topic
+  # branches, a broken push otherwise sits unnoticed until someone opens one.
+  # Raised by Devin in the external review. The gauntlet cost is already paid
+  # per PR; this moves the signal earlier, it does not add a new one.
   push:
-    branches: [main]
+    branches: ['**']
   pull_request:
 
 jobs:

@@ -368,6 +368,14 @@ best ideas in `docs/ideas.md` and they belong after a shipped web version.
 
 ### Phase B — the Godot port
 
+> **There is no Godot branch, and there never has been.** No `project.godot`,
+> no `*.gd`, no `*.tscn`, on any branch. **Phase B *is* the Godot plan** — the
+> brief's "Godot version" is this section, not a branch to check out. Devin
+> asked for this sentence in its external review specifically so that an agent
+> sent to "audit the Godot branch" would not go looking for one; it went
+> unapplied, and a later reviewer duly concluded no Godot plan existed. It
+> exists. It is below.
+
 The separation is real and was checked, not assumed: `board.js`, `pill.js`,
 `game.js`, `light.js`, `modifiers.js`, `rng.js`, `versus.js`, `eras.js` and
 `constants.js` contain **zero** DOM references — roughly 2,800 lines of pure,
@@ -627,6 +635,39 @@ frame. Define the hash *now*, in JS, as a pure function in `board.js`
 already exercised and stable before anyone writes GDScript against it. A hash
 invented on the Godot side first will encode Godot's cell layout, and the
 oracle becomes a port of the port.
+
+#### Answer to the external review — 15 September 2026
+
+Devin asked for revision on items 1, 3 and 4 "before this is treated as the
+consensus plan", and filed 5-9 as additions. It was treated as the consensus
+plan anyway, with only item 2 absorbed. Closing that out now, point by point,
+because an external review left hanging is worse than one never sought.
+
+| # | Devin's item | Status |
+| --- | --- | --- |
+| 1 | A0 misplaces the war bonnet — it is an art fix, not a text fix | **Applied**, cycle 4. Accepted at the time and never applied; a cycle-4 reviewer found it still standing. Devin was right and was ignored for two days. |
+| 2 | The PRECACHE guard is done, not proposed | **Correct when written.** Cycle 4 then found the remaining gap: it does not cover assets referenced from JavaScript (`src/art.js` builds URLs by template). A0 now says "partially done" with that gap named. |
+| 3 | The strengths matrix is stated with more confidence than its sources carry | **Applied, and then some.** Cycle 4 went past Devin's suggested header rewording: the section is retitled, three supporting facts are deleted as stale or wrong, and the source audit found not one primary source among seven — one of which contradicts the row it was cited for. Devin's "the practical conclusion is the part that survives" is exactly what was kept. |
+| 4 | "Retire the branch" needs an owner and a trigger | **Half applied.** The tag is now split out as unconditional per `DEC-0001` item 2 — Devin's command bundles the tag with `:openai/medical-eras-visual-overhaul`, and that deletion is reserved to the Principal under Protocol §3, so it is not run here. The second half — label the trap in `direction.md` §29 — **is now done**. |
+| 5 | CI does not run on feature-branch pushes | **Applied.** `ci.yml` now triggers on `branches: ['**']`. Devin's reasoning holds exactly: harmless with one author, a silent trap with several agents pushing to `vendor/topic`. |
+| 6 | No lint or format configuration | **Applied.** `.editorconfig` only — 2-space, LF, final newline — which is zero-dependency and holds the no-tooling line Devin asked to hold. No eslint, no prettier. |
+| 7 | Pages deploy publishes the whole repository | **Answered, not changed.** The offline budget question Devin pointed at is now A0.4 with a real number: `PRECACHE` is 66 entries / ~2.95 MB, of which ~2.6 MB is practitioner art. The deploy-size question stays open and is recorded there. |
+| 8 | `window.rxdrop` is the test seam and is undocumented | **Applied.** Added to the README file map so nobody "cleans it up". |
+| 9 | Godot: nothing exists on any branch; Phase B is a plan, not a branch | **Applied**, and it should have been applied immediately. Devin asked for this one sentence so that "an agent sent to audit the Godot branch does not go looking for one" — it went unapplied, and a later reviewer went looking, found no branch, and concluded there was no Godot plan at all. Phase B now opens by saying so in a block quote. This is the clearest case in this repository of a cheap documentation fix being deferred and then costing exactly what its author predicted. |
+
+**On Devin's plan changes.** Its "run A2 step 1 before A0" is moot as written —
+A0's credibility work is done and A2.1's subject was overtaken by `main`'s own
+art — but the principle it was defending survives and is worth restating:
+*the cheapest fact that can invalidate a phase goes first.* Under the rewritten
+A2 that fact is "do virus mascots read at board scale, and do they belong in
+this game at all", not "do portraits read at 130px".
+
+Its Phase B addition — define `Board.prototype.hash()` in JS now, before anyone
+writes GDScript against it — is **not implemented**, and cycle 4 confirmed no
+`hash` exists in `src/board.js` or `tools/gauntlet.mjs`. Phase B now names
+`Board.toStrings()` as the comparison unit the determinism stage actually uses,
+which resolves the ambiguity Devin was warning about; implementing the hash
+remains an open option rather than a promise the plan makes and does not keep.
 
 **Verdict.** Approve the audit and the harvest-not-merge recommendation. Q1 is
 answered by §4 alone: a merge produces a build that silently loads nothing, and

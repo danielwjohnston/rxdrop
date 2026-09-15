@@ -839,6 +839,14 @@ RxDrop.
 
 ## 29. Current Visual-Overhaul Branch
 
+> **Do not merge this branch.** It fails silently on merge —
+> `src/phototherapy.js` imports `DARK_AT`, which `main` does not export, so the
+> whole overhaul runtime never loads. See `docs/branch-audit.md` §4. The
+> accepted decision (`DEC-0001`) is to **harvest**, not merge, and cycle 4
+> narrowed what is left to harvest to `virus-theatre.js` and the mascots —
+> `main` has since shipped its own practitioner art. The trap is labelled here
+> because this is the page someone reads before going looking for the branch.
+
 A dedicated branch currently exists for this work:
 
 `openai/medical-eras-visual-overhaul`

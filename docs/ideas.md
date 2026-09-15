@@ -348,9 +348,10 @@ Worth writing down, because none of it was visible from the design:
   and the report now ask about the same player.
 - **One line a session is a bad exchange rate.** The first tuning had a five-
   piece session buying a single row out of seventeen. Light falls more than
-  twice as fast now (`LIGHT_FALL` 520 → 190) and a line **spills** into its
-  neighbours, further the more lines land together - the same shape as a
-  cascade, and the reason to stack rather than take every single line.
+  twice as fast now (`LIGHT_FALL` 520 → 190). The spill that once widened a
+  line into its neighbours is **cut**: the respec made one line clear one row -
+  the *lowest filmed* row, wherever the line was made - so the exchange rate is
+  now flat and legible rather than bonus-shaped (`game.js:scrubFilm`).
 - **An unbounded visit is not a visit.** A bot told to leave when the worst row
   was clear never left: with viruses across a dozen rows there is always a row
   re-fogging. Visits are bounded by lines won or time spent, whichever comes
@@ -760,11 +761,15 @@ makes a good thing better, and the mechanic has to be complete without them.
 
 More than phototherapy, and the expensive part is not the gameplay:
 
-- **A transport.** The audio engine today triggers effects and loops two
-  chiptunes. A rhythm mechanic needs a sample-accurate beat clock off
-  `AudioContext.currentTime` with a look-ahead scheduler - never
-  `requestAnimationFrame` or `Date.now()`, both of which drift audibly. This is
-  the single biggest piece of work and everything else waits on it.
+- ~~**A transport.**~~ *`shipped` 14 September 2026 - `src/transport.js`.*
+  This entry twice claimed the audio engine had no transport. That was wrong
+  both times: `src/audio.js:387-404` already ran the textbook look-ahead
+  scheduler. The audit narrowed the real gap to the beat *position* being
+  private and the clock not being injectable - and that gap is now closed.
+  `Transport` exposes `beatAt()`, `position()` (beat index and bar position),
+  `beatWindow()` and `timeOfBeat()`, and takes a `clock` at construction so
+  tests and the bot drive a virtual one. See `docs/transport.md`.
+  **Sonotherapy no longer waits on audio infrastructure.**
 - **Music as data.** Eras would each need a score - a timeline the transport
   reads - rather than imperative loops. That is the same refactor the
   eleven-period music direction needs anyway, so it gets paid for twice.
@@ -775,13 +780,13 @@ More than phototherapy, and the expensive part is not the gameplay:
   of the gauntlet is "a seed reproduces a game exactly", and wall-clock audio
   time is not reproducible. The answer is that the *score* is seeded and the
   player's hits are inputs like any other - but it means the beat clock must be
-  **injectable**, so tests and the bot can run on a virtual transport. Cheap to
-  design in now; expensive to bolt on later. Nothing about this should be built
-  until that decision is made.
+  **injectable**, so tests and the bot can run on a virtual transport. That
+  injectable clock now exists (`Transport({ clock })`), so the design-in has
+  been paid for; what remains is the decision about seeding the *score*.
 
 The bottle, the board and the renderer are already separated enough that the
-gameplay side is tractable. It is the audio engine that is not ready, and that is
-worth knowing before anyone starts.
+gameplay side is tractable, and the audio engine now has its clock. What is left
+here is score-as-data and input timestamping, not infrastructure.
 
 ### Rationing - `shipped`
 
@@ -913,8 +918,9 @@ phototherapy that shipped: light cuts the biofilm hiding the disease, sound
 breaks the membrane protecting it, and the drug finishes what the other two
 opened up. It is the only proposal on this page that touches every system already
 in the bottle, and the only one blocked on a piece of engineering rather than a
-decision - the audio engine has no transport, and a rhythm mechanic is a
-sample-accurate beat clock before it is anything else.
+decision - the audio scheduler keeps its beat position private, and a rhythm
+mechanic needs that position queryable and the clock injectable before it is
+anything else. Smaller than first written: see the corrected note above.
 
 **Phototherapy** shipped and replaced the blackout, which worked and did not
 mean anything. Its three open forks ship as toggles rather than as decisions -

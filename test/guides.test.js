@@ -1,10 +1,26 @@
 import assert from 'node:assert/strict';
-import { globSync, lstatSync, readFileSync, readlinkSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { lstatSync, readFileSync, readdirSync, readlinkSync } from 'node:fs';
+import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+
+// Deliberately a hand-rolled walk rather than fs.globSync: globSync landed in
+// Node 22 and this repo's CI still runs the suite on Node 20, where importing
+// it yields undefined and the check dies with a TypeError instead of testing
+// anything. Caught by CI, not locally - the container runs Node 22.
+const IGNORED = new Set(['node_modules', '.git']);
+function findGuides(dir = ROOT) {
+  const found = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (IGNORED.has(entry.name)) continue;
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) found.push(...findGuides(full));
+    else if (entry.name === 'CLAUDE.md') found.push(relative(ROOT, full));
+  }
+  return found;
+}
 
 /**
  * CLAUDE.md is a symlink to AGENTS.md, and that is load-bearing.
@@ -36,10 +52,7 @@ describe('the day-one guide has exactly one copy', () => {
   it('has no second CLAUDE.md anywhere in the tree', () => {
     // Cycle 4's attack 1: a nested guide forks the day-one text without ever
     // touching the root symlink. Claude Code reads directory-scoped guides.
-    const found = globSync('**/CLAUDE.md', {
-      cwd: ROOT,
-      exclude: (name) => name === 'node_modules' || name === '.git',
-    });
+    const found = findGuides();
     assert.deepEqual(
       found.sort(), ['CLAUDE.md'],
       `the root CLAUDE.md symlink must be the only one - found: ${found.join(', ')}`,

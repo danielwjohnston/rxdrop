@@ -23,7 +23,9 @@ move". Since then:
 | `main` | 7 |
 | `openai/medical-eras-visual-overhaul` | 16 |
 
-**The branch predates seven merged PRs (#21–#27).** That single fact drives most
+**The branch predates fourteen merged PRs — 31 commits.** *(Originally "seven
+(#21–#27)", measured 12 September 2026 against `main` at `782d324`; re-measured
+15 September against `f548356`.)* That single fact drives most
 of what follows, because two of those PRs were fixes for defects real people hit
 in playtesting.
 
@@ -267,8 +269,6 @@ Converged across three review cycles. Sequenced by dependency, not by appeal.
   requires them in `PRECACHE` — offline play silently degrades to the
   procedural fallback with no test failing. Close it by iterating
   `ERAS x POSES` through the same URL builder and asserting membership.
-- Add a gauntlet check that every `src/*.js` and every referenced asset is in
-  `sw.js`'s `PRECACHE`. The list is hand-maintained and nothing guards it.
 
 **A1. The campaign ends (independent — do it early).**
 `main` has a level finale card, but the button reads "Play level 20 again". A
@@ -378,11 +378,12 @@ best ideas in `docs/ideas.md` and they belong after a shipped web version.
 
 The separation is real and was checked, not assumed: `board.js`, `pill.js`,
 `game.js`, `light.js`, `modifiers.js`, `rng.js`, `versus.js`, `eras.js` and
-`constants.js` contain **zero** DOM references — roughly 2,800 lines of pure,
+`constants.js` contain **zero** DOM references — **3,232 lines** (2,994
+non-blank; re-measured 15 September, and they form a closed import set) of pure,
 deterministic, seeded logic. Transliterating that to GDScript is tedious and
 low-risk.
 
-Rewritten, not ported: `renderer.js`, `main.js` (1,468 lines, ~62 DOM
+Rewritten, not ported: `renderer.js`, `main.js` (1,539 lines, 45 DOM
 references, entirely throwaway), `input.js`, `audio.js`, the service worker, and
 `formulary.js`'s storage layer.
 

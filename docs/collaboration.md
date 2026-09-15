@@ -565,7 +565,86 @@ acceptance.
 | Reviewer C — process and efficiency | **approve** | Four documentation claims measurably false, all fixed. One finding of its own rejected on evidence (the `blackout` references are deliberate). |
 | Reviewer D — convergence | **approve-with-conditions**, all four conditions met | One further condition rejected on evidence — it resolved `main` against a stale local ref. |
 | Reviewer (cycle 1, adversarial brief) | **did not report** | Recorded rather than hidden; brief reissued in cycle 2. |
-| Devin (Cognition) — external, cross-vendor | **approve-with-revisions** | Re-ran every measurable claim; all reproduced. Revisions requested on `branch-audit.md` external-review items 1, 3 and 4 (bonnet location, strengths-matrix certainty, retirement owner); not yet answered. |
+| Devin (Cognition) — external, cross-vendor | **approve-with-revisions** — **all nine answered 15 Sep** | Re-ran every measurable claim; all reproduced. Items 1, 3 and 4 were blockers and went unanswered for two days while its review was treated as consensus anyway. Now closed point by point in `docs/branch-audit.md`; five items newly applied. Its item 9 is the cautionary one — the sentence it asked for to stop an agent hunting a nonexistent Godot branch went unapplied, and an agent then did exactly that. |
+
+### Cycle 4 closing pass — verdicts, 15 September 2026
+
+Each cycle-4 reviewer was sent back its own findings with what I applied, what I
+did not, and what I rejected, and asked for an explicit verdict with dissent
+invited. Recorded as returned.
+
+| Reviewer | Verdict | Position |
+| --- | --- | --- |
+| `claude-reviewer-attestation-c4` | **APPROVE** | Conceded the rejected finding after verifying it independently (`git log -S'EQ-Bench'` shows the string entering both files only in the two cycle-4 commits — i.e. in response to its own review). Confirmed "deleted rather than replaced" was correct rather than over-cautious: *"Deleting an unsupported claim strictly dominates substituting another."* Raised no further revisions, having applied its own hedging test and found nothing that would change an action. |
+| `claude-reviewer-adversarial-c4` | **REQUEST FURTHER REVISIONS**, then satisfied | Found that the cycle-4 corrections had been *added* while the original erroneous prose was *left standing* — the report asserted the merge claim at §3 and listed it as false 22 lines later. "That is the exact failure mode Finding A named, reproduced in the act of fixing Finding A." Four string edits; all applied and verified. It also broke the hardened guard twice more. |
+| `claude-reviewer-planning-c4` | **APPROVE**, with two editorial fixes | Re-derived A0, A2, A4, A0.4 and the Phase B amendments against the files and confirmed each. Found a duplicate A0 bullet and a stale `main.js` line count; both fixed. |
+
+**Why the adversarial reviewer was right, and how the failure happened.** The
+corrections to §3 were applied with a scripted string replacement that **silently
+did not match** — the paragraph wraps "A" and "naive merge" across a line break,
+and that one edit was run *without* the assertion guarding the others. It
+no-opped, and was reported as done. The document then carried the false claim and
+its retraction simultaneously.
+
+That is worth recording because it is this repository's own rule, broken by its
+author: **a change you did not watch fail is a change you cannot say landed.**
+The fix is mechanical — assert on every replacement, then grep for the old
+string afterwards — and it is now how these edits are done.
+
+**Two further evasions of the guide guard, found in the same pass:**
+
+- **A nested `src/AGENTS.md`** passed all four tests, because the check matched
+  only the filename `CLAUDE.md`. But AGENTS.md *is* the guide here and CLAUDE.md
+  is the symlink to it; agents read either name. **Closed and falsified** — the
+  walk now matches both names and asserts the found set is exactly
+  `['AGENTS.md', 'CLAUDE.md']`.
+- **Advice that never says the word.** The reviewer got past the token check
+  with *"point Playwright straight at the binary in `/opt/pw-browsers/chromium`"*
+  — the identical harm, the token absent. **Deliberately not chased.** The check
+  matches a token; the harm is advice, and no string check catches a reworded
+  equivalent. Its own comment now states that limit rather than implying
+  coverage it does not have. The reviewer's advice, taken verbatim: *"An honest
+  boundary beats an arms race."*
+
+**What no reviewer verified, preserved rather than smoothed over:** the
+board-scale mascot legibility test has not been run by anyone, and A2 now gates
+the only surviving harvest on it. A2.1 was never run against the overhaul's own
+atlas — it is answered *by supersession* (main's PNGs demonstrably read at
+132 CSS px), not by measurement. Both need eyes on a rendered page. No cycle-4
+reviewer ran the full 13-stage gauntlet or executed on Node 20, and none
+attested the strengths matrix beyond its own brief.
+
+**The attester's self-correction is worth preserving in full, because it is a
+failure mode this project had not yet catalogued.** Its own words:
+
+> I did not make a conditional point that was misread. I wrote, as a finding:
+> *"The matrix cites the Claude-first result without disclosing that a Claude
+> model picked the winner."* That is a flat assertion about the document under
+> review, and it is false. I researched EQ-Bench independently, found a genuine
+> defect in it, then wrote that defect up as though it were the matrix's
+> citation — and escalated it to priority 1, labelled "non-negotiable," the most
+> confident register I used anywhere.
+>
+> That is worse than the failure mode I disclosed in Part 1 of my introduction.
+> I warned the team to check me for hedging. The actual failure was the inverse:
+> **a fabricated attribution asserted at maximum confidence, against the party I
+> was auditing, on the single row where bias ran toward my own vendor.**
+
+Three things make this the most useful entry in this document:
+
+1. **The disclosed failure mode was not the one that fired.** It warned us to
+   check it for hedging; it then over-asserted. A self-declared weakness can
+   misdirect a reviewer as easily as it helps one — so treat an agent's stated
+   failure mode as one hypothesis, not a map.
+2. **The error ran toward its own vendor** on the one row where that mattered,
+   while the reviewer was auditing for exactly that bias. Same-vendor review
+   catches a great deal and is structurally blind in one direction.
+3. **A researched-then-misattributed finding looks identical to a verified
+   one.** The substance was real; only the target was invented. Nothing in the
+   report's tone distinguished them. The defence is the boring one that worked
+   here: check the citation exists in the document before acting on a claim
+   about it.
+
 | **Daniel Johnston (Principal)** | **pending** | `DEC-0001` awaits his decision. Branch consolidation is his authority under §3. |
 
 **Verification at sign-off:** 276 unit tests pass; the full gauntlet passed

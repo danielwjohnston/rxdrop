@@ -17,7 +17,12 @@ function findGuides(dir = ROOT) {
     if (IGNORED.has(entry.name)) continue;
     const full = join(dir, entry.name);
     if (entry.isDirectory()) found.push(...findGuides(full));
-    else if (entry.name === 'CLAUDE.md') found.push(relative(ROOT, full));
+    else if (entry.name === 'CLAUDE.md' || entry.name === 'AGENTS.md') {
+      // Both names, not just CLAUDE.md. AGENTS.md is the real guide here and
+      // CLAUDE.md is the symlink to it; agents read either. A forked
+      // src/AGENTS.md passed a CLAUDE.md-only check. Found in cycle 4.
+      found.push(relative(ROOT, full));
+    }
   }
   return found;
 }
@@ -49,13 +54,13 @@ function findGuides(dir = ROOT) {
  *      passed. Now matched on the token that actually matters.
  */
 describe('the day-one guide has exactly one copy', () => {
-  it('has no second CLAUDE.md anywhere in the tree', () => {
+  it('has no second guide anywhere in the tree, under either name', () => {
     // Cycle 4's attack 1: a nested guide forks the day-one text without ever
     // touching the root symlink. Claude Code reads directory-scoped guides.
     const found = findGuides();
     assert.deepEqual(
-      found.sort(), ['CLAUDE.md'],
-      `the root CLAUDE.md symlink must be the only one - found: ${found.join(', ')}`,
+      found.sort(), ['AGENTS.md', 'CLAUDE.md'],
+      `the root guide and its symlink must be the only ones - found: ${found.join(', ')}`,
     );
   });
 
@@ -84,6 +89,13 @@ describe('the day-one guide has exactly one copy', () => {
     // thing itself. The repo's tooling deliberately sets no executablePath and
     // relies on PLAYWRIGHT_BROWSERS_PATH, so any mention outside a prohibition
     // is the regression.
+    //
+    // KNOWN LIMIT, stated rather than chased. This matches a TOKEN; the harm
+    // is the ADVICE. Cycle 4 got past it with prose that never says
+    // "executablePath" - "point Playwright straight at the binary in
+    // /opt/pw-browsers/chromium". No string check can catch a reworded
+    // equivalent, and an arms race here would cost more than it returns. The
+    // check catches the named regression coming back. That is all it claims.
     const mentions = [...guide.matchAll(/executablePath/g)];
     assert.equal(
       mentions.length, 1,

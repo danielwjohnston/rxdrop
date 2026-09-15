@@ -168,14 +168,29 @@ Full audit: [`docs/branch-audit.md`](../docs/branch-audit.md).
 was cut at PR #20 and **predates fourteen merged PRs** (31 commits; "seven" was
 correct when written and was not re-measured). Its `index.html`,
 `main.js` and `styles.css` are byte-identical to the merge base — so it is not
-solving the onboarding problem differently, it simply does not have the fix. A
-naive merge reinstates a defect a real tester hit (*couldn't find Start on an
-iPhone*) and deletes the browser check that catches it.
+solving the onboarding problem differently, it simply does not have the fix. **That is a statement about the branch as an artifact, not about a merge** —
+see the correction below.
 
-**It also fails silently.** `src/phototherapy.js` imports `DARK_AT`, which the
-current implementation does not export → `SyntaxError` → the overhaul runtime
-never loads at all. Fixing that export is worse than leaving it: it lets
-`runtime-overhaul.js` monkey-patch nine `Game.prototype` methods.
+**Corrected in cycle 4 — I had this wrong, and it was the claim I called "the
+finding that decided the strategy".** I wrote that a naive merge reinstates the
+Start-button defect and deletes the browser check. It does not. The branch
+changes thirteen files, and `index.html`, `src/main.js`, `src/styles.css` and
+`tools/browser-check.mjs` are **all byte-identical to the merge base**, so a
+three-way merge takes main's side and the onboarding fix and both checks
+survive. What is true is narrower: the branch **standalone** lacks them, which
+matters for a checkout or a replace-main harvest, not for a merge.
+
+**The recommendation survives on the other two grounds, which do hold:**
+
+- **It fails on merge.** `src/phototherapy.js` imports `DARK_AT`. The *branch*
+  exports it at its own `constants.js:239`, so the branch is fine standalone —
+  but **`main` does not**, so **post-merge** it is a `SyntaxError` and the
+  overhaul runtime silently never loads. My earlier wording dropped the "on
+  merge" qualifier and asserted the branch was dead on arrival. It isn't.
+- **Fixing that export is worse than leaving it**: it lets
+  `runtime-overhaul.js` monkey-patch nine `Game.prototype` methods — thirteen
+  prototype methods in all, counting `Board`, `InputController`, `Renderer` and
+  `AudioEngine`.
 
 **Recommendation, accepted as `DEC-0001`:** harvest the art and period work; do
 not merge the branch wholesale. **Do not delete the branch** until the harvest
@@ -207,7 +222,7 @@ Sequenced by dependency, not appeal.
 
 | Item | What | State |
 | --- | --- | --- |
-| **A0** | Fix two historical-credibility errors in `eras.js` **before** any art exists (a 1347 plague band with a 1600s beaked mask; a paleolithic healer in a Plains war bonnet). Guard `sw.js` PRECACHE with a check. | Precache guard **done** |
+| **A0** | ~~Fix two historical-credibility errors in `eras.js`.~~ **Closed** — the plague band is now `1619 - 1799` (`eras.js:140-144`), pinned by `test/eras.test.js:25`. The war bonnet was **never in `eras.js`**; it is in the branch's sprite sheet, so it is an art question inside A2. Remaining: create the `archive/openai-medical-eras` tag (unconditional per DEC-0001), and close the precache gap for assets referenced from JS. | partly **done** |
 | **A1** | The campaign ends. There is a finale card, but the button says "Play level 20 again". A caseload needs a last case. **The only item that changes what the game is.** | open |
 | **A2** | Harvest the art — **130px test first** | open, **riskiest** |
 | **A3** | Expose the beat: beat index, bar position, injectable clock | **delivered** — `src/transport.js` |

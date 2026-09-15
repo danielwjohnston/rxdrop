@@ -276,7 +276,11 @@ the differential test fail far from its actual cause.
 
 ## 6. Collaboration improvement guide
 
-Conventions in `docs/collaboration.md` §5. The four that carry the most weight:
+Conventions in `docs/collaboration.md` §5, and **§5a for cross-vendor work
+specifically** — what a non-Anthropic agent needs (no credentials; the
+repository is public and MIT), why the *artifact* rather than a shared session
+is the interface between vendors, and four failure modes this project actually
+hit. The four general conventions that carry the most weight:
 
 - **Every mechanic ships with a bound** — a written sentence saying why it cannot
   leave a virus unanswerable, enforced by a check rather than by intention. The

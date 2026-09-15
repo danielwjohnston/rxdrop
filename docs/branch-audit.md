@@ -418,7 +418,45 @@ a single automated question.
    rules divergence. **Require an explicit seed in the port.**
 
 It rests entirely on the ported PRNG being bit-exact, which is why
-`test/fixtures/rng-golden.json` now exists. **Port `src/rng.js` first, check it
+`test/fixtures/rng-golden.json` now exists.
+
+#### The sequenced breakdown
+
+*Added 15 September 2026. Phase B was prose where Phase A was a dependency
+graph, and a reviewer fairly called it a plan outline rather than a plan.
+Sequenced below on the same basis as Phase A: dependency order, with sizing
+given as **measured line counts** rather than invented day estimates — nobody
+here has written GDScript against this codebase, so a calendar figure would be
+fiction. Line counts are real and they rank the work.*
+
+| # | Item | Depends on | Size (measured) |
+| --- | --- | --- | --- |
+| **B0** | Port `rng.js` and check it against `test/fixtures/rng-golden.json`. **Nothing else moves until it matches.** | — | **17 lines**, and the highest-risk 17 in the project |
+| **B1** | Port `constants.js`. Pure data; no logic to get wrong. | B0 | 325 |
+| **B2** | Stand up the differential oracle harness: run one seed and one input log through both engines, compare `Board.toStrings()` per frame. Build it **before** the rules it checks. | B0, B1 | harness only |
+| **B3** | Port the small pure modules: `pill.js`, `versus.js`, `modifiers.js`, `eras.js`. Each lands behind B2. | B2 | 754 total |
+| **B4** | Port `light.js` and `board.js`. | B3 | 1,025 |
+| **B5** | Port `game.js` — the largest and the one the oracle exists for. | B4 | 1,111 |
+| **B6** | Rewrite the impure layer natively. Not a port: `renderer.js`, `main.js`, `input.js`, `audio.js`, `formulary.js`'s storage, the service worker. | B5 | 4,467 rewritten, not translated |
+| **B7** | Port `transport.js` as a pure module. Separate because nothing depends on it until a mechanic reads the beat. | B0 | 254 |
+
+**The ratio is the useful number.** 3,232 lines transliterate mechanically;
+**4,521 are thrown away and rewritten natively.** The port is therefore *more
+rewrite than port*, and anyone sizing it from "how much code is there" will
+size it wrong. The 3,232 is tedious and low-risk. The 4,521 is where a Godot
+version becomes a different piece of software — and the reason Phase B waits on
+a shipped web version, because rewriting a moving target twice is the only way
+to make this expensive.
+
+**What does not port, stated plainly.** The gauntlet — thirteen stages of Node
+ESM importing `src/*.js` directly. Rewriting it in GDScript would discard the
+accumulated catch history, which is the single most valuable artifact this
+repository has. B2 exists so that it does not have to be rewritten: the JS rules
+stay as the oracle, and "did the port change the rules?" stays one automated
+question.
+
+**Gate.** No Godot work starts before Phase A5 (freeze). This is sequencing,
+not deferral — the rules are still moving, and B5 ports `game.js`. **Port `src/rng.js` first, check it
 against the fixture, and port nothing else until it matches.** mulberry32 ports
 *almost* right — `Math.imul` is a signed 32-bit multiply and `>>>` is unsigned,
 neither free in a 64-bit integer language — and an almost-right generator makes

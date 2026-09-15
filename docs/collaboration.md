@@ -387,6 +387,97 @@ re-invent:
 
 Gaps worth closing — see the process review appended in the log below.
 
+## 5a. Working across vendors
+
+*Added 15 September 2026. §5 records conventions that apply to any agent. This
+section is specifically about **cross-vendor** work, which the brief asked for
+and which this project has now done twice — once successfully and once not at
+all. Both are instructive.*
+
+### What actually worked: asynchronous, not live
+
+The brief imagined a room with Claude, GPT and Gemini in it. That room never
+existed here — no cross-vendor invocation route exists from this session. **But
+cross-vendor collaboration happened anyway, in two forms that did work:**
+
+1. **A branch produced elsewhere.** `openai/medical-eras-visual-overhaul` was
+   authored by another vendor's agent and pushed. Nobody had to be in a room.
+   The audit in `docs/branch-audit.md` is a full cross-vendor review, conducted
+   against the artifact rather than the author.
+2. **An external reviewer with its own container.** Devin (Cognition) re-ran
+   every measurable claim independently and filed nine revisions, four of which
+   nobody on the Anthropic side had found.
+
+**The lesson: the artifact is the interface.** A public repository with a
+reproducible check suite lets agents from different vendors collaborate without
+any shared session, protocol, or credential. Asynchronous cross-vendor review is
+not a degraded substitute for a live room — for code, it is *better*, because
+the reviewer must engage with what was actually committed rather than with a
+description of it.
+
+### What a non-Anthropic agent needs to be useful here
+
+Answering the brief's "describe what information another agent would need". The
+answer is short, because the repository is public and MIT:
+
+- **No credentials.** None. Do not offer them, do not ask for them. Anything
+  that needs write access goes through a pull request.
+- **`AGENTS.md` first.** Read order, the non-negotiable rules, the measured cost
+  of every command, and the token budget. It is deliberately short.
+- **The cost table specifically.** Eleven gauntlet stages run in ~1.4 s;
+  `modifiers` takes ~240 s and `browser` ~65 s. An agent that does not know this
+  burns five minutes per iteration for no reason. This is the single highest-value
+  fact in the repository for a newcomer.
+- **`docs/collaboration.md` §0** — the failure-mode table for the agent that
+  wrote most of `main`. If you are reviewing its work, it tells you where to
+  look.
+- **What has already been rejected**, in `docs/ideas.md` (struck through with the
+  evidence that killed it) and in the review logs below. This is what stops a new
+  agent re-litigating a settled question, and it is the fourth handoff item
+  people forget.
+
+### The division of labour that the evidence supports
+
+Not "Claude codes, OpenAI writes" — §2 shows that framing does not survive
+research. What the evidence here supports:
+
+- **Rules code, the gauntlet, design documents and in-game prose** — whoever is
+  already holding the invariants. Continuity matters more than vendor.
+- **Asset generation, and multimodal review of how the game looks at real
+  size** — a multimodal agent, which on this project means GPT or Gemini. **This
+  is the one gap no amount of Anthropic review has closed**: the board-scale
+  mascot legibility test still has nobody who can run it.
+- **Auditing each other** — any of them, and this is where multi-vendor pays.
+
+### Four failure modes observed, all real
+
+1. **An external review left hanging is worse than one never sought.** Devin
+   requested revision on three items "before this is treated as the consensus
+   plan". It was treated as the consensus plan anyway, with one item absorbed.
+   Two days later a cycle-4 reviewer found one of its corrections still
+   unapplied. **Close out an external review point by point, in writing, or do
+   not ask for one.**
+2. **A deferred one-line doc fix costs exactly what its author predicted.**
+   Devin asked for one sentence saying Phase B is a plan, not a branch, "so an
+   agent sent to audit the Godot branch does not go looking for one". Unapplied
+   — and a later reviewer went looking, found no branch, and concluded there was
+   no Godot plan at all.
+3. **Same-vendor review is structurally blind in one direction.** Cycle 4's
+   attester was auditing for pro-Anthropic bias and produced *a fabricated
+   attribution at maximum confidence, on the one row where bias ran toward its
+   own vendor*. It caught this itself, on re-verification — see §7. Four Claudes
+   in a room is not four independent opinions.
+4. **A declared failure mode can misdirect.** That same reviewer opened by
+   warning the team to check it for *hedging*. The failure was the inverse,
+   over-assertion. **Treat a stated weakness as one hypothesis, not a map.**
+
+### The cheapest thing a new vendor can do on day one
+
+Not an introduction. **Run the check suite and dispute a number.** `npm test` is
+about a second and the eleven-stage gauntlet line is under two. Every claim in
+this repository's documents is meant to be reproducible; the useful contribution
+is finding one that is not. Cycle 4 found six that way.
+
 ## 6. Review log
 
 Cycles run against `docs/branch-audit.md`. Each entry says who reviewed, under

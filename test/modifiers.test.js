@@ -357,7 +357,11 @@ describe('phototherapy: the fog, and the light you make to cut it', () => {
   it('leaves on its own with the timer variant, and waits with the manual one', () => {
     const timed = foggy({ lightExit: 'timer' });
     timed.enterLight();
-    for (let t = 0; t < LIGHT_SESSION + 500; t += 16) timed.updateLight(16);
+    const duration = timed.lightTimer;
+    for (let t = 0; t < duration + 500; t += 16) {
+      timed.updateLight(16);
+      if (timed.chamber) timed.chamber.grid.fill(null);
+    }
     assert.equal(timed.inLight, false, 'the timer variant should end the session');
 
     // The manual variant waits to be told - but only for a player who is
@@ -372,6 +376,17 @@ describe('phototherapy: the fog, and the light you make to cut it', () => {
     assert.equal(manual.inLight, true, 'the manual variant should wait to be told');
     manual.toggleLight();
     assert.equal(manual.inLight, false);
+  });
+
+  it('gives a timer session enough capsule-paced time to lock a light piece', () => {
+    const timed = foggy({ lightExit: 'timer' });
+    timed.enterLight();
+    const duration = timed.lightTimer;
+    for (let t = 0; t < duration - timed.dropInterval && timed.inLight; t += 16) {
+      timed.updateLight(16);
+    }
+    assert.equal(timed.inLight, true, 'the timer should still be running');
+    assert.ok(timed.chamber.grid.some(Boolean), 'a light piece should be standing');
   });
 
   it('takes the chamber width it is given', () => {
@@ -390,6 +405,12 @@ describe('phototherapy: the fog, and the light you make to cut it', () => {
     assert.equal(bare.fallInterval, LIGHT_FALL);
     bare.setHurry(true);
     assert.equal(bare.fallInterval, LIGHT_FALL_FAST);
+
+    const paced = new LightChamber(8, BOARD_HEIGHT, createRng(5), () => 700);
+    paced.fallTimer = 690;
+    paced.setHurry(true);
+    paced.update(16);
+    assert.ok(paced.piece.y <= 1, 'hurry should not bank multiple rows');
 
     assert.equal(foggy({ lightWidth: 5 }).enterLight() && 5, 5);
     const wide = foggy({ lightWidth: 8 });

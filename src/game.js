@@ -561,7 +561,9 @@ export class Game {
       this.rng,
       () => this.dropInterval,
     );
-    this.lightTimer = this.lightExit === 'timer' ? LIGHT_SESSION : 0;
+    this.lightTimer = this.lightExit === 'timer'
+      ? Math.max(LIGHT_SESSION, this.dropInterval * (this.height + 2))
+      : 0;
     this.emit('lightOn', { width: this.lightWidth, exit: this.lightExit });
     return true;
   }

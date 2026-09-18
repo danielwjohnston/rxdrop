@@ -160,7 +160,9 @@ export class LightChamber {
   }
 
   setHurry(on) {
+    const before = this.fallInterval;
     this.hurrying = Boolean(on);
+    if (before > 0) this.fallTimer *= this.fallInterval / before;
   }
 
   get fallInterval() {

@@ -69,7 +69,6 @@ affirm the row about yourself. **The valuable thing you can do is supply primary
 sources** — benchmark maintainers' own boards, model cards, vendor evaluation
 posts, peer-reviewed work — and dispute rows where the public evidence does not
 support them, *including rows that favour you*.
-
 **5. Affirmation.** State plainly whether you will critique constructively,
 accept correction publicly, and refrain from fabricating another agent's voice
 or agreement.

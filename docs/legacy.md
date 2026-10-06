@@ -5,6 +5,10 @@
 > game reads only `src/`, `assets/practitioners/`, `index.html`, `manifest.json`
 > and `sw.js`. If a file is in `legacy/`, it is *history*, not *product*.
 >
+> This archive was harvested onto current `main` history from the stale
+> consolidation work without merging that branch's runtime changes. For the
+> live project state, see [`docs/status.md`](status.md).
+>
 > Format: a documentary. Each act has narration (what the voice-over says), a
 > shot list (what is on screen, with the commit or file to show), and the
 > decision the scene turns on. Quotes attributed to Daniel are from the

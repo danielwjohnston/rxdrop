@@ -1489,7 +1489,7 @@ window.addEventListener('offline', () => {
 });
 window.addEventListener('online', () => {
   dom.offlineNote.textContent =
-    'An original Dr. Mario style puzzler. No dependencies - drawn and synthesised in the browser.';
+    'A medical-history treatment puzzler. No dependencies - drawn and synthesised in the browser.';
 });
 
 // A small hook for debugging in the console (and for the browser checks).

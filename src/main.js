@@ -812,11 +812,11 @@ function finishLevel(event) {
     return;
   }
   const finale = event.level >= MAX_LEVEL;
-  dom.clearTitle.textContent = finale ? 'Bottle empty!' : 'Level clear!';
+  dom.clearTitle.textContent = finale ? 'Campaign complete!' : 'Level clear!';
   dom.clearLevel.textContent = event.level;
   dom.clearScore.textContent = game.score.toLocaleString();
   dom.clearFinale.hidden = !finale;
-  dom.nextLevelButton.textContent = finale ? 'Play level 20 again' : 'Next level';
+  dom.nextLevelButton.textContent = finale ? 'Return to title' : 'Next level';
   showNote(finale ? event.level : event.level + 1);
   showScreen('clear');
 }
@@ -1124,12 +1124,17 @@ document.addEventListener('click', (event) => {
       startGame({ level: game?.level ?? settings.level, speed: game?.speedName ?? settings.speed });
     }
   } else if (target.dataset.nextLevel !== undefined) {
-    game.advanceLevel();
-    settings.level = game.level;
-    saveSettings();
-    startEraMusic(game.level);
-    showScreen('playing');
-    syncHud(true);
+    // Level 20 is the end of the campaign, not a hidden loop back into itself.
+    if (screen === 'clear' && game?.level >= MAX_LEVEL) {
+      quitToTitle();
+    } else {
+      game.advanceLevel();
+      settings.level = game.level;
+      saveSettings();
+      startEraMusic(game.level);
+      showScreen('playing');
+      syncHud(true);
+    }
   } else if (target.dataset.copy !== undefined) copyShare(target);
   else if (target.dataset.mode) setMode(target.dataset.mode);
   else if (target.dataset.adjust === 'level') adjustLevel(Number(target.dataset.delta));
@@ -1482,7 +1487,7 @@ window.addEventListener('offline', () => {
 });
 window.addEventListener('online', () => {
   dom.offlineNote.textContent =
-    'An original Dr. Mario style puzzler. No dependencies - drawn and synthesised in the browser.';
+    'A medical-history falling-capsule puzzler. No dependencies - drawn and synthesised in the browser.';
 });
 
 // A small hook for debugging in the console (and for the browser checks).

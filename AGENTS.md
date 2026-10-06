@@ -12,12 +12,15 @@ framework, or a package dependency.
 
 ## Read in this order
 
-1. **`README.md`** — what the game is, how to run it, the file map.
-2. **`docs/ultragauntlet.md`** — the quality gate and why each stage exists.
-   Nothing else here makes sense before this one.
-3. **Only the section you need** of `docs/ideas.md` (mechanics, each with its
-   status and its bound) and `docs/branch-audit.md` (branch state, delivery plan).
-4. **`docs/collaboration.md`** — multi-agent conventions and the handoff packet.
+1. **`.agents/PROTOCOL.md`** — the Principal-authored collaboration and safety
+   rules. This file is the process authority when shorter guides disagree.
+2. **`README.md`** and **`docs/status.md`** — what the game is, how to run it,
+   and what is actually current.
+3. **`docs/ultragauntlet.md`** — the quality gate and why each stage exists.
+4. **Only the section you need** of `docs/ideas.md` (mechanics, each with its
+   status and its bound) and `docs/branch-audit.md` (historical convergence
+   evidence, not live status).
+5. **`docs/collaboration.md`** — multi-agent conventions and the handoff packet.
    Its §0 is a standing introduction from the agent that wrote most of `main`,
    including **a table of the errors it has actually made here and how each was
    caught**. If you are reviewing its work, start there — it will tell you where
@@ -126,7 +129,13 @@ A handoff needs four things, and the fourth is the one people forget:
 
 ## Branches
 
-`main` is the truth. Feature branches are `vendor/topic` or
-`claude/topic`. A branch that loses an audit gets tagged `archive/<name>` and
-deleted the same day — a stale branch that looks mergeable is a trap, and this
-repository has already been bitten by one.
+`main` is the canonical integration baseline for the shipped web game. Feature
+branches are `vendor/topic` or `claude/topic`, and significant conclusions
+should still inspect relevant branches and open PRs before assuming `main`
+contains every experiment.
+
+Do not force-push, rewrite, archive, or delete shared branches without the
+Principal's authorization. Once work is merged or explicitly superseded and the
+Principal authorizes cleanup, remove stale branch refs promptly so they cannot
+be mistaken for active alternatives. Preserve historically useful material in
+repository docs, tags, or `legacy/` when that history still has project value.

@@ -864,13 +864,13 @@ differently in the cave and in the clean room.
 This is what turns "there are interactions" into "I am finding the
 interactions", and it costs almost nothing: a set of flags, a line of copy each.
 
-*What shipped, and one change that made it better.* Eleven discoveries, one for
-every mechanic on this page, and each one collects a note **per era** rather
-than a single note from wherever you happened to find it. Find a chain reaction
-in the cave and the shaman writes it up; find one again in the clean room and
-the technician writes it up beside them. So the notebook accumulates
-observations of one phenomenon across five eras of medicine, which is what a
-case book actually looks like - and it gives every one of those lines a reason to exist
+*What shipped, and one change that made it better.* Ten discoveries, one for
+every tracked interaction in the notebook, and each one collects a note **per
+era** rather than a single note from wherever you happened to find it. Find a
+chain reaction in the cave and the shaman writes it up; find one again in the
+clean room and the technician writes it up beside them. So the notebook
+accumulates observations of one phenomenon across ten eras of medicine, which is
+what a case book actually looks like - and it gives every one of those lines a reason to exist
 rather than forty-five of them being unreachable.
 
 A page you have not filled in says **nothing about itself**. It reads "Not yet

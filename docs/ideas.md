@@ -670,8 +670,8 @@ frequency is suddenly treatable.
 
 Which means the era soundtrack stops being decoration and becomes **the
 interface**. The prehistoric phrase is heavy toms on a modal drone. The genomic
-phrase is a sequenced arpeggio. Same mechanic, and the player learns eleven
-musical dialects because each one is a control scheme.
+phrase is a sequenced arpeggio. Same mechanic, and the player learns ten
+musical dialects because each era is a control scheme.
 
 That is the strongest argument on this page for building out the music-per-period
 system: it would no longer be paint.
@@ -772,7 +772,7 @@ More than phototherapy, and the expensive part is not the gameplay:
   **Sonotherapy no longer waits on audio infrastructure.**
 - **Music as data.** Eras would each need a score - a timeline the transport
   reads - rather than imperative loops. That is the same refactor the
-  eleven-period music direction needs anyway, so it gets paid for twice.
+  ten-era music direction needs anyway, so it gets paid for twice.
 - **Input timestamps at the event, not the frame.** A 60Hz frame is 16ms of slop,
   which is most of a tight timing window. Hits have to be judged against
   `event.timeStamp`, mapped into audio time.
@@ -864,13 +864,13 @@ differently in the cave and in the clean room.
 This is what turns "there are interactions" into "I am finding the
 interactions", and it costs almost nothing: a set of flags, a line of copy each.
 
-*What shipped, and one change that made it better.* Eleven discoveries, one for
-every mechanic on this page, and each one collects a note **per era** rather
-than a single note from wherever you happened to find it. Find a chain reaction
-in the cave and the shaman writes it up; find one again in the clean room and
-the technician writes it up beside them. So the notebook accumulates
-observations of one phenomenon across five eras of medicine, which is what a
-case book actually looks like - and it gives every one of those lines a reason to exist
+*What shipped, and one change that made it better.* Ten discoveries, one for
+every tracked interaction in the notebook, and each one collects a note **per
+era** rather than a single note from wherever you happened to find it. Find a
+chain reaction in the cave and the shaman writes it up; find one again in the
+clean room and the technician writes it up beside them. So the notebook
+accumulates observations of one phenomenon across ten eras of medicine, which is
+what a case book actually looks like - and it gives every one of those lines a reason to exist
 rather than forty-five of them being unreachable.
 
 A page you have not filled in says **nothing about itself**. It reads "Not yet
@@ -894,7 +894,7 @@ which is a fact about the bot, not about the game.
 | The formulary | A notebook that fills in as you trigger interactions, collecting a note per era for each one. |
 | Antibodies | Both parents in one cascade synthesise a compound that takes the strain and the ring around it. |
 | The neck row | A row above the bottle. Filling the bottle is not a loss until capsules back up into the neck. |
-| Apothecary Through Time | Five eras, five vessels, five physicians, five notes. |
+| Apothecary Through Time | Ten eras, ten vessels, ten practitioners, ten notes. |
 | Daily challenge | One seeded bottle a day, the same for everyone, with a seeded pair of modifiers named on the card. |
 | Versus | Two bottles on one keyboard, trading garbage. |
 | Offline play | Installs as a PWA and plays with the network off. |

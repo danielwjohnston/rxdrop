@@ -13,13 +13,15 @@ framework, or a package dependency.
 
 ## Read in this order
 
-1. **`README.md`** and **`docs/status.md`** — what the game is and what is true now.
-2. **`docs/ultragauntlet.md`** — the quality gate and why each stage exists.
+1. **`.agents/PROTOCOL.md`** — the Principal-authored collaboration and
+   safety rules. This is the process authority when shorter guides disagree.
+2. **`README.md`** and **`docs/status.md`** — what the game is and what is true now.
+3. **`docs/ultragauntlet.md`** — the quality gate and why each stage exists.
    Nothing else here makes sense before this one.
-3. **Only the section you need** of `docs/ideas.md` (mechanics, each with its
+4. **Only the section you need** of `docs/ideas.md` (mechanics, each with its
    status and its bound). Use `docs/branch-audit.md` only when you need the
    historical branch-convergence evidence; it is not the live roadmap.
-4. **`docs/collaboration.md`** — multi-agent conventions and the handoff packet.
+5. **`docs/collaboration.md`** — multi-agent conventions and the handoff packet.
    Its §0 is a standing introduction from the agent that wrote most of `main`,
    including **a table of the errors it has actually made here and how each was
    caught**. If you are reviewing its work, start there — it will tell you where

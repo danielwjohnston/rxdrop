@@ -1,5 +1,11 @@
 # Branch audit: `main` vs `openai/medical-eras-visual-overhaul`
 
+> **Historical audit, not live status.** This document records the September 2026
+> branch-convergence investigation and preserves its corrections. For the current
+> implementation, roadmap and branch interpretation, start with
+> [`docs/status.md`](status.md). Do not infer today's active work or branch
+> disposition from the dated measurements below.
+
 **Audited 12 September 2026, at `origin/main` 782d324 and
 `origin/openai/medical-eras-visual-overhaul` 40ebd8e.**
 Refs are given against `origin` deliberately: a reviewer of this document

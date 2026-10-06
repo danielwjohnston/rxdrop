@@ -33,10 +33,10 @@ Every branch and pull request is covered by CI.
 
 The gate consists of:
 
-- unit tests on Node 20 and Node 22;
+- **318 unit tests** on Node 20 and Node 22;
 - the thirteen-stage UltraGauntlet;
-- browser checks covering menus, input, daily, versus, offline/mobile behavior,
-  and the campaign-complete path.
+- **43 browser checks** covering menus, input, daily, versus, offline/mobile
+  behavior, and the campaign-complete path.
 
 The latest integrated `main` before this status refresh passed CI and deployed
 successfully to GitHub Pages. New work should still report the checks actually
@@ -51,6 +51,8 @@ run for that change rather than inheriting an older green result.
 - Continue evaluating the Historian / cross-era narrative host in issue #47.
 - Treat additional mechanics as expansion work rather than requirements for
   declaring the existing campaign structurally complete.
+- Run the full gate and make an explicit Principal-approved web-complete/freeze
+  decision before shifting primary development effort to Godot.
 
 ### Audio
 
@@ -63,6 +65,13 @@ architecture work is tracked separately:
 - #43 — Godot audio implementation contract.
 
 The parent architecture issue #38 remains open for the larger system.
+
+### Narrative
+
+The ten local era practitioners are implemented. The cross-era Historian proposed
+in issue #47 is a separate narrative/event layer and is not implemented. Its
+inclusion in the web-complete scope versus a later narrative expansion remains a
+product decision rather than a technical blocker.
 
 ### Godot
 
@@ -98,3 +107,17 @@ The GitHub repository settings should match that framing as well:
   `medical-history`, `game-development`, `godot`
 
 These fields live in GitHub repository settings rather than tracked files.
+
+## Source hierarchy
+
+When repository artifacts disagree:
+
+1. Explicit Principal decisions and the Principal-authored
+   `.agents/PROTOCOL.md` govern process and product authority.
+2. Implementation, tests and runtime/deployment evidence establish what the
+   software actually does.
+3. This file is the current operational summary.
+4. `docs/direction.md` expresses creative intent.
+5. `docs/ideas.md` tracks mechanic status and design arguments.
+6. Historical audits, collaboration records and `legacy/` preserve evidence
+   and learning but are not automatically current product truth.

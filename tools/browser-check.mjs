@@ -1336,6 +1336,38 @@ try {
   await landscape.close();
 
 
+  await check('level 20 ends the campaign instead of replaying level 20', async () => {
+    const finale = await browser.newPage({ viewport: { width: 1000, height: 840 } });
+    await finale.bringToFront();
+    const finaleErrors = [];
+    finale.on('pageerror', (error) => finaleErrors.push(error.message));
+    await finale.goto(`${BASE}/?level=20&speed=LOW&seed=2026`, { waitUntil: 'networkidle' });
+    await finale.click('[data-start]');
+    await finale.waitForTimeout(250);
+
+    await finale.evaluate(() => {
+      const g = window.rxdrop.game;
+      g.board.forEachCell((cell, x, y) => {
+        if (cell.type === 'virus') g.board.set(x, y, null);
+      });
+      g.finishResolution();
+    });
+    await finale.waitForTimeout(150);
+
+    assert.equal(await finale.isVisible('#screen-clear'), true);
+    assert.equal((await finale.textContent('#clear-title')).trim(), 'Campaign complete!');
+    assert.equal((await finale.textContent('#next-level')).trim(), 'Return to title');
+    assert.match((await finale.textContent('#clear-finale')).trim(), /campaign is complete/i);
+
+    await finale.click('#next-level');
+    await finale.waitForTimeout(100);
+    assert.equal(await finale.evaluate(() => window.rxdrop.screen), 'title');
+    assert.equal(await finale.evaluate(() => window.rxdrop.game === null), true);
+    assert.deepEqual(finaleErrors, []);
+    await finale.close();
+  });
+
+
   await check('music can be turned off from the title screen', async () => {
     const music = await browser.newPage({ viewport: { width: 1000, height: 900 } });
     await music.bringToFront();

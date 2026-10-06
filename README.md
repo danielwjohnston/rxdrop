@@ -33,14 +33,16 @@ Local versus, both bottles dealt the same layout and the same capsules:
 
 The web game is the executable product today. It includes solo play, a seeded
 daily challenge, local versus, antibiotic resistance and collateral sensitivity,
-hybrid strains and antibodies, run modifiers, phototherapy, five implemented
-medical eras, and the physician's formulary.
+hybrid strains and antibodies, run modifiers, phototherapy, ten implemented
+medical eras with practitioner art and era-specific music, the physician's
+formulary, and an authoritative musical transport for rhythm-aware systems.
 
-The larger creative direction continues beyond the currently implemented five-era
-presentation. The project's north star is in [`docs/direction.md`](docs/direction.md),
-while [`docs/ideas.md`](docs/ideas.md) records mechanics that are proposed,
-shipped, revised or cut. Repository/branch reconciliation and the web-to-Godot
-plan live in [`docs/branch-audit.md`](docs/branch-audit.md).
+The current implementation and near-term roadmap live in
+[`docs/status.md`](docs/status.md). The project's creative north star is in
+[`docs/direction.md`](docs/direction.md), while
+[`docs/ideas.md`](docs/ideas.md) records mechanics that are proposed, shipped,
+revised or cut. [`docs/branch-audit.md`](docs/branch-audit.md) is the historical
+September 2026 convergence audit rather than the live project-status document.
 
 Repository documentation is part of the product. A change that materially alters
 behavior, architecture, testing, controls, project direction, deployment, or
@@ -280,8 +282,8 @@ clipped inside.
   third of days plain - and says on the card which ones it drew. That is what
   stops the daily being the same game at a different level.
 - **The formulary** is a notebook that starts blank and fills in as you
-  *trigger* interactions, never as you read about them. Eleven discoveries, one
-  for every mechanic, and each collects a note per era: find a chain reaction in the
+  *trigger* interactions, never as you read about them. Ten discoveries, one
+  for every tracked mechanic, and each collects a note per era: find a chain reaction in the
   cave and the shaman writes it up, find one again in the clean room and the
   technician writes it up beside them. A page you have not filled in says
   nothing about itself.
@@ -298,7 +300,7 @@ npm run test:watch # re-run on change
 
 # End-to-end checks in a real browser (Playwright is not a dependency):
 npm i --no-save playwright && npx playwright install chromium
-npm run test:browser  # 42 checks: menus, controls, versus, daily, offline, mobile
+npm run test:browser  # 43 checks: menus, controls, campaign ending, versus, daily, offline, mobile
 
 npm run gauntlet   # the full protocol below: every stage, one gate
 ```
@@ -345,7 +347,8 @@ tools/browser-check.mjs  end-to-end checks in a real browser
 window.rxdrop         the test seam: how the browser checks drive the game
 tools/gauntlet.mjs    the UltraGauntlet: thirteen stages, one gate
 docs/ultragauntlet.md what the gauntlet is and why each stage exists
-docs/branch-audit.md  the branches compared, and which parts survive
+docs/status.md        current implementation state and near-term roadmap
+docs/branch-audit.md  historical branch-convergence audit
 docs/collaboration.md how several agents work here without waste
 docs/direction.md     the creative direction: what the project is becoming
 docs/ideas.md         the design workshop: mechanics proposed, shipped and cut

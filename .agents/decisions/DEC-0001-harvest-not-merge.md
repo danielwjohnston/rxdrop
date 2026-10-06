@@ -19,12 +19,18 @@ overlapping ideas. Which parts of which should survive?
 
 ## Evidence
 
-- The branch was cut at `35eb061` (PR #20) and predates seven merged PRs.
-- It lacks the PR #21 onboarding and start-button-reachability fixes, and the
-  two browser checks protecting them. Its `index.html`, `main.js` and
-  `styles.css` are **byte-identical to the merge base** — it is not solving the
-  problem another way. A naive merge reinstates a defect a real tester hit and
-  deletes the check that catches it.
+- The branch was cut at `35eb061` (PR #20). At the time of the decision it
+  already trailed `main`; the later September audit measured the gap at
+  fourteen merged PRs.
+- **Correction preserved from review:** the original decision text said a naive
+  three-way merge would reinstate the PR #21 onboarding/start-button defect.
+  That was disproved in review cycle 4. Because `index.html`, `main.js`,
+  `styles.css`, and `tools/browser-check.mjs` were unchanged from the merge
+  base on the overhaul branch, a normal merge would retain `main`'s versions.
+  The branch is still stale as a standalone checkout, but this point is **not**
+  evidence for the harvest-not-merge decision. The module-load failure,
+  prototype patching, superseded treatment mechanics, and art-harvest tradeoff
+  below are the grounds that remain valid.
 - A merge does not conflict meaningfully (two files) but **fails silently**:
   `src/phototherapy.js:3` imports `DARK_AT`, which `main` does not export, so
   the whole overhaul never loads. Fixing that export instead lets the branch's

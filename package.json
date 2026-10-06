@@ -2,7 +2,7 @@
   "name": "rxdrop",
   "version": "1.0.0",
   "private": true,
-  "description": "RxDrop - a Dr. Mario style falling-capsule puzzle game for the browser",
+  "description": "RxDrop - a medical-history falling-capsule puzzle game about treating evolving infections",
   "type": "module",
   "scripts": {
     "start": "node tools/serve.js",

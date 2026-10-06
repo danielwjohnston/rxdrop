@@ -285,8 +285,8 @@ clipped inside.
   third of days plain - and says on the card which ones it drew. That is what
   stops the daily being the same game at a different level.
 - **The formulary** is a notebook that starts blank and fills in as you
-  *trigger* interactions, never as you read about them. Eleven discoveries, one
-  for every mechanic, and each collects a note per era: find a chain reaction in the
+  *trigger* interactions, never as you read about them. Ten discoveries, one
+  for every tracked mechanic, and each collects a note per era: find a chain reaction in the
   cave and the shaman writes it up, find one again in the clean room and the
   technician writes it up beside them. A page you have not filled in says
   nothing about itself.

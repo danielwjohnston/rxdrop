@@ -7,11 +7,11 @@ process for its own sake.
 
 ## Before changing anything
 
-1. Read `README.md` for the current product and repository shape.
+1. Read `README.md` and `docs/status.md` for the current product and live project state.
 2. Read `AGENTS.md` if an AI agent will participate.
 3. Read only the relevant sections of `docs/ideas.md`, `docs/direction.md` and
-   `docs/branch-audit.md` for the work you are doing.
-4. Check active pull requests and branches before substantial overlapping work.
+   the historical `docs/branch-audit.md` for the work you are doing.
+4. Check active pull requests and compare relevant branches before substantial overlapping work.
 
 The Principal-authored multi-agent rules live in `.agents/PROTOCOL.md`.
 

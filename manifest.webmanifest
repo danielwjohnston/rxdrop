@@ -1,7 +1,7 @@
 {
   "name": "RxDrop",
   "short_name": "RxDrop",
-  "description": "A Dr. Mario style falling-capsule puzzler. Match four, clear the viruses, don't fill the bottle.",
+  "description": "A medical-history falling-capsule treatment puzzle where infections adapt to therapy.",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",

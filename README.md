@@ -33,14 +33,19 @@ Local versus, both bottles dealt the same layout and the same capsules:
 
 The web game is the executable product today. It includes solo play, a seeded
 daily challenge, local versus, antibiotic resistance and collateral sensitivity,
-hybrid strains and antibodies, run modifiers, phototherapy, five implemented
-medical eras, and the physician's formulary.
+hybrid strains and antibodies, run modifiers, phototherapy, chain and multi-line
+scoring, ten implemented medical eras with reactive practitioners, ten
+era-specific chiptunes, an authoritative musical transport, and the physician's
+formulary. Clearing level 20 completes the campaign rather than replaying the
+last level indefinitely.
 
-The larger creative direction continues beyond the currently implemented five-era
-presentation. The project's north star is in [`docs/direction.md`](docs/direction.md),
-while [`docs/ideas.md`](docs/ideas.md) records mechanics that are proposed,
-shipped, revised or cut. Repository/branch reconciliation and the web-to-Godot
-plan live in [`docs/branch-audit.md`](docs/branch-audit.md).
+For the current implementation/roadmap snapshot, start with
+[`docs/status.md`](docs/status.md). The project's north star remains
+[`docs/direction.md`](docs/direction.md), while
+[`docs/ideas.md`](docs/ideas.md) records mechanics that are proposed, shipped,
+revised or cut. [`docs/branch-audit.md`](docs/branch-audit.md) is retained as a
+dated historical audit of the earlier branch-convergence work, not the live
+roadmap.
 
 Repository documentation is part of the product. A change that materially alters
 behavior, architecture, testing, controls, project direction, deployment, or
@@ -289,16 +294,18 @@ clipped inside.
   a loss on its own: capsules are dealt into the neck above it, and you get a
   long fuse to steer one clear. The run ends only once the neck is blocked too,
   which means capsules have genuinely backed up out of the bottle.
+- Clearing level 20 is the end of the campaign. The completion card returns to
+  the title instead of starting level 20 again.
 
 ## Development
 
 ```sh
-npm test           # 312 unit tests, no dependencies, well under a second
+npm test           # 318 unit tests, no dependencies, well under a second
 npm run test:watch # re-run on change
 
 # End-to-end checks in a real browser (Playwright is not a dependency):
 npm i --no-save playwright && npx playwright install chromium
-npm run test:browser  # 42 checks: menus, controls, versus, daily, offline, mobile
+npm run test:browser  # 43 checks: menus, controls, versus, daily, offline, mobile, finale
 
 npm run gauntlet   # the full protocol below: every stage, one gate
 ```
@@ -331,6 +338,7 @@ src/versus.js         two games, garbage routed between them
 src/daily.js          the date-seeded daily challenge
 src/renderer.js       canvas drawing
 src/audio.js          Web Audio synthesis: ten era chiptune loops and the effects
+src/transport.js      authoritative beat/bar/subdivision clock for music/gameplay
 src/input.js          keyboard, touch, swipe and gamepad
 src/main.js           screens, HUD, persistence and the animation loop
 src/styles.css        every pixel of chrome around the canvas
@@ -345,7 +353,8 @@ tools/browser-check.mjs  end-to-end checks in a real browser
 window.rxdrop         the test seam: how the browser checks drive the game
 tools/gauntlet.mjs    the UltraGauntlet: thirteen stages, one gate
 docs/ultragauntlet.md what the gauntlet is and why each stage exists
-docs/branch-audit.md  the branches compared, and which parts survive
+docs/status.md        current implementation, roadmap and branch-status snapshot
+docs/branch-audit.md  dated historical branch audit and convergence evidence
 docs/collaboration.md how several agents work here without waste
 docs/direction.md     the creative direction: what the project is becoming
 docs/ideas.md         the design workshop: mechanics proposed, shipped and cut

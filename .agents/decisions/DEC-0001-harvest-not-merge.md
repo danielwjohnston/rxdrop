@@ -19,12 +19,17 @@ overlapping ideas. Which parts of which should survive?
 
 ## Evidence
 
-- The branch was cut at `35eb061` (PR #20) and predates seven merged PRs.
-- It lacks the PR #21 onboarding and start-button-reachability fixes, and the
-  two browser checks protecting them. Its `index.html`, `main.js` and
-  `styles.css` are **byte-identical to the merge base** — it is not solving the
-  problem another way. A naive merge reinstates a defect a real tester hit and
-  deletes the check that catches it.
+- The branch was cut at `35eb061` (PR #20) and became stale as `main`
+  continued through later merged work.
+- The branch as a standalone checkout lacks the PR #21 onboarding and
+  start-button-reachability fixes and the browser checks protecting them.
+  Its `index.html`, `main.js` and `styles.css` are byte-identical to the
+  merge base. **Correction recorded 6 October 2026:** an earlier version of
+  this decision incorrectly said a normal three-way merge would reinstate that
+  defect and delete those checks. Because the branch did not modify those
+  files, a merge would retain `main`'s versions. This point is evidence
+  against shipping/replacing `main` with the stale branch, not the reason for
+  the harvest-not-merge decision.
 - A merge does not conflict meaningfully (two files) but **fails silently**:
   `src/phototherapy.js:3` imports `DARK_AT`, which `main` does not export, so
   the whole overhaul never loads. Fixing that export instead lets the branch's
@@ -36,6 +41,19 @@ overlapping ideas. Which parts of which should survive?
   atlases, all eleven visual periods, a virus theatre, evolving music.
 - The art is **not** cleanly separable — `doctors.js` pulls in a runtime that
   monkey-patches nine `Game` methods — so glue must be written either way.
+
+## Later verification note
+
+The harvest-not-merge decision remains accepted. Subsequent review corrected the
+onboarding-merge claim above but independently confirmed the stronger reasons:
+the post-merge `DARK_AT` module-load failure and the overhaul runtime's
+prototype patching conflict with the tested implementation.
+
+The active game later adopted a separate ten-era ligne-claire practitioner set
+and ten-era presentation on `main`. The original overhaul SVG work is valuable
+as project history/reference rather than as runtime code; the current
+consolidation work preserves it under `legacy/` without loading it into the
+game.
 
 ## Tradeoffs
 

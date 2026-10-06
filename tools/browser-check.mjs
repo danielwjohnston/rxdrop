@@ -1336,6 +1336,42 @@ try {
   await landscape.close();
 
 
+  await check('level 20 completes the campaign instead of replaying itself', async () => {
+    const finale = await browser.newPage({ viewport: { width: 1000, height: 840 } });
+    await finale.bringToFront();
+    const finaleErrors = [];
+    finale.on('pageerror', (error) => finaleErrors.push(error.message));
+    await finale.goto(`${BASE}/?level=20&speed=LOW&seed=2026`, { waitUntil: 'networkidle' });
+    await finale.click('[data-start]');
+    await finale.waitForTimeout(250);
+
+    await finale.evaluate(() => {
+      const g = window.rxdrop.game;
+      const viruses = [];
+      g.board.forEachCell((cell, x, y) => {
+        if (cell.type === 'virus') viruses.push([x, y]);
+      });
+      for (const [x, y] of viruses) g.board.set(x, y, null);
+      g.finishResolution();
+    });
+    await finale.waitForTimeout(180);
+
+    assert.equal(await finale.evaluate(() => window.rxdrop.screen), 'clear');
+    assert.equal(await finale.textContent('#clear-title'), 'Campaign complete');
+    assert.match(await finale.textContent('#clear-finale'), /caseload is complete/i);
+    assert.equal(await finale.textContent('#next-level'), 'Return to title');
+
+    await finale.click('#next-level');
+    await finale.waitForTimeout(100);
+    assert.equal(
+      await finale.evaluate(() => window.rxdrop.screen),
+      'title',
+      'campaign completion must not advance/replay level 20',
+    );
+    assert.deepEqual(finaleErrors, []);
+    await finale.close();
+  });
+
   await check('music can be turned off from the title screen', async () => {
     const music = await browser.newPage({ viewport: { width: 1000, height: 900 } });
     await music.bringToFront();

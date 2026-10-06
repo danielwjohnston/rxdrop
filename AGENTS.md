@@ -5,18 +5,20 @@ it is short on purpose.
 
 ## What this is
 
-A Dr. Mario–style falling-capsule game about treating an evolving infection.
-Zero dependencies, no build step, vanilla ES modules, canvas, offline PWA.
+A medical-history treatment puzzle built on falling-capsule mechanics, where
+infections adapt to therapy across ten eras. Zero dependencies, no build step,
+vanilla ES modules, canvas, offline PWA.
 Those are deliberate constraints, not accidents — do not add a bundler, a
 framework, or a package dependency.
 
 ## Read in this order
 
-1. **`README.md`** — what the game is, how to run it, the file map.
+1. **`README.md`** and **`docs/status.md`** — what the game is and what is true now.
 2. **`docs/ultragauntlet.md`** — the quality gate and why each stage exists.
    Nothing else here makes sense before this one.
 3. **Only the section you need** of `docs/ideas.md` (mechanics, each with its
-   status and its bound) and `docs/branch-audit.md` (branch state, delivery plan).
+   status and its bound). Use `docs/branch-audit.md` only when you need the
+   historical branch-convergence evidence; it is not the live roadmap.
 4. **`docs/collaboration.md`** — multi-agent conventions and the handoff packet.
    Its §0 is a standing introduction from the agent that wrote most of `main`,
    including **a table of the errors it has actually made here and how each was
@@ -51,7 +53,7 @@ The same goes for any file over ~800 lines — see the token budget below.
 
 ```
 npm start                     # serve at localhost:8080
-npm test                      # 312 unit tests, ~1.0s   <- cheapest useful check
+npm test                      # 318 unit tests, ~1.0s   <- cheapest useful check
 node tools/playtest.mjs       # the bot plays; reports on feel, not legality
 node tools/gauntlet.mjs       # the full gate, ~5 minutes
 ```
@@ -126,7 +128,12 @@ A handoff needs four things, and the fourth is the one people forget:
 
 ## Branches
 
-`main` is the truth. Feature branches are `vendor/topic` or
-`claude/topic`. A branch that loses an audit gets tagged `archive/<name>` and
-deleted the same day — a stale branch that looks mergeable is a trap, and this
-repository has already been bitten by one.
+`main` is the canonical integrated implementation. Feature branches are
+`vendor/topic` or `claude/topic`, but an old branch name is not evidence that it
+is still an active competing direction: compare it with `main` and inspect its
+PR/history first.
+
+Archival, deletion, force-pushes and other destructive branch operations remain
+Principal-authorized under `.agents/PROTOCOL.md` §§3 and 9. When a branch is
+fully incorporated or deliberately superseded, recommend cleanup and preserve
+needed history, but do not delete it merely for neatness without that authority.

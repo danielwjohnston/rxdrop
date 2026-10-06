@@ -54,9 +54,9 @@ The established gate is:
 - `npm run gauntlet` - 13 stages, including the browser suite;
 - GitHub Pages deployment from `main`.
 
-The previous `main` head (`777945e`, 18 September 2026) passed Node 20,
-Node 22, the full UltraGauntlet, and Pages deployment. Changes made after that
-baseline must earn a fresh green CI result before being treated as shipped.
+GitHub Actions is the release gate: Node 20 and Node 22 unit tests plus the
+full UltraGauntlet must pass for a change to be treated as shipped. The Pages
+workflow then deploys pushes to `main`.
 
 ## Current roadmap
 
@@ -79,8 +79,8 @@ baseline must earn a fresh green CI result before being treated as shipped.
 Issue #39's authoritative transport work has shipped through PR #44:
 `AudioContext.currentTime` is the clock, scheduling uses look-ahead, gameplay
 can query beat windows, pause/resume semantics are documented, and transport
-tests cover drift and boundary behavior. #39 should therefore be closed rather
-than left looking like an unimplemented dependency.
+tests cover drift and boundary behavior. #39 is closed as completed; #40-#43
+carry the remaining audio architecture and Godot-handoff work.
 
 ### Narrative status
 

@@ -31,6 +31,24 @@ instead of silently replaying level 20.
 
 Every branch and pull request is covered by CI.
 
+Since 9 October the gate is enforced on `main`. The repository ruleset
+**main: require CI** blocks any change to `main` until three checks pass:
+`Unit tests (Node 20.x)`, `Unit tests (Node 22.x)` and `UltraGauntlet`. Only
+GitHub Actions can report those checks, and the ruleset has no bypass list. So
+work reaches `main` through a branch and a pull request, never a direct push.
+"Allow auto-merge" is on, so a PR can be queued to merge once its checks pass.
+
+Two consequences:
+
+- **The required checks are the CI job names.** Renaming a job in
+  `.github/workflows/ci.yml` or changing its Node matrix stops that check
+  reporting. Every PR would then wait on a check that never arrives. Update
+  the ruleset in the same change; editing the ruleset is an admin action.
+- **A cancelled UltraGauntlet run is not a failure.** When a branch with an
+  open PR is pushed, CI runs twice, and `ci.yml` cancels the older run by
+  design. The cancelled run can show as a failed check in `gh pr checks`. The
+  ruleset uses the newer run.
+
 The gate consists of:
 
 - **313 unit tests** on Node 20 and Node 22;
@@ -90,6 +108,9 @@ October the GitHub description still reads "A Dr. Mario clone". No homepage or
 topics are set, and automatic deletion of merged head branches is off. #49 was
 closed in favour of #50, but the settings it asked for are still unchanged.
 These changes are admin-only, so they are Principal actions.
+
+Separately from #50, the Principal applied two settings on 9 October: "Allow
+auto-merge" and the **main: require CI** ruleset described under Quality gate.
 
 The PR #48 and #52 head branches (`openai/project-state-sync-2026-10-06`,
 `openai/project-state-followups-2026-10-06`) are merged. The PR #51 duplicate

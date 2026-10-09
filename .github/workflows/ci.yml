@@ -19,6 +19,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
+# The job names below are the required checks in the "main: require CI"
+# ruleset: "Unit tests (Node 20.x)", "Unit tests (Node 22.x)", "UltraGauntlet".
+# Renaming a job or changing the Node matrix stops that check reporting, and
+# every PR then waits on it forever. Update the ruleset in the same change.
 jobs:
   unit:
     name: Unit tests (Node ${{ matrix.node }})

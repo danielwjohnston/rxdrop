@@ -151,3 +151,6 @@ node tools/gauntlet.mjs fuzz      # one stage while iterating
 
 The gauntlet is the merge gate for this repository: CI runs the same stages, and
 a red stage means the change is not ready, whatever the feature looks like.
+Since 9 October that is enforced rather than conventional. A ruleset on `main`
+requires the `UltraGauntlet` job and both unit-test jobs to pass before
+anything lands.

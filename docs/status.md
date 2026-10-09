@@ -72,17 +72,28 @@ stages were re-run locally on Node 22; `modifiers` and `browser` were not
 re-run locally. New work should still report the checks actually run for that
 change rather than inheriting an older green result.
 
-> **Correction (9 October).** The 6 October docs reported 318 unit tests. CI
-> for that same `main` reports 313. The bump from 312 to 318 accompanied commit
-> c005985 ("Carry forward repository and portability regression guards"),
-> which changed no files, and the guards it describes were not found on `main`,
-> `openai/project-state-convergence` or `openai/repository-surface-refresh`.
-> Whether those guards should be recovered or the claim retired is open below.
+> **Correction (9 October; resolved).** The 6 October docs reported 318 unit
+> tests, but CI for that same `main` reports 313. The 318 was a double count,
+> and no tests are missing:
+>
+> - #29 (6168262, 15 September) added `test/precache.test.js` and
+>   `test/rng-golden.test.js`, three tests each, and the suite stood at 312.
+> - #45's review fixes (5628906, merged in 777945e) added "gives a timer
+>   session enough capsule-paced time to lock a light piece". That made 313,
+>   though the docs were not bumped.
+> - Commit c005985 ("Carry forward repository and portability regression
+>   guards") changed no files. PR #48 described it as carrying forward the
+>   precache and PRNG golden-vector guards. Those six tests were already on
+>   `main`, so the docs went from 312 to 318.
+> - No branch carries a test file or a test case that `main` lacks.
+>
+> The guards are present and green. The claim is retired, not recovered.
 
 ## Current roadmap
 
-No product code has landed since PR #52 on 6 October. The roadmap below is
-re-ordered by what is unblocked now. The classifications follow
+No product code has landed since PR #52 on 6 October. #53 and #54 changed
+only documentation and CI. The roadmap below is re-ordered by what is
+unblocked now. The classifications follow
 `.agents/PROTOCOL.md` §22 and are recommendations. Priority and scope remain
 Principal decisions.
 
@@ -92,7 +103,6 @@ Principal decisions.
 | --- | --- | --- |
 | Web-complete/freeze decision | critical blocker for Godot | Principal: decision, plus #47 scope call |
 | #50 repository settings and branch cleanup | high value, small | Principal: admin-only GitHub settings |
-| Recover or retire the c005985 regression guards | high value, small | Any agent: locate or re-derive, then reconcile counts |
 | #40 engine-neutral score schema | normal implementation | Unblocked; gates #41 and #43 |
 | #42 Sonotherapy prototype | normal implementation | Unblocked (#39 done); must land with a bound |
 | #41 adaptive mixer | normal implementation | #40 |

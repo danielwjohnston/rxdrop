@@ -300,7 +300,7 @@ clipped inside.
 ## Development
 
 ```sh
-npm test           # 318 unit tests, no dependencies, well under a second
+npm test           # 313 unit tests, no dependencies, well under a second
 npm run test:watch # re-run on change
 
 # End-to-end checks in a real browser (Playwright is not a dependency):

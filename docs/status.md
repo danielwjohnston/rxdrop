@@ -31,6 +31,33 @@ instead of silently replaying level 20.
 
 Every branch and pull request is covered by CI.
 
+Since 9 October the gate is enforced on `main`. The repository ruleset
+**main: require CI** blocks any change to `main` until three checks pass:
+`Unit tests (Node 20.x)`, `Unit tests (Node 22.x)` and `UltraGauntlet`. Only
+GitHub Actions can report those checks, and the ruleset has no bypass list. So
+work reaches `main` through a branch and a pull request, never a direct push.
+"Allow auto-merge" is on, so a PR can be queued to merge once its checks pass.
+
+Two consequences:
+
+- **The required checks are the CI job names.** Renaming a job in
+  `.github/workflows/ci.yml` or changing its Node matrix stops that check
+  reporting. Every PR would then wait on a check that never arrives. Update
+  the ruleset in the same change; editing the ruleset is an admin action.
+- **Only `pull_request` runs are the gate.** GitHub judges required checks
+  per run, so a cancelled run carrying a required name blocks the PR even when
+  another run of the same commit passed. That blocked #53 until the cancelled
+  job was re-run. `ci.yml` now gives the required names only to
+  `pull_request` runs, and never cancels them. Push runs still test every
+  branch, but they report as `… [push]`, which the ruleset ignores. A red or
+  cancelled `[push]` check makes `gh pr checks` exit non-zero without blocking
+  the merge, so use `gh pr checks --required` to see the gate. A genuinely
+  failed required check needs a fix or, if it was flaky, a re-run of that job;
+  a re-run replaces its result.
+- **Branches cut before this change** still produce required-named push runs
+  until they merge `main`. A stale cancelled run on such a branch's head
+  commit blocks its PR the old way. Re-run that job, or merge `main` in.
+
 The gate consists of:
 
 - **313 unit tests** on Node 20 and Node 22;
@@ -90,6 +117,9 @@ October the GitHub description still reads "A Dr. Mario clone". No homepage or
 topics are set, and automatic deletion of merged head branches is off. #49 was
 closed in favour of #50, but the settings it asked for are still unchanged.
 These changes are admin-only, so they are Principal actions.
+
+Separately from #50, the Principal applied two settings on 9 October: "Allow
+auto-merge" and the **main: require CI** ruleset described under Quality gate.
 
 The PR #48 and #52 head branches (`openai/project-state-sync-2026-10-06`,
 `openai/project-state-followups-2026-10-06`) are merged. The PR #51 duplicate

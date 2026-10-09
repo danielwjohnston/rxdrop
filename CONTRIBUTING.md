@@ -60,6 +60,9 @@ not. Never claim a test passed if it was not executed successfully.
 
 ## Pull requests
 
+Changes reach `main` only through a pull request whose required CI checks have
+passed. A repository ruleset enforces this; see `docs/status.md`, Quality gate.
+
 Keep PRs focused and explain:
 
 - what changed;

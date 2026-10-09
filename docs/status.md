@@ -44,10 +44,19 @@ Two consequences:
   `.github/workflows/ci.yml` or changing its Node matrix stops that check
   reporting. Every PR would then wait on a check that never arrives. Update
   the ruleset in the same change; editing the ruleset is an admin action.
-- **A cancelled UltraGauntlet run is not a failure.** When a branch with an
-  open PR is pushed, CI runs twice, and `ci.yml` cancels the older run by
-  design. The cancelled run can show as a failed check in `gh pr checks`. The
-  ruleset uses the newer run.
+- **Only `pull_request` runs are the gate.** GitHub judges required checks
+  per run, so a cancelled run carrying a required name blocks the PR even when
+  another run of the same commit passed. That blocked #53 until the cancelled
+  job was re-run. `ci.yml` now gives the required names only to
+  `pull_request` runs, and never cancels them. Push runs still test every
+  branch, but they report as `… [push]`, which the ruleset ignores. A red or
+  cancelled `[push]` check makes `gh pr checks` exit non-zero without blocking
+  the merge, so use `gh pr checks --required` to see the gate. A genuinely
+  failed required check needs a fix or, if it was flaky, a re-run of that job;
+  a re-run replaces its result.
+- **Branches cut before this change** still produce required-named push runs
+  until they merge `main`. A stale cancelled run on such a branch's head
+  commit blocks its PR the old way. Re-run that job, or merge `main` in.
 
 The gate consists of:
 

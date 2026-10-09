@@ -139,9 +139,11 @@ PR/history first.
 `Unit tests (Node 22.x)` and `UltraGauntlet` to pass first, so work on a branch
 and open a PR. Those are CI job names: if your change renames a job or alters the
 Node matrix in `ci.yml`, say so in the PR, because the Principal must update the
-ruleset or every PR stalls. A cancelled UltraGauntlet run is the older of two
-duplicate runs, cancelled by design, not a failure. See `docs/status.md`,
-Quality gate.
+ruleset or every PR stalls. Only `pull_request` runs carry the required names;
+push runs report as `… [push]`. Keep it that way, and never let a
+`pull_request` run be cancelled. GitHub counts a cancelled required check as a
+failure even when another run passed, and that is what blocked #53. Read the
+gate with `gh pr checks --required`. See `docs/status.md`, Quality gate.
 
 Archival, deletion, force-pushes and other destructive branch operations remain
 Principal-authorized under `.agents/PROTOCOL.md` §§3 and 9. When a branch is

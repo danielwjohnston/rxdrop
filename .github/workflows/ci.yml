@@ -10,22 +10,38 @@ on:
     branches: ['**']
   pull_request:
 
-# Pushing to a branch that has an open PR fires BOTH events, which ran the
-# ~5-minute gauntlet twice for one push the moment feature-branch coverage was
-# turned on above. head_ref (set on pull_request) and ref_name (set on push)
-# are the same branch name, so both events land in one group and the older run
-# is cancelled. Feature-branch coverage without paying for it twice.
+# Pushing to a branch that has an open PR fires BOTH events. They used to share
+# one group, so the older run was cancelled and the gauntlet ran once per push.
+# That broke on 9 October, when the "main: require CI" ruleset made these jobs
+# required checks. GitHub judges required checks per run, not per commit: any
+# cancelled run carrying a required name blocks the PR, even when another run
+# of the same commit passed. #53 sat blocked that way until the cancelled job
+# was re-run, and 777945e and 966ff27 carry the same stale cancellations from
+# branch pushes. Shuffling which runs cancel which cannot fix it; a reopened
+# PR, a re-run of an old run or a force-push back to an earlier commit can
+# still land a cancellation on the head. So the two events now do different
+# jobs:
+# - pull_request runs are the gate. Each one gets its own group (the run id),
+#   so nothing ever cancels it. A run superseded by a newer push finishes
+#   anyway: runner time only, since Actions minutes are free on this public
+#   repo.
+# - push runs keep the every-branch early signal above. They cancel their own
+#   older runs per branch, and they report under suffixed names (see the jobs)
+#   that the ruleset does not require, so a cancelled push run cannot block a
+#   merge.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.run_id || github.ref }}
   cancel-in-progress: true
 
-# The job names below are the required checks in the "main: require CI"
-# ruleset: "Unit tests (Node 20.x)", "Unit tests (Node 22.x)", "UltraGauntlet".
-# Renaming a job or changing the Node matrix stops that check reporting, and
-# every PR then waits on it forever. Update the ruleset in the same change.
+# On pull_request runs, the job names below are exactly the required checks in
+# the "main: require CI" ruleset: "Unit tests (Node 20.x)", "Unit tests (Node
+# 22.x)", "UltraGauntlet". Every other event appends its name, for example
+# "UltraGauntlet [push]", so those runs never count toward the gate. Renaming
+# a job or changing the Node matrix stops a required check reporting, and every
+# PR then waits on it forever. Update the ruleset in the same change.
 jobs:
   unit:
-    name: Unit tests (Node ${{ matrix.node }})
+    name: "Unit tests (Node ${{ matrix.node }})${{ github.event_name != 'pull_request' && format(' [{0}]', github.event_name) || '' }}"
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -39,7 +55,7 @@ jobs:
       - run: npm test
 
   gauntlet:
-    name: UltraGauntlet
+    name: "UltraGauntlet${{ github.event_name != 'pull_request' && format(' [{0}]', github.event_name) || '' }}"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

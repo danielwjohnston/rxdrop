@@ -60,7 +60,7 @@ Two consequences:
 
 The gate consists of:
 
-- **318 unit tests** on Node 20 and Node 22;
+- **327 unit tests** on Node 20 and Node 22;
 - the thirteen-stage UltraGauntlet;
 - **43 browser checks** covering menus, input, daily, versus, offline/mobile
   behavior, and the campaign-complete path.
@@ -89,9 +89,10 @@ change rather than inheriting an older green result.
 >
 > The guards are present and green. The claim is retired, not recovered.
 >
-> **The suite is 318 again, genuinely (10 October).** `test/metadata.test.js`
+> **The suite was 318 again, genuinely, on 10 October.** `test/metadata.test.js`
 > added five tests, taking 313 to 318. Both figures are correct for their
-> dates; do not "correct" this one back to 313.
+> dates, so do not "correct" that 318 back to 313. The score tests for #40 then
+> took the suite to 327.
 
 ## Current roadmap
 
@@ -107,10 +108,9 @@ Principal decisions.
 | --- | --- | --- |
 | Web-complete/freeze decision | critical blocker for Godot | Principal: decision, plus #47 scope call |
 | #50 remainder: auto-delete, branch cleanup, social preview | high value, small | Principal: admin-only GitHub actions |
-| #40 engine-neutral score schema | normal implementation | Unblocked; gates #41 and #43 |
 | #42 Sonotherapy prototype | normal implementation | Unblocked (#39 done); must land with a bound |
-| #41 adaptive mixer | normal implementation | #40 |
-| #43 Godot audio contract | normal implementation | #40 |
+| #41 adaptive mixer | normal implementation | Unblocked (#40 done) |
+| #43 Godot audio contract | normal implementation | Unblocked (#40 done) |
 | #47 cross-era Historian | product decision first | Principal: web-complete scope or later expansion |
 
 ### Web completion / refinement
@@ -173,14 +173,21 @@ waits on that decision's verification condition, not on tidiness.
 
 ### Audio
 
-The authoritative transport requested by issue #39 is implemented. Remaining
-architecture work is tracked separately, in dependency order:
+The authoritative transport requested by issue #39 is implemented. So is the
+engine-neutral score schema of issue #40, on 10 October. The music is now data
+in `src/score-data.js`, validated and realized by `src/score.js`, with the
+contract in `docs/score.md`. A golden fixture proves the move changed no note,
+drum or tempo. The remaining architecture work is tracked separately:
 
-- #40 — engine-neutral score schema. Unblocked, and gates #41 and #43.
-- #42 — Sonotherapy prototype. Depends only on #39, so it is unblocked now. It
-  is a new mechanic and ships only with a written bound and a gauntlet check.
-- #41 — adaptive mixer and treatment-state mapping. Needs #40.
-- #43 — Godot audio implementation contract. Needs #40.
+- #42 — Sonotherapy prototype. Unblocked. It is a new mechanic and ships only
+  with a written bound and a gauntlet check. Its timing-window metadata and
+  that window's bound already exist in the score.
+- #41 — adaptive mixer and treatment-state mapping. Unblocked. The score
+  declares the inputs (`danger`, `resistance`, `outbreak`, `phototherapy`,
+  `mutation`, `antibody`) and how variants and stingers refer to them. The
+  mixer maps game state to those inputs.
+- #43 — Godot audio implementation contract. Unblocked. `docs/score.md`
+  already separates specification from web-only behaviour for the score.
 
 The parent architecture issue #38 remains open for the larger system.
 

@@ -1,14 +1,17 @@
 /**
  * All of RxDrop's sound is synthesised at runtime with the Web Audio API -
  * there are no audio files to download. The music is ten original chiptune
- * loops, one for each medicine era; the effects are short envelopes on square,
- * triangle and noise voices.
+ * loops, one for each medicine era, written as data in src/score-data.js; this
+ * file voices them. The effects are short envelopes on square, triangle and
+ * noise voices.
  *
  * Musical time comes from the Transport in transport.js: the engine renders
  * notes onto it, gameplay reads beat/bar position from it, and neither side
  * keeps its own clock.
  */
 import { Transport } from './transport.js';
+import { parseScore, realize } from './score.js';
+import { SCORE } from './score-data.js';
 
 const NOTES = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 
@@ -82,238 +85,62 @@ function flattenTrack(track) {
   return flat;
 }
 
-const makeTrack = (track) => ({
-  leadType: 'square',
-  bassType: 'triangle',
-  bar: 16,
-  ...track,
-});
-
-const pharmaceuticalDanger = {
-  tempo: 1,
-  lead: [
-    ['E5', 2], ['G5', 2], ['A5', 2], ['B5', 2], ['A5', 2], ['G5', 2], ['E5', 4],
-    ['D5', 2], ['E5', 2], ['G5', 2], ['A5', 2], ['G5', 2], ['E5', 2], ['D5', 4],
-    ['C5', 2], ['E5', 2], ['G5', 2], ['A5', 2], ['G5', 2], ['E5', 2], ['C5', 4],
-    ['D5', 2], ['F5', 2], ['A5', 2], ['B5', 2], ['A5', 2], ['F5', 2], ['D5', 4],
-  ],
-  bass: [
-    ['A2', 4], ['A3', 4], ['E2', 4], ['E3', 4],
-    ['F2', 4], ['F3', 4], ['G2', 4], ['G3', 4],
-    ['A2', 4], ['A3', 4], ['E2', 4], ['E3', 4],
-    ['D2', 4], ['D3', 4], ['G2', 4], ['G3', 4],
-  ],
-  drums: 'x.x.x.xxx.x.x.x.',
-};
-
-const geneticArpeggio = [
-  'A3', 'C4', 'E4', 'A4', 'C4', 'E4', 'A4', 'E4',
-  'F3', 'A3', 'C4', 'F4', 'A3', 'C4', 'F4', 'C4',
-  'C4', 'E4', 'G4', 'C5', 'E4', 'G4', 'C5', 'G4',
-  'G3', 'B3', 'D4', 'G4', 'B3', 'D4', 'G4', 'D4',
-];
-
-/**
- * Tracks are [note, sixteenths] pairs. Each loop is written here rather than
- * sampled, so every era has an original tune in the spirit of a puzzle game
- * soundtrack.
- */
-export const TRACKS = Object.freeze({
-  protomedicine: makeTrack({
-    tempo: 0.7,
-    leadType: 'triangle',
-    lead: [
-      ['A3', 4], ['C4', 4], ['D4', 2], ['C4', 2], ['A3', 4],
-      ['A3', 4], ['E4', 4], ['G4', 2], ['E4', 2], ['D4', 4],
-      ['A3', 4], ['C4', 4], ['D4', 2], ['E4', 2], ['D4', 4],
-      ['G4', 4], ['E4', 4], ['D4', 2], ['C4', 2], ['A3', 4],
-    ],
-    bass: [
-      ['A2', 8], ['E2', 8], ['A2', 8], ['E2', 8],
-      ['A2', 8], ['E2', 8], ['A2', 8], ['E2', 8],
-    ],
-    drums: 'x...t...x..t....',
-  }),
-  egyptian: makeTrack({
-    tempo: 0.9,
-    lead: [
-      ['E4', 2], ['F4', 2], ['G#4', 2], ['A4', 2], ['B4', 2], ['A4', 2], ['G#4', 2], ['F4', 2],
-      ['E4', 2], ['D#4', 2], ['E4', 2], ['B3', 2], ['C4', 2], ['B3', 2], ['A3', 2], ['G#3', 2],
-      ['E4', 2], ['F4', 2], ['G#4', 2], ['B4', 2], ['A4', 2], ['G#4', 2], ['F4', 2], ['E4', 2],
-      ['D#4', 2], ['E4', 2], ['G#4', 2], ['A4', 2], ['B4', 2], ['C5', 2], ['B4', 2], ['E4', 2],
-    ],
-    bass: [
-      ['E2', 4], ['B2', 4], ['E2', 4], ['B2', 4], ['E2', 4], ['B2', 4], ['E2', 4], ['B2', 4],
-      ['E2', 4], ['B2', 4], ['E2', 4], ['B2', 4], ['E2', 4], ['B2', 4], ['E2', 4], ['B2', 4],
-    ],
-    drums: 'x.x..x.x.x..x.x.',
-  }),
-  hippocratic: makeTrack({
-    tempo: 1,
-    leadType: 'triangle',
-    lead: [
-      ['D4', 2], ['F4', 2], ['A4', 2], ['F4', 2], ['C4', 2], ['E4', 2], ['G4', 2], ['E4', 2],
-      ['A3', 2], ['C4', 2], ['E4', 2], ['C4', 2], ['G3', 2], ['B3', 2], ['D4', 2], ['B3', 2],
-      ['D4', 2], ['F4', 2], ['A4', 2], ['C5', 2], ['G4', 2], ['E4', 2], ['C4', 2], ['E4', 2],
-      ['A3', 2], ['C4', 2], ['E4', 2], ['G4', 2], ['D4', 2], ['F4', 2], ['A4', 2], ['F4', 2],
-    ],
-    bass: [
-      ['D2', 8], ['D2', 8], ['C2', 8], ['C2', 8],
-      ['A2', 8], ['A2', 8], ['G2', 8], ['G2', 8],
-    ],
-    drums: 'x...h.x.x...h...',
-  }),
-  bimaristan: makeTrack({
-    tempo: 0.95,
-    lead: [
-      ['D4', 1], ['Eb4', 3], ['F#4', 4], ['G4', 2], ['F#4', 2], ['Eb4', 2], ['D4', 2],
-      ['D4', 1], ['Eb4', 3], ['F#4', 2], ['G4', 4], ['A4', 2], ['G4', 2], ['F#4', 2],
-      ['D4', 1], ['Eb4', 3], ['F#4', 4], ['A4', 2], ['Bb4', 2], ['A4', 2], ['G4', 2],
-      ['F#4', 1], ['G4', 3], ['A4', 4], ['G4', 2], ['F#4', 2], ['Eb4', 2], ['D4', 2],
-    ],
-    bass: [
-      ['D2', 8], ['G2', 8], ['D2', 8], ['D2', 8],
-      ['G2', 8], ['D2', 8], ['G2', 8], ['D2', 8],
-    ],
-    drums: 'x..x.x..x..x.tt.',
-  }),
-  apothecary: makeTrack({
-    tempo: 1,
-    leadType: 'triangle',
-    lead: [
-      ['G4', 4], ['A4', 4], ['Bb4', 4], ['A4', 4],
-      ['C5', 4], ['D5', 4], ['C5', 4], ['Bb4', 4],
-      ['G4', 4], ['Bb4', 4], ['A4', 4], ['G4', 4],
-      ['D5', 4], ['C5', 4], ['Bb4', 4], ['G4', 4],
-    ],
-    bass: [
-      ['D4', 4], ['E4', 4], ['F4', 4], ['E4', 4],
-      ['G4', 4], ['A4', 4], ['G4', 4], ['F4', 4],
-      ['D4', 4], ['F4', 4], ['E4', 4], ['D4', 4],
-      ['A4', 4], ['G4', 4], ['F4', 4], ['D4', 4],
-    ],
-    drums: 'x.x.x.x.x.x.x.x.',
-  }),
-  plague: makeTrack({
-    tempo: 0.75,
-    leadType: 'sawtooth',
-    lead: [
-      ['D5', 8], ['C5', 4], ['Bb4', 4],
-      ['A4', 8], ['G4', 4], ['F4', 4],
-      ['E4', 8], ['F4', 4], ['D4', 4],
-      ['C5', 8], ['Bb4', 4], ['A4', 4],
-    ],
-    bass: [
-      ['D2', 8], ['A2', 8], ['D2', 8], ['A2', 8],
-      ['D2', 8], ['A2', 8], ['D2', 8], ['A2', 8],
-    ],
-    drums: 'x.......x.....xx',
-  }),
-  patent: makeTrack({
-    tempo: 1.1,
-    lead: [
-      ['C5', 2], [null, 2], ['E5', 2], ['G5', 2], ['A5', 2], ['G5', 2], ['E5', 2], ['D5', 2],
-      ['C5', 2], ['E5', 2], ['F5', 2], ['G5', 2], ['A5', 2], ['G5', 2], ['E5', 2], ['C5', 2],
-      ['D5', 2], [null, 2], ['F5', 2], ['A5', 2], ['B5', 2], ['A5', 2], ['F5', 2], ['D5', 2],
-      ['C5', 2], ['E5', 2], ['G5', 2], ['B4', 2], ['C5', 2], ['D5', 2], ['E5', 2], ['G5', 2],
-    ],
-    bass: [
-      ['C2', 2], ['E3', 2], ['G3', 2], ['E3', 2], ['C2', 2], ['E3', 2], ['G3', 2], ['E3', 2],
-      ['C2', 2], ['E3', 2], ['G3', 2], ['E3', 2], ['C2', 2], ['E3', 2], ['G3', 2], ['E3', 2],
-      ['C2', 2], ['E3', 2], ['G3', 2], ['E3', 2], ['C2', 2], ['E3', 2], ['G3', 2], ['E3', 2],
-      ['C2', 2], ['E3', 2], ['G3', 2], ['E3', 2], ['C2', 2], ['E3', 2], ['G3', 2], ['E3', 2],
-    ],
-    drums: 'x.h.x.h.x.h.x.h.',
-  }),
-  antisepsis: makeTrack({
-    tempo: 1,
-    leadType: 'triangle',
-    bar: 12,
-    lead: [
-      ['F4', 4], ['A4', 4], ['C5', 4],
-      ['C5', 4], ['Bb4', 4], ['A4', 4],
-      ['F4', 4], ['G4', 4], ['A4', 4],
-      ['C5', 4], ['A4', 4], ['F4', 4],
-      ['Bb4', 4], ['A4', 4], ['G4', 4],
-      ['A4', 4], ['C5', 4], ['D5', 4],
-      ['C5', 4], ['Bb4', 4], ['A4', 4],
-      ['F4', 4], ['G4', 4], ['F4', 4],
-    ],
-    bass: [
-      ['F2', 4], ['C3', 4], ['A2', 4], ['C2', 4], ['G2', 4], ['E2', 4],
-      ['Bb2', 4], ['F3', 4], ['D3', 4], ['F2', 4], ['C3', 4], ['A2', 4],
-      ['D2', 4], ['A2', 4], ['F3', 4], ['C2', 4], ['G2', 4], ['E2', 4],
-      ['F2', 4], ['C3', 4], ['A2', 4], ['Bb2', 4], ['F3', 4], ['D3', 4],
-    ],
-    drums: 'x..h..h..h..',
-  }),
-  pharmaceutical: makeTrack({
-    tempo: 1.25,
-    lead: [
-      ['C5', 4], ['E5', 2], ['G5', 2], ['F5', 4], ['E5', 4],
-      ['D5', 4], ['F5', 2], ['A5', 2], ['G5', 4], ['E5', 4],
-      ['C5', 4], ['G5', 2], ['E5', 2], ['D5', 4], ['C5', 4],
-      ['B4', 4], ['D5', 2], ['G5', 2], ['A5', 6], [null, 2],
-    ],
-    bass: [
-      ['C3', 8], ['A2', 8], ['D3', 8], ['G2', 8],
-      ['C3', 8], ['A2', 8], ['G2', 8], ['G3', 8],
-    ],
-    drums: 'x..x..x...x.x...',
-    danger: pharmaceuticalDanger,
-  }),
-  genetic: makeTrack({
-    tempo: 1.4,
-    bassType: 'sawtooth',
-    lead: [...geneticArpeggio, ...geneticArpeggio].map((note) => [note, 1]),
-    bass: Array.from({ length: 32 }, (_, index) => [
-      ['A2', 'F2', 'C2', 'G2'][index % 4],
-      2,
-    ]),
-    drums: 'x.h.x.h.x.hhx.h.',
-  }),
-});
-
-const TRACK_ALIASES = Object.freeze({
-  chill: { id: 'pharmaceutical', danger: false },
-  fever: { id: 'pharmaceutical', danger: true },
-});
-
-function requestedTrack(name, danger = false) {
-  const alias = TRACK_ALIASES[name];
-  return alias ?? { id: name, danger };
+/** The score, validated once at load: a malformed score fails here, loudly. */
+const MODEL = parseScore(SCORE);
+if (MODEL.ticksPerBeat !== SUBS) {
+  throw new Error(`the scheduler plays sixteenths, not ${MODEL.ticksPerBeat} ticks a beat`);
 }
 
-function copyTrack(track) {
+/** This renderer voices exactly three stems: a melody, a bass and a kit. */
+function stem(arrangement, name, role) {
+  const found = arrangement.stems[name];
+  if (found?.role !== role) {
+    throw new Error(`${arrangement.id}: audio.js needs a ${role} stem named "${name}"`);
+  }
+  return found;
+}
+
+/**
+ * A realized arrangement in the shape the scheduler plays: [note, sixteenths]
+ * pairs, one drum character per sixteenth, and the bar counted in sixteenths.
+ * Fresh arrays every time, because the score's own are frozen.
+ */
+function toTrack(arrangement) {
+  const lead = stem(arrangement, 'lead', 'melody');
+  const bass = stem(arrangement, 'bass', 'bass');
   return {
-    ...track,
-    lead: track.lead.map(([note, length]) => [note, length]),
-    bass: track.bass.map(([note, length]) => [note, length]),
-    drums: track.drums,
+    bpm: arrangement.bpm,
+    bar: arrangement.barTicks,
+    leadType: lead.timbre,
+    bassType: bass.timbre,
+    lead: lead.events.map(([note, length]) => [note, length]),
+    bass: bass.events.map(([note, length]) => [note, length]),
+    drums: stem(arrangement, 'drums', 'percussion').pattern,
   };
+}
+
+/**
+ * Every era's calm loop, realized from the score in src/score-data.js. The
+ * notes live there now, as data another engine can read; see docs/score.md.
+ */
+export const TRACKS = Object.freeze(
+  Object.fromEntries(
+    Object.keys(MODEL.arrangements).map((id) => [id, toTrack(realize(MODEL, id))]),
+  ),
+);
+
+/** A name and danger -> the arrangement to play. Aliases pin their own danger. */
+function requestedTrack(name, danger = false) {
+  const alias = MODEL.aliases[name];
+  if (!alias) return { id: name, danger };
+  return { id: alias.arrangement, danger: alias.inputs.danger ?? danger };
 }
 
 /** Returns the effective era track, including the requested danger treatment. */
 export function resolveTrack(name, danger = false) {
   const requested = requestedTrack(name, danger);
-  const base = TRACKS[requested.id];
-  if (!base) return null;
-  const resolved = copyTrack(base);
-  if (!requested.danger) return resolved;
-  if (base.danger) {
-    Object.assign(resolved, base.danger);
-    resolved.lead = (base.danger.lead ?? resolved.lead)
-      .map(([note, length]) => [note, length]);
-    resolved.bass = (base.danger.bass ?? resolved.bass)
-      .map(([note, length]) => [note, length]);
-  } else {
-    resolved.tempo = base.tempo * 1.2;
-    resolved.drums = [...base.drums].map((step, index) =>
-      step === '.' && index % 2 === 1 ? 'h' : step,
-    ).join('');
-  }
-  delete resolved.danger;
-  return resolved;
+  const arrangement = realize(MODEL, requested.id, { danger: requested.danger });
+  return arrangement ? toTrack(arrangement) : null;
 }
 
 export class AudioEngine {
@@ -686,10 +513,9 @@ export class AudioEngine {
     }
     if (!this.ctx || this.playing || !this.musicEnabled) return;
     this.playing = true;
-    // tempo multiplies the 120bpm base the loops were written against; bar is
-    // counted in sixteenths, so the waltz's 12 means three beats to the bar.
+    // bar is counted in sixteenths, so the waltz's 12 means three beats to the bar.
     this.transport.setMeter(this.track.bar / SUBS);
-    this.transport.setTempo(120 * this.track.tempo);
+    this.transport.setTempo(this.track.bpm);
     this.transport.start(this.ctx.currentTime + 0.1);
     this.nextStep = 0;
     this.timer = setInterval(() => this.schedule(), 25);

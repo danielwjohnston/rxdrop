@@ -55,16 +55,17 @@ The same goes for any file over ~800 lines — see the token budget below.
 
 ```
 npm start                     # serve at localhost:8080
-npm test                      # 327 unit tests, ~1.0s   <- cheapest useful check
+npm test                      # 333 unit tests, ~2s     <- cheapest useful check
 node tools/playtest.mjs       # the bot plays; reports on feel, not legality
 node tools/gauntlet.mjs       # the full gate, ~5 minutes
+node tools/reference-traces.mjs  # the porting contract still replays (docs/portability.md)
 ```
 
 **The gauntlet's cost is not evenly spread.** Measured:
 
 | stage(s) | time |
 | --- | --- |
-| eleven stages together | **1.4 s** |
+| eleven stages together | **2.8 s** |
 | `modifiers` | ~240 s |
 | `browser` | ~65 s |
 
@@ -77,7 +78,7 @@ node tools/gauntlet.mjs rules determinism timing boundaries fuzz \
   resistance collateral hybrid versus playtest performance
 ```
 
-That is 11 of 13 stages in under two seconds. Add `modifiers` when you touch
+That is 11 of 13 stages in about three seconds. Add `modifiers` when you touch
 `src/modifiers.js` or `src/light.js`; add `browser` when you touch
 `index.html`, `src/styles.css`, `src/main.js` or `sw.js`. Run the whole thing
 once, before handing off. Never run the full gauntlet to check a one-line edit.

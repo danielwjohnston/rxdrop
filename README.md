@@ -300,7 +300,7 @@ clipped inside.
 ## Development
 
 ```sh
-npm test           # 327 unit tests, no dependencies, well under a second
+npm test           # 333 unit tests, no dependencies, about two seconds
 npm run test:watch # re-run on change
 
 # End-to-end checks in a real browser (Playwright is not a dependency):
@@ -308,6 +308,7 @@ npm i --no-save playwright && npx playwright install chromium
 npm run test:browser  # 43 checks: menus, controls, versus, daily, offline, mobile, finale
 
 npm run gauntlet   # the full protocol below: every stage, one gate
+node tools/reference-traces.mjs  # the porting contract still replays (docs/portability.md)
 ```
 
 ### The UltraGauntlet

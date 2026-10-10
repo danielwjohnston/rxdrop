@@ -49,7 +49,9 @@ warning instead of a loss.
 - `ee6b344` *Fix rotation drift and the lock timing that made the game unfair
   (#6)*; `6c9527f` *Add a neck row (#7)*.
 - `assets/screenshot.png`, `assets/versus.png` — the two README screenshots,
-  the only images the repository had for its first three days.
+  the only images the repository had for its first three days. They were
+  re-captured on 10 October; the originals are `git show
+  4c8a9a5:assets/screenshot.png` and `git show 4c8a9a5:assets/versus.png`.
 
 **DECISION.** Ship a finished clone first, then decide what it is. The
 gauntlet stays as the gate for everything after.

@@ -1,6 +1,6 @@
 # RxDrop current project status
 
-**Last reviewed:** 9 October 2026, at `main` 583cf4e  
+**Last reviewed:** 10 October 2026, at `main` 4c8a9a5  
 **Canonical implementation:** `main`  
 **Primary target:** Web/PWA  
 **Secondary target:** Godot, after the web version reaches a Principal-approved completion point
@@ -60,7 +60,7 @@ Two consequences:
 
 The gate consists of:
 
-- **313 unit tests** on Node 20 and Node 22;
+- **318 unit tests** on Node 20 and Node 22;
 - the thirteen-stage UltraGauntlet;
 - **43 browser checks** covering menus, input, daily, versus, offline/mobile
   behavior, and the campaign-complete path.
@@ -88,6 +88,10 @@ change rather than inheriting an older green result.
 > - No branch carries a test file or a test case that `main` lacks.
 >
 > The guards are present and green. The claim is retired, not recovered.
+>
+> **The suite is 318 again, genuinely (10 October).** `test/metadata.test.js`
+> added five tests, taking 313 to 318. Both figures are correct for their
+> dates; do not "correct" this one back to 313.
 
 ## Current roadmap
 
@@ -102,7 +106,7 @@ Principal decisions.
 | Item | Class | Waiting on |
 | --- | --- | --- |
 | Web-complete/freeze decision | critical blocker for Godot | Principal: decision, plus #47 scope call |
-| #50 repository settings and branch cleanup | high value, small | Principal: admin-only GitHub settings |
+| #50 remainder: auto-delete, branch cleanup, social preview | high value, small | Principal: admin-only GitHub actions |
 | #40 engine-neutral score schema | normal implementation | Unblocked; gates #41 and #43 |
 | #42 Sonotherapy prototype | normal implementation | Unblocked (#39 done); must land with a bound |
 | #41 adaptive mixer | normal implementation | #40 |
@@ -122,20 +126,50 @@ Principal decisions.
 
 ### Repository administration
 
-Issue #50 remains open, and none of its settings have been applied yet. As of 9
-October the GitHub description still reads "A Dr. Mario clone". No homepage or
-topics are set, and automatic deletion of merged head branches is off. #49 was
-closed in favour of #50, but the settings it asked for are still unchanged.
-These changes are admin-only, so they are Principal actions.
+Most of issue #50 is applied. On 10 October the GitHub API showed the
+description "Medical-history puzzle game where treatments evolve and infections
+adapt.", the GitHub Pages homepage, and all seven topics. Separately, on 9
+October the Principal applied "Allow auto-merge" and the **main: require CI**
+ruleset described under Quality gate.
 
-Separately from #50, the Principal applied two settings on 9 October: "Allow
-auto-merge" and the **main: require CI** ruleset described under Quality gate.
+Four admin actions remain. Agent sessions so far have not had the access for
+any of them:
 
-The PR #48 and #52 head branches (`openai/project-state-sync-2026-10-06`,
-`openai/project-state-followups-2026-10-06`) are merged. The PR #51 duplicate
-(`openai/project-state-convergence`) is closed and reconciled. Those three join
-the cleanup candidates listed in #50. `openai/medical-eras-visual-overhaul`
-stays held under DEC-0001.
+- **Social preview.** `assets/social-preview.png` (1280×640) is committed and
+  is already the page's `og:image`. GitHub's own social-preview setting has no
+  API. Upload it under Settings → General → Social preview.
+- **Automatically delete head branches after merge** is still off.
+- **Delete the fully merged branches.** Each of these sixteen has a merged PR
+  whose head is the branch's current tip, so nothing on them is missing from
+  `main`: `claude/document-main-ci-ruleset` (#54),
+  `claude/retire-c005985-guard-claim` (#55),
+  `claude/roadmap-refresh-2026-10-09` (#53), `claude/rxdrop-setup-khf70o`
+  (#29 and earlier), `devin/1789203310-cross-vendor-review` (#28),
+  `devin/1789237782-practitioner-art` (#32), `devin/1789239438-ten-eras` (#33),
+  `devin/1789244932-browser-testing-skill` (#34),
+  `devin/1789245592-chain-scoring` (#35),
+  `devin/1789245982-light-chamber-pace` (#36),
+  `devin/1789247592-era-chiptunes` (#37),
+  `devin/1789306513-review-fixes` (#45), `devin/audio-transport` (#44),
+  `openai/project-state-followups-2026-10-06` (#52),
+  `openai/project-state-sync-2026-10-06` (#48) and
+  `openai/repository-surface-refresh` (#31).
+- **Create the DEC-0001 archival tag.** DEC-0001 item 2 authorized
+  `archive/openai-medical-eras` at `40ebd8e`. The repository has no tags, so
+  that tag does not exist yet.
+
+Three branches were closed without merging, and each still holds files that
+`main` lacks. They are not fully merged, so deleting them needs a decision,
+ideally with an archive tag first:
+
+- `openai/project-state-convergence` (#51, the duplicate reconciled by #52);
+- `devin/1789307833-consolidate-legacy` (#46, superseded);
+- `openai/master-multi-agent-protocol` (#30). It alone carries
+  `.agents/agents/openai-gpt-5.6-sol.md` and
+  `.agents/tasks/TASK-0001-bootstrap-master-protocol.md`.
+
+`openai/medical-eras-visual-overhaul` stays held under DEC-0001. Its deletion
+waits on that decision's verification condition, not on tidiness.
 
 ### Audio
 
@@ -182,16 +216,22 @@ for why earlier branch decisions were made, but it is not the live roadmap.
 
 ## Repository-facing metadata
 
-Tracked repository files describe RxDrop as a medical-history treatment puzzle.
-The GitHub repository settings should match that framing as well:
+Tracked files and GitHub settings now both describe RxDrop as a medical-history
+treatment puzzle:
 
-- description: **Medical-history puzzle game where treatments evolve and infections adapt**
-- homepage: **https://danielwjohnston.github.io/rxdrop/**
-- suggested topics: `puzzle-game`, `javascript`, `pwa`, `canvas`,
-  `medical-history`, `game-development`, `godot`
-
-These fields live in GitHub repository settings rather than tracked files.
-As of 9 October they have not been applied. Issue #50 tracks them.
+- description: **Medical-history puzzle game where treatments evolve and infections adapt.**
+  (applied);
+- homepage: **https://danielwjohnston.github.io/rxdrop/** (applied);
+- topics: `puzzle-game`, `javascript`, `pwa`, `canvas`, `medical-history`,
+  `game-development`, `godot` (applied);
+- `index.html` carries the matching meta description plus Open Graph and
+  Twitter tags. Its `og:image` is `assets/social-preview.png`.
+  `test/metadata.test.js` fails if that file goes missing, changes size or
+  drifts out of step with the descriptions;
+- the README screenshots `assets/screenshot.png` and `assets/versus.png` were
+  re-captured on 10 October from the current game, with the bot playing level 9
+  at seed 8675309. The September captures showed the old "Dr. Mario style"
+  footer.
 
 ## Source hierarchy
 

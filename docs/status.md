@@ -60,7 +60,7 @@ Two consequences:
 
 The gate consists of:
 
-- **327 unit tests** on Node 20 and Node 22;
+- **333 unit tests** on Node 20 and Node 22;
 - the thirteen-stage UltraGauntlet;
 - **43 browser checks** covering menus, input, daily, versus, offline/mobile
   behavior, and the campaign-complete path.
@@ -92,7 +92,7 @@ change rather than inheriting an older green result.
 > **The suite was 318 again, genuinely, on 10 October.** `test/metadata.test.js`
 > added five tests, taking 313 to 318. Both figures are correct for their
 > dates, so do not "correct" that 318 back to 313. The score tests for #40 then
-> took the suite to 327.
+> took the suite to 327, and the Phase 0 reference-trace tests to 333.
 
 ## Current roadmap
 
@@ -198,12 +198,34 @@ in issue #47 is a separate narrative/event layer and is not implemented. Its
 inclusion in the web-complete scope versus a later narrative expansion remains a
 product decision rather than a technical blocker.
 
-### Godot
+### Godot and native
 
-There is no Godot implementation in this repository yet. The web version remains
-the reference implementation. Portability work should preserve deterministic
-gameplay semantics and engine-neutral contracts rather than copy browser
-architecture literally.
+There is no Godot or native implementation in this repository yet. The web
+version remains the reference implementation. Portability work should preserve
+deterministic gameplay semantics and engine-neutral contracts rather than copy
+browser architecture literally.
+
+Phase 0, the engine-neutral groundwork, landed on 10 October. It does not choose
+an engine. `docs/portability.md` holds three things:
+
+- the measured audit;
+- a parity matrix;
+- the contract a port is checked against: nine reference traces in
+  `test/fixtures/traces/` plus `test/fixtures/rotation-golden.json`, recorded
+  and checked by `tools/reference-traces.mjs`.
+
+That is the JavaScript half of Phase B's differential oracle
+(`docs/branch-audit.md`, B2).
+
+Two findings bind any port:
+
+- **The rules are deterministic per frame length, not per elapsed time.** Two
+  8 ms steps diverge from one 16 ms step, so a port must use a fixed 16 ms step.
+- **Rules state carries binary64 floats.** A C/C++ build needs
+  `-ffp-contract=off`.
+
+A native C++/SDL2 roadmap has been proposed. Its review and decision record wait
+on the Principal supplying the roadmap text.
 
 ## Branch and history policy
 

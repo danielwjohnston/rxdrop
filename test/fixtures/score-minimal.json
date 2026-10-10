@@ -1,0 +1,64 @@
+{
+  "format": "rxdrop-score",
+  "version": 1,
+  "ticksPerBeat": 4,
+  "inputs": {
+    "danger": { "kind": "flag" },
+    "resistance": { "kind": "level" },
+    "mutation": { "kind": "event" }
+  },
+  "kit": { "x": "kick", "h": "hat" },
+  "timing": { "sonotherapy": { "windowMs": 90, "strongBeat": "downbeat" } },
+  "motifs": {
+    "theme": { "events": [["A4", 4], ["C5", 4], ["E5", 4], ["C5", 4]] },
+    "pulse": { "pattern": "x.h." }
+  },
+  "variants": [
+    {
+      "id": "danger",
+      "when": { "input": "danger" },
+      "transforms": [
+        { "op": "scaleTempo", "by": 1.25 },
+        { "op": "fillRests", "stem": "drums", "hit": "x", "every": 4, "offset": 1 }
+      ]
+    }
+  ],
+  "arrangements": {
+    "ancient": {
+      "era": "protomedicine",
+      "bpm": 90,
+      "meter": [4, 4],
+      "stems": {
+        "lead": { "role": "melody", "timbre": "triangle", "part": [{ "motif": "theme" }] },
+        "bass": { "role": "bass", "timbre": "triangle", "part": [["A2", 16]] },
+        "drums": { "role": "percussion", "pattern": [{ "motif": "pulse", "repeat": 4 }] }
+      },
+      "variants": [
+        {
+          "id": "tension",
+          "when": { "input": "resistance", "atLeast": 0.5 },
+          "stems": { "bass": { "part": [["Bb2", 16]] } }
+        }
+      ]
+    },
+    "modern": {
+      "era": "genetic",
+      "bpm": 140,
+      "meter": [3, 4],
+      "stems": {
+        "lead": {
+          "role": "melody",
+          "timbre": "square",
+          "part": [{ "motif": "theme", "transpose": 7 }, [null, 4], ["E5", 4]]
+        },
+        "bass": { "role": "bass", "timbre": "sawtooth", "part": [["D2", 12], ["A2", 12]] },
+        "drums": { "role": "percussion", "pattern": ["x..h..", { "motif": "pulse" }, "x.", "x..h..x..h.."] }
+      },
+      "sonotherapy": { "windowMs": 120, "strongBeat": "none" }
+    }
+  },
+  "aliases": {
+    "calm": { "arrangement": "modern", "inputs": { "danger": false } }
+  },
+  "stingers": [{ "on": "mutation", "motif": "theme", "quantize": "bar" }]
+}

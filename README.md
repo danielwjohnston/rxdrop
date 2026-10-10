@@ -300,7 +300,7 @@ clipped inside.
 ## Development
 
 ```sh
-npm test           # 318 unit tests, no dependencies, well under a second
+npm test           # 327 unit tests, no dependencies, well under a second
 npm run test:watch # re-run on change
 
 # End-to-end checks in a real browser (Playwright is not a dependency):
@@ -337,8 +337,10 @@ src/art.js            ligne-claire practitioner sprites and resilient loading
 src/versus.js         two games, garbage routed between them
 src/daily.js          the date-seeded daily challenge
 src/renderer.js       canvas drawing
-src/audio.js          Web Audio synthesis: ten era chiptune loops and the effects
+src/audio.js          Web Audio synthesis: voices the score, plus the effects
 src/transport.js      authoritative beat/bar/subdivision clock for music/gameplay
+src/score.js          the score format: validates and realizes music as data
+src/score-data.js     every era's music, as JSON-shaped data any engine can read
 src/input.js          keyboard, touch, swipe and gamepad
 src/main.js           screens, HUD, persistence and the animation loop
 src/styles.css        every pixel of chrome around the canvas

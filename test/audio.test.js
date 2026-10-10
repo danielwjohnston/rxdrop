@@ -42,7 +42,7 @@ describe('era music', () => {
   it('resolves era danger without losing the era identity', () => {
     const calm = resolveTrack('protomedicine', false);
     const danger = resolveTrack('protomedicine', true);
-    assert.equal(danger.tempo, 0.7 * 1.2);
+    assert.ok(Math.abs(danger.bpm - calm.bpm * 1.2) < 1e-9, 'danger is a fifth faster');
     assert.ok([...danger.drums].some((step, index) => step === 'h' && index % 2 === 1));
     assert.deepEqual(
       resolveTrack('pharmaceutical', true).lead,

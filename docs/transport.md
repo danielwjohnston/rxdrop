@@ -1,6 +1,7 @@
 # The transport
 
-`src/transport.js` is the game's authoritative musical clock. It exists because
+`src/transport.js` is the game's authoritative musical clock. It says *when*
+a beat is; `docs/score.md` says what plays on it. It exists because
 a rhythm-aware mechanic (Sonotherapy, issue #38's family) cannot be built on
 `requestAnimationFrame` or `Date.now()`: musical time has to come from the
 audio clock and nowhere else.

@@ -864,7 +864,7 @@ differently in the cave and in the clean room.
 This is what turns "there are interactions" into "I am finding the
 interactions", and it costs almost nothing: a set of flags, a line of copy each.
 
-*What shipped, and one change that made it better.* Ten discoveries, one for
+*What shipped, and one change that made it better.* Eleven discoveries, one for
 every tracked interaction in the notebook, and each one collects a note **per
 era** rather than a single note from wherever you happened to find it. Find a
 chain reaction in the cave and the shaman writes it up; find one again in the
@@ -882,6 +882,376 @@ whole formulary at once with the real bot and fails if any discovery is one that
 playing can never trigger. Half the runs work the light and half never touch it,
 because a bot that always spends the light can never clear a run in the dark -
 which is a fact about the bot, not about the game.
+
+### The pharmacopoeia - period sources for the Plague Years - `workshop`
+
+*The idea, from the author:* "anything useful to pull from these
+https://github.com/topics/medical-history ?" The one useful answer on that
+topic page was `Shannon-Goddard/pharmacopeia-extemporanea-archive`, an online
+archive of 977 eighteenth-century medicinal recipes searchable by ailment,
+ingredient and preparation. Then: "yes, add the pharmacopoeia idea to
+ideas.md."
+
+The idea is to use that archive as an **index** into the three period sources
+behind it: two printed books and a manuscript, which it took from a modern web
+transcription. The aim is that the Plague Years speak in words physicians of
+the period actually wrote. Nothing in the archive is copied: not its data, its
+tags or its transcriptions.
+
+Filed at `workshop` rather than `proposed`. The licence question is answered,
+and the two printed books have clean public-domain scans. Five things are not
+yet done:
+
+- the check that holds the line, which has not been written;
+- a page-image reading of every quotation;
+- three decisions the sources raise: the place, the date, and the beak's
+  herbs.
+
+Nothing here touches a rule, so every check it needs is a unit test in
+`npm test`.
+
+#### What it is reaching for
+
+[practitioners.md](practitioners.md) dates the Plague Years costume: de Lorme
+1619, Rome 1656, Marseille 1720. That file cites nothing, though, and the de
+Lorme attribution is contested. The words have even less footing. "Receipt",
+"the college", "physic", the watchman's cross, and the rosemary and clove in
+the beak are all plausible, but nothing in the repository ties any of them to
+a text. This idea gives the words a source and a page, and it would be fair to
+give the costume the same treatment.
+
+It is **a voice, not a mechanic.** It lives in the slots the era already has:
+one era note, one subtitle, and the eleven `plague` notes in the Formulary. It
+rewrites what is in those slots and never adds one. The era notes are ten
+sentences long on purpose (README), and the Formulary has exactly one slot per
+era per discovery. A mechanic built on remedies is a separate entry,
+**Compounding**, which carries its own bound.
+
+It also fits the theme better than invented colour can, because the sources
+argue about this game's own subject. Both fall inside the era's dates:
+
+- **Fuller, 1710**, defends the many-ingredient antidote: "I would not have
+  this most noble Antidote thought the worse of, because its jumbled up of
+  such a vast number of Ingredients" (p. 368, read against the page image).
+- **Buchan, 1784**, calls such compounds "those amazing farragos which have so
+  long disgraced the medical art".
+
+Inside one era, the trusted cure becomes the discredited one. That is the arms
+race the game rests on, in the words of two physicians seventy-odd years apart.
+
+Fuller also says something the game says. His alexipharmacks are "generous",
+and in a malignant fever they "sometimes snatch the Sick out of the very Jaws
+of Death". In "the small Pox, Measles, and all those Inflammatory Fevers that
+partake of Malignity" they "are to be look'd upon as no better than Poisons".
+So in 1710 the right medicine for one fever is the wrong one for the next.
+
+One overlap to respect. The Apothecary's era note already says "The theriac has
+sixty ingredients. I could not tell you which one works." That joke belongs to
+that era. The Plague Years should take the *argument* (the antidote defended,
+then mocked) and not repeat the joke.
+
+#### What the books offer
+
+These are candidates only. Each must be checked against its page image before
+it goes anywhere.
+
+- **Fuller:**
+  - the "Antiloimic Decoction", an anti-plague remedy (Decoctions, pp. 48-49,
+    per OCR);
+  - the "Alexipharmac Powder", "a Champion against malignant and pestilential
+    Fevers, for it encourageth the Spirits, and drives out the Enemy";
+  - Epidemial Water, Treacle Water, Diascordium, Venice Treacle, Mithridate,
+    Water of Snails, Glyster, Cataplasm;
+  - his form names, to be read from the scan in original spelling: Cawdle,
+    Electuary, Julep, Lohoch, Ptisan and others. The archive's list of them is
+    the transcriber's index, and it modernises "Cawdle" to "Caudle".
+  - His preface uses "Receipts" and "Physic", which gives those two words a
+    source.
+- **Buchan, "Of Infection":**
+  - Those who wait on the sick "should stuff their noses with tobacco, or some
+    other strong smelling herb, as rue, tansy, or the like ... sprinkle the
+    room where he lies with vinegar". That gives the `tolerance` note's vinegar
+    a source.
+  - The putrid-fever chapter names "rue, tansy, rosemary, wormwood" to be
+    smelled by those near the patient.
+  - Also: "Some attention indeed is generally paid to the plague; but other
+    diseases pass unregarded."
+- **Buchan, the balsam of many names:** "The Commander's Balsam, Persian
+  Balsam, Balsam of Berne, Wade's Balsam, Friar's Balsam, Jesuit's Drops,
+  Turlington's Drops". He says it "does not deserve the extravagant encomiums
+  which have been bestowed on it". This is a bridge to the patent-medicine era
+  that follows.
+
+#### The bound: the archive is an index, never a source
+
+The archive's `LICENSE.md` is byte-identical on `main`, `master` and the
+`v1.0.0` tag. It reads: "This work is licensed under the Creative Commons
+Attribution-NonCommercial-ShareAlike 4.0 International License." It applies
+that licence to "the digitization, structuring, annotation, and tooling". It
+also says the original texts are "in the public domain due to their age".
+
+Copying from it into an MIT project fails on the licence's own text:
+
+- **NonCommercial.** RxDrop could not offer that material under MIT at all. It
+  would have to ship under NC-SA terms, and the commercial use MIT invites
+  would breach them.
+- **ShareAlike.** Adaptations must be released under BY-NC-SA, or a licence
+  compatible with it. MIT is neither.
+- **Section 4.** Where database rights apply, as they do in the EU and UK,
+  extracting "all or a substantial portion" of the database is allowed for
+  "NonCommercial purposes only".
+
+The problem runs two layers deep. The archive's transcriptions were scraped
+from pascalbonenfant.com, whose pages read "© Stephen Hart 2026" and carry no
+licence. Nothing found says Hart permitted relicensing.
+
+Separately, the same licensor's Zenodo record (DOI 10.5281/zenodo.20576814)
+lists `cc-by-4.0`, while the deposited files say BY-NC-SA. Conflicting
+statements are not a permission to rely on, and Hart's layer sits under both.
+
+This is a reading of the licence text, not legal advice. Where
+"insubstantial" ends depends on jurisdiction.
+
+**What may be taken:**
+
+- What reading the archive privately tells you: which recipe exists, in which
+  book, and for which complaint. Reading needs no licence.
+- Wording and facts from a public-domain scan of the book itself (below), read
+  at the page image and cited by edition and page.
+- A handful of recipe titles, checked against the scan and kept in the
+  original spelling. A handful, not a list.
+- Original period-voice lines written here, informed by what was found.
+- A credit to the archive in docs as a research aid. This entry is that credit.
+
+**What must not be taken:**
+
+- Anything from the archive's `data/` (the recipe and ingredient CSV and JSON
+  files), including any subset. That holds everywhere in the repository, test
+  fixtures and reference traces included.
+- The 89-category ailment taxonomy or its assignments, the parsed ingredients,
+  or the metric conversions.
+- The `instructions`, `notes` and `full_text` transcriptions, **even where they
+  look like the original wording**. They are Hart's digitisation, claimed
+  under the archive's licence. Take the words from a scan instead.
+- Any of the archive's code or site.
+- Its selection or arrangement in bulk, even of bare facts.
+- Anything at runtime: no fetch, and no entry in `sw.js`.
+- Its bibliographic labels as fact. See Buchan, below.
+
+**The check.** Unit tests beside the notes they guard, in
+`test/formulary.test.js` and `test/eras.test.js`. Sources are data stored
+beside the text, never inside it. A discovery gets `sources: { plague: {...} }`
+next to `notes`, because `src/main.js` renders `notes[era]` as plain text. The
+era entry gets `note.source`. Each source is `{ author, title, year, edition,
+ref }`. The check covers the `plague` era only, and has four rules:
+
+1. **A trigger needs a source.** A note needs a source if it contains a
+   quotation mark or a term from `PERIOD_TERMS`. The starting list is
+   `receipt`, `college`, `physic`, `pest` and `cross`. Every source must also
+   be attached to a note. On today's text, rule 1 fails on seven `plague`
+   notes: `collateral`, `hybrid`, `cure`, `antibody`, `phototherapy`, `washed`
+   and `seal`. The source pass cites or rewords each one. That first red run
+   is the check's first falsification.
+2. **The date is in the era.** `year` is an integer inside the era's band,
+   parsed from `era.period`: 1619 to 1799. Because the band ends before 1800,
+   any cited edition is long out of copyright.
+3. **The scan is known and clean.**
+   - *Allowlist:* `ref` must be one of the scans listed in the test itself,
+     each with its rights statement. `practitioners.md` mirrors that list for
+     readers, but the gate does not parse `docs/`.
+   - *Denylist:* `ref` must not contain `github.com`, `githubusercontent`,
+     `github.io`, `zenodo`, `pharmacopeia-extemporanea-archive`,
+     `pascalbonenfant` or `americanrevolution`.
+4. **No trace of the archive in the source.** No file under `src/` contains
+   `pharmacopeia-extemporanea-archive` or `pascalbonenfant`.
+
+Falsify each rule with a case that trips only that rule:
+
+| Rule | Falsifying case |
+| --- | --- |
+| 1 | A quoted Fuller phrase with no source |
+| 2 | A year of 1810 |
+| 3, allowlist | A plain `ref` that is not on the list, such as another archive.org identifier |
+| 3, denylist | A `ref` pointing at a pascalbonenfant page |
+| 4 | The archive's name in a plain comment in `src/eras.js`, with no `ref` |
+
+Watch each fail, revert, and say so in the commit message.
+
+To be frank about the gap: the check cannot see a borrowed word nobody put on
+the list, so review still has to catch those. What it makes impossible is a
+shipped citation that points at the archive, at a modern transcription, or at
+a date outside the era. Whether the notebook ever shows a citation to the
+player is not decided, and the check works either way.
+
+Two smaller bounds ride along. Neither is enforced today, so both need checks
+written:
+
+- **It adds no text.**
+  - Pin `DISCOVERY_IDS` to today's eleven ids.
+  - Cap each `plague` note at 120 characters. The longest today is 105.
+  - Cap the plague era note at 150 characters. It is 132 today.
+  - Falsify with a twelfth discovery, and with a third sentence in one note.
+- **No note gives a dose.** Period receipts are full of opium, mercury and
+  antimony. Use names and voice only.
+  - The `plague` notes must match no number-and-unit pattern. Numbers count as
+    digits or spelled numerals ("one" to "twenty", "half"). Units count as
+    grain, `gr.`, scruple, drachm, dram, ounce, or the apothecary signs ℈, ʒ
+    and ℥.
+  - Falsify with "ten grains of".
+
+The bound every mechanic carries also holds, by construction. `formulary.js` is
+"a reader of the game, never a participant in it", so nothing here can make a
+virus unanswerable.
+
+#### The sources, and where to read them free
+
+| Work | Edition to cite | Free scan | Rights |
+| --- | --- | --- | --- |
+| Thomas Fuller, M.D. (1654-1734), *Pharmacopoeia Extemporanea: or, a Body of Prescripts* | London: Benj. Walford, 1710 (ESTC T120387) | [Wellcome](https://wellcomecollection.org/works/yncqc3km); the same scan with OCR at the [Internet Archive](https://archive.org/details/b30508630) | Public Domain Mark 1.0 |
+| William Buchan, M.D. (1729-1805), *Domestic Medicine* | London, 1784, 8th edition | [Wellcome](https://wellcomecollection.org/works/y8t5vd94); [Internet Archive](https://archive.org/details/b28764377) | Public Domain Mark 1.0 |
+| The "Rev. William Twigge, Notebook" | None. It is an unpublished manuscript | None found | Director's written consent required on its face (National Archives Act 1986, s.17), plus a fee |
+
+**Fuller**
+
+- This is not the seventeenth-century churchman of the same name.
+- The 1710 book is Fuller's own English version of his Latin work, which was
+  first published in 1701 and reached a 4th Latin edition by 1708. The English
+  title page says "With large Additions and Emendations". His preface says he
+  wrote it in English to forestall pirated translations.
+- Which copy the archive's upstream transcribed is unverified, so cite the
+  Wellcome 1710 scan by page.
+- Also free on Wellcome: the English 2nd edition, 1714
+  ([Wellcome](https://wellcomecollection.org/works/d4egjhqx)), and the Latin
+  first edition, 1701
+  ([Wellcome](https://wellcomecollection.org/works/n4g38n4y)).
+
+**Buchan**
+
+- The archive labels its source "1785 (2nd ed.)". That conflicts with the
+  record:
+  - The first edition is Edinburgh, 1769
+    ([Wellcome](https://wellcomecollection.org/works/f662mavr)).
+  - The second edition is London, 1772.
+  - No English 1785 edition was found.
+- The 1784 8th edition is one of two scanned London editions either side of
+  the archive's "1785". The other is the 9th, of 1786 (Wellcome `prxc6nnp`).
+- The archive's Buchan recipes come from the appendix "containing a
+  dispensatory". That appendix is first named on the title page of the 3rd
+  edition, 1774 ([Wellcome](https://wellcomecollection.org/works/fwp7hhg8)).
+  Confidence in that date is medium: it rests on title pages and poor OCR.
+- Cite a scanned edition and page, never the archive's label.
+- Avoid the Google-digitised Philadelphia 1784 copy. The book is public
+  domain, but Google's usage guidelines, prepended to the scan, ask for
+  non-commercial use.
+
+**"Twigge's notebook"**
+
+- It is not a printed book. It is a manuscript in the National Archives of
+  Ireland, reference M 6231, according to the archivist Aideen Ireland's 2008
+  article
+  ([PDF](https://www.nationalarchives.ie/wp-content/uploads/2019/03/Medical_sources_AideenIreland.pdf)).
+- That article attributes it to Diana Wray Twigg, wife of the Archdeacon of
+  Limerick, not to the Rev. William Twigge.
+- Two things are unverified: the reference did not turn up in the live
+  catalogue, and the archive's "c.1715" is unconfirmed.
+- There is no free scan.
+- The National Archives' own
+  [permissions page](https://nationalarchives.ie/help-with-research/copies-publication-and-copyright/permission-to-publish/)
+  requires permission and a fee to publish. On its face, the National
+  Archives Act 1986, s.17(3) makes publishing any part of records in its
+  custody without the Director's written consent an offence. Whether M 6231
+  falls within that section is not confirmed.
+- Every online transcription is a modern copyrighted work.
+- **It stays out of shipped text**, or appears as bare facts at most.
+
+Most quotations on this page come from Internet Archive OCR, with the long s
+restored. One, Fuller p. 368, has been checked against its page image.
+Fuller's recipe headings are blackletter, which OCR garbles. None of it ships
+until it has been read against the page image.
+
+The public-domain conclusions rest on publication and death dates, and on
+Wellcome's rights statements. They are not legal advice.
+
+#### Where it plugs in
+
+- **`src/formulary.js`: the eleven `plague` notes.** Rewrite them in place.
+  - `tolerance` already has the vinegar that Buchan supports.
+  - `collateral` reads "A country receipt, older than the college, did what
+    the college receipts would not." Fuller's preface uses "Receipts". The
+    college is not yet sourced.
+  - Measured on 11 October 2026, three notes (`outbreak`, `phototherapy`,
+    `washed`) share a run of five or more words with their Apothecary
+    counterparts, and `dark` paraphrases its counterpart. This is probably
+    left over from splitting one era into two: `LEGACY_ERA_IDS` maps
+    `apothecary` to `plague`. A source pass is the chance to fix that.
+  - A second check, that no two eras' notes for one discovery share a
+    five-word run, fails on today's text, so its falsification comes free.
+- **`src/eras.js`: the plague `note` and `subtitle`.** The period stays
+  exactly `1619 - 1799`, which `test/eras.test.js` pins.
+- **`docs/practitioners.md`:** a short sources table after Part B. It mirrors
+  the test's allowlist for readers.
+- **`docs/music.md`** is not a plug-in point. It is the register to copy: link
+  the source, and say what is not being claimed.
+- **Not `src/doctors.js`.** It draws the plague doctor; it does not speak, so
+  there are no practitioner lines to enrich.
+- **Not a new module.** A `src/sources.js` would have to join `PRECACHE` in
+  `sw.js`, which `test/precache.test.js` enforces. Citations live as data
+  beside the notes: stored, never fetched.
+
+#### What must be true first
+
+1. **The check exists,** written and seen to fail all five ways above. The
+   two smaller bounds' checks exist too.
+2. **Every quotation has been read against its page image,** not taken from
+   OCR.
+3. **The place is decided.**
+   - The era note is set in Marseille, 1720, under a French and Italian
+     costume. All three sources are in English, from London, Edinburgh and
+     Limerick.
+   - The Formulary's plague voice is already English (receipt, the college,
+     physic), so the sources belong there.
+   - The Marseille note either stays source-free or changes place. That is the
+     author's call, not this page's.
+4. **The date is decided.**
+   - practitioners.md dates the beaked doctor 1619 - c. 1720, though, as
+     above, it cites nothing for that window. That nothing beaked is attested
+     after c. 1720 is the repository's own claim, unverified.
+   - Fuller (1710) sits inside the window. Buchan (1769 on) sits in the era's
+     tail.
+   - *Domestic Medicine* is household Enlightenment medicine, arguably nearer
+     the voice of Patent Medicine. Check 2 settles half the question: a 1784
+     edition cannot be cited from the 1800 - 1906 era. Whether the farrago
+     turn belongs in this era's notes at all is still a decision.
+5. **The beak's herbs are sourced or dropped.**
+   - Buchan names rue, tansy, rosemary and wormwood for those near the sick
+     (1784, putrid-fever chapter), and tobacco and vinegar in "Of Infection".
+     None of that is about a beak.
+   - Clove in the beak has only secondary support.
+   - Either a primary source turns up, or the era note falls back to the
+     subtitle's "aromatic beak", which is safe.
+
+#### Rejected
+
+- **Copying the archive's data, even a filtered handful of rows.** It is
+  CC BY-NC-SA 4.0; see the bound.
+- **Fetching the archive at runtime, or caching it in the PWA.** That hands the
+  same licence to every player, and it would make an offline game need the
+  network.
+- **Practitioner lines.** `doctors.js` has none, and adding a speaking surface
+  breaks the ten-sentence story layer.
+- **A remedy codex:** more notes, a recipe page, a collection. That adds
+  length, not depth. The slot count is the design.
+- **Remedies as a mechanic, inside this entry.** A rule built on ingredients
+  needs its own bound and its own gauntlet check. That is **Compounding**, a
+  separate entry. This one stays a voice, which is what keeps it cheap.
+- **Twigge's notebook in shipped text.** There is no free scan, publishing
+  needs the Director's consent and a fee, the transcriptions are copyrighted,
+  and the attribution is in doubt.
+- **Doses.** Names and voice only.
+- **pascalbonenfant.com or americanrevolution.org as substitute sources.**
+  Both carry their own copyright notices.
+- **The Zenodo record's `cc-by-4.0` as permission.** It conflicts with the
+  same licensor's deposited files.
 
 ## What is already in
 
@@ -922,12 +1292,23 @@ decision - the audio scheduler keeps its beat position private, and a rhythm
 mechanic needs that position queryable and the clock injectable before it is
 anything else. Smaller than first written: see the corrected note above.
 
+**The pharmacopoeia** is at `workshop`. It is a voice for the Plague Years, not
+a mechanic. It would ground the era's note and its eleven Formulary notes in
+two eighteenth-century books that argue about this game's own subject: Fuller
+in 1710 defending the many-ingredient antidote, and Buchan in 1784 calling such
+compounds "amazing farragos". The archive that found them is CC BY-NC-SA 4.0,
+so it serves as an index only. The bound is a unit check that rejects any
+quotation without a public-domain citation dated inside the era. Promotion
+waits on the check, a page-image reading of each quotation, and three
+decisions: the place, the date, and the beak's herbs.
+
 **Phototherapy** shipped and replaced the blackout, which worked and did not
 mean anything. Its three open forks ship as toggles rather than as decisions -
 see above.
 
-Everything else on this page is built. That is not a finish line - it is an empty
-inbox, and the whole point of the page is that anyone can fill it again.
+Everything else on this page is built, apart from the October ward, which is at
+`workshop`. That is not a finish line - it is an inbox, and the whole point of the
+page is that anyone can fill it again.
 
 ### What is knowingly not done
 

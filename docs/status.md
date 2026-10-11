@@ -112,6 +112,7 @@ Principal decisions.
 | #41 adaptive mixer | normal implementation | Unblocked (#40 done) |
 | #43 Godot audio contract | normal implementation | Unblocked (#40 done) |
 | #47 cross-era Historian | product decision first | Principal: web-complete scope or later expansion |
+| Native/Godot Phase 1 hardware spike | investigation | Principal: device steps on the RG351V (`docs/native-roadmap.md`) |
 
 ### Web completion / refinement
 
@@ -120,9 +121,10 @@ Principal decisions.
 - Treat additional mechanics as expansion work rather than requirements for
   declaring the existing campaign structurally complete.
 - Run the full gate and make an explicit Principal-approved web-complete/freeze
-  decision before shifting primary development effort to Godot. As of 9
-  October, no such decision is recorded. `.agents/decisions/` holds only
-  DEC-0001. The open scope question is whether #47 belongs inside web-complete.
+  decision before shifting primary development effort to Godot or a native
+  runtime. As of 10 October, no such decision is recorded. DEC-0002 approves
+  only investigation, not a freeze. The open scope question is whether #47
+  belongs inside web-complete.
 
 ### Repository administration
 
@@ -224,8 +226,13 @@ Two findings bind any port:
 - **Rules state carries binary64 floats.** A C/C++ build needs
   `-ffp-contract=off`.
 
-A native C++/SDL2 roadmap has been proposed. Its review and decision record wait
-on the Principal supplying the roadmap text.
+A native C++17/SDL2 runtime, with the Anbernic RG351V handheld first, was
+proposed on 9 October. `docs/native-roadmap.md` holds it, reconstructed and
+reviewed, because the original text was not available to the session that
+wrote it. DEC-0002 records the Principal's decision on it: investigation and
+Phase 0 are approved, and the runtime stays open. Native C++ and Godot are
+compared on the device in the roadmap's Phase 1 hardware spike before DEC-0003
+picks one.
 
 ## Branch and history policy
 

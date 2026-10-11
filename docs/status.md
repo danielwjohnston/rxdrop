@@ -112,7 +112,7 @@ Principal decisions.
 | #41 adaptive mixer | normal implementation | Unblocked (#40 done) |
 | #43 Godot audio contract | normal implementation | Unblocked (#40 done) |
 | #47 cross-era Historian | product decision first | Principal: web-complete scope or later expansion |
-| Native/Godot Phase 1 hardware spike | investigation | Principal: device steps on the RG351V (`docs/native-roadmap.md`) |
+| Native/Godot Phase 1 hardware spike | investigation | Principal: confirm DEC-0002's scope, then the device steps on the RG351V. Spike code stays on a branch until DEC-0002 open question 2 is answered (`docs/native-roadmap.md`) |
 
 ### Web completion / refinement
 
@@ -224,15 +224,15 @@ Two findings bind any port:
 - **The rules are deterministic per frame length, not per elapsed time.** Two
   8 ms steps diverge from one 16 ms step, so a port must use a fixed 16 ms step.
 - **Rules state carries binary64 floats.** A C/C++ build needs
-  `-ffp-contract=off`.
+  `-ffp-contract=off` and no `-ffast-math`.
 
 A native C++17/SDL2 runtime, with the Anbernic RG351V handheld first, was
 proposed on 9 October. `docs/native-roadmap.md` holds it, reconstructed and
 reviewed, because the original text was not available to the session that
 wrote it. DEC-0002 records the Principal's decision on it: investigation and
 Phase 0 are approved, and the runtime stays open. Native C++ and Godot are
-compared on the device in the roadmap's Phase 1 hardware spike before DEC-0003
-picks one.
+compared on the device in the roadmap's Phase 1 hardware spike before the
+runtime decision, a new DEC record, picks one.
 
 ## Branch and history policy
 

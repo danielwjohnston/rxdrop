@@ -1,9 +1,8 @@
 # DEC-0002: Investigate a native engine; keep the runtime choice open
 
 **Date:** 10 October 2026 (UTC)
-**Status:** **accepted by the Principal**, as relayed in a session handoff.
-The scope reading below is this session's own, and awaits his confirmation.
-It does not adopt a runtime.
+**Status:** **accepted by the Principal.** He confirmed the scope below on
+11 October 2026. It does not adopt a runtime.
 **Author:** cloud agent session `session_014ayrCU3iJV1QJHK8E9cys1` (no
 profile in `.agents/agents/`)
 **Proposal:** [`docs/native-roadmap.md`](../../docs/native-roadmap.md), a
@@ -105,9 +104,16 @@ October 2026 (UTC); the local session it continued ended on 9 October at
   gives it as "investigation and Phase 0 approved; the runtime choice stays
   open until there is hardware evidence".
 
-The two lists below are this session's reading of that scope, for the
-Principal to confirm. They describe Phase 1 by its content, and that content
-governs if `docs/native-roadmap.md` is later reconciled with the original.
+The two lists below were this session's reading of that scope.
+
+**The Principal confirmed them on 11 October 2026**, in the same cloud
+session. He answered "Yes, as written" to this summary: "Phase 1 hardware
+spike approved (a minimal SDL2 build and a minimal Godot build of the same
+worst-case scene, measured on your RG351V); no Phase 2 rules port before the
+web-freeze decision; the runtime choice stays open until the spike's numbers."
+
+The lists describe Phase 1 by its content, and that content governs if
+`docs/native-roadmap.md` is later reconciled with the original.
 
 What this authorises:
 
@@ -116,8 +122,8 @@ What this authorises:
   - a minimal SDL2 build and a minimal Godot build of the same worst-case
     scene, each with the rng and digest ports and a float probe;
   - measured on the RG351V. The device steps are the Principal's.
-  - The code lives on a spike branch or in a separate repository. It is not
-    proposed for `main` until open question 2 is answered.
+  - The code lives on a `claude/` spike branch and is never proposed for
+    `main` (open question 2, answered below).
 
 What it does not authorise:
 
@@ -128,16 +134,20 @@ What it does not authorise:
   decision.** No rules module is ported as the port, and spike code is not
   carried into Phase 2 unreviewed.
 - **Adding a C++ toolchain, a Godot project or a native CI job to `main`.**
-  That is open question 2.
+  Open question 2 was answered "spike branch for now"; a `native/` directory
+  on `main` is decided after Phase 1.
 - **Amending §20.**
 
 ## Open questions for the Principal
 
-1. **The original proposal text.** `docs/native-roadmap.md` is a
+1. **The original proposal text.** Still open. `docs/native-roadmap.md` is a
    reconstruction; the original was not available to the session that wrote
    it.
 2. **May a native toolchain, a Godot project or a native CI job live in this
-   repository?**
+   repository?** **Answered on 11 October 2026: "Spike branch for now."**
+   Spike code lives on a `claude/` branch and is never proposed for `main`.
+   Whether a `native/` directory may join `main` is decided after Phase 1.
+   The considerations behind the question stand for that later decision:
    - `AGENTS.md` forbids build steps and dependencies for the web game.
    - A `native/` directory with its own CMake build, outside the web game's
      load path and with a non-required CI job, would keep that rule's

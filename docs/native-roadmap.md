@@ -1,7 +1,8 @@
 # Native engine and portable platform: roadmap
 
-**Status:** proposal under review. Investigation and Phase 0 are approved;
-the runtime choice is open (DEC-0002).
+**Status:** proposal. Investigation, Phase 0 and the Phase 1 spike are
+approved, and the Principal confirmed that scope on 11 October 2026. The
+runtime choice is open (DEC-0002).
 **Proposed by:** the Principal, 9 October 2026, as "RXDROP Native Engine &
 Portable Gaming Platform".
 **This text:** reconstructed on 10 October 2026, not transcribed, then
@@ -68,10 +69,11 @@ See `docs/status.md`, Quality gate.
      tree, so `native/` must hold none, or the test script must name `test/`.
      And `pages.yml` publishes the whole checkout (`path: '.'`), so `native/`
      must be excluded from the Pages artifact.
-   - Adding it is a Principal decision (DEC-0002, open question 2). Until he
-     answers, Phase 1 code lives on a `claude/` spike branch or in a separate
-     repository, and no PR proposes it for `main`. The ruleset requires CI
-     checks, not review, so such a PR could merge without him.
+   - Adding it is a Principal decision (DEC-0002, open question 2). On 11
+     October 2026 he answered "spike branch for now". Phase 1 code lives on a
+     `claude/` spike branch, and no PR proposes it for `main`. The ruleset
+     requires CI checks, not review, so such a PR could merge without him.
+     Whether a `native/` directory may join `main` is decided after Phase 1.
 2. **The required CI checks keep their names.** A native job can be added
    beside them, but not in place of them (`docs/status.md`, Quality gate).
 3. **§20 names Godot as the secondary target.** Choosing a native C++ runtime
@@ -148,8 +150,8 @@ opinion, which is why DEC-0002 waits on it.
    latency.
 5. Read off the numbers the build prints.
 
-**Agent, on a spike branch** (not `main`, until DEC-0002 open question 2 is
-answered):
+**Agent, on a `claude/` spike branch** (never `main`; DEC-0002 open question
+2):
 
 - **Builds that load on the firmware.** These wait on the facts above.
   - The SDL2 build is cross-compiled for AArch64 against a sysroot whose
@@ -308,15 +310,16 @@ two real uses rather than one guess.
 | A 16 ms step on a 60 Hz panel runs slow or doubles a step, and drifts from the beat | Phase 1 measures the refresh, and its findings record picks the loop policy. |
 | Audio latency on the handheld breaks Sonotherapy (#42) | Phase 1 measures it end to end, on film. The 90 ms window is the score's default, and no arrangement may widen it past half a beat (`docs/score.md`), so the window cannot absorb the latency. The calibration offset is what absorbs it, and `docs/ideas.md` already states that offset as a bound. |
 | A wrong device clock gives the wrong daily | Phase 1 checks the clock. If it cannot be trusted, the daily needs network time or a date the player confirms. |
-| A second toolchain to maintain forever | A separate directory and a non-required CI job, both subject to DEC-0002 open question 2. Phase 5 extraction waits on a second game. |
+| A second toolchain to maintain forever | For now it stays on a spike branch, off `main` (DEC-0002, open question 2). If a `native/` directory is allowed after Phase 1, it gets a non-required CI job. Phase 5 extraction waits on a second game. |
 | Two runtimes evaluated, neither finished | The runtime decision picks one. The traces make a later switch cheaper, not free. |
 
 ## What needs the Principal
 
 - the original proposal text, to reconcile with this page;
-- confirmation of DEC-0002's scope (its two lists);
 - the device steps in Phase 1;
 - the web-freeze decision (`docs/status.md`, Next up);
 - the runtime decision after Phase 1;
-- whether a native toolchain, a Godot project or a native CI job may live in
-  this repository at all (DEC-0002, open question 2).
+- after Phase 1, whether a `native/` directory may join `main`.
+
+DEC-0002's scope and open question 2 ("spike branch for now") were answered
+on 11 October 2026.

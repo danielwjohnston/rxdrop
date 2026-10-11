@@ -112,7 +112,7 @@ Principal decisions.
 | #41 adaptive mixer | normal implementation | Unblocked (#40 done) |
 | #43 Godot audio contract | normal implementation | Unblocked (#40 done) |
 | #47 cross-era Historian | product decision first | Principal: web-complete scope or later expansion |
-| Native/Godot Phase 1 hardware spike | investigation | Principal: confirm DEC-0002's scope, then the device steps on the RG351V. Spike code stays on a branch until DEC-0002 open question 2 is answered (`docs/native-roadmap.md`) |
+| Native/Godot Phase 1 hardware spike | investigation | Principal: the device steps on the RG351V. Scope confirmed 11 October; spike code stays on a `claude/` branch (DEC-0002, `docs/native-roadmap.md`) |
 
 ### Web completion / refinement
 

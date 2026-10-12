@@ -664,8 +664,12 @@ const MIN_VIRUS_ROW = 4;
 const MIN_VIRUS_ROWS = 10;
 const MAX_VIRUS_ROWS = 13;
 
-/** True if putting `color` at (x, y) would make a line of `runLength`. */
-function createsRun(board, x, y, color, runLength) {
+/**
+ * True if putting `color` at (x, y) would make a line of `runLength`. Only
+ * `inBounds` and `get` are read, so a caller can hand it a view of the board
+ * with cells it has decided on but not yet placed.
+ */
+export function createsRun(board, x, y, color, runLength) {
   const count = (dx, dy) => {
     let n = 0;
     let cx = x + dx;

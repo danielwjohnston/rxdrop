@@ -828,6 +828,24 @@ longer, so the budget truncated them mid-run and the comparison inverted - the
 check reported rationing as easier when it was not, for a reason that had
 nothing to do with the game.
 
+*A third finding, 11 October 2026: the check measures one configuration.* It
+builds `new Game({ level: 4, speed: 'LOW', seed, modifiers })`, so it only ever
+runs with resistance off, at level 4. Run the same loop and the same bot with
+level and resistance exposed, and the claim holds only where the check looks.
+The Organ Trial design panel found this, and it was reproduced for this note.
+
+| LOW, the check's own loop | plain | rationing |
+| --- | --- | --- |
+| level 4, resistance off (10 seeds): viruses per capsule | 0.031 | 0.023 |
+| level 4, resistance on (10 seeds): viruses per capsule | 0.023 | **0.031** |
+| level 0, resistance off (6 seeds): viruses per capsule | 0.025 | **0.029** |
+
+With resistance on, or at level 0, rationing kills viruses *faster* per capsule
+than the plain bottle. That is the relief this entry says was fixed. The check
+should sweep resistance on and more than one level before any design leans on
+rationing again. Until it does, "worse than a plain bottle" is true of one
+configuration, not of the modifier.
+
 ### Contaminated batch - `shipped`
 
 Some capsules are inert - they stack, they fall, they clear nothing. Dumping
@@ -845,11 +863,547 @@ judgement - which is the version of the decision worth having.
 A column is sealed off and refuses capsules until you clear beside it. The
 bottle gets narrower, and the shape of the board becomes the puzzle.
 
-*The bound:* a seal lifts on its own after ten capsules whatever you do, and
-never takes a spawn column. And it blocks *placement only* - gravity, matching
-and clearing all still see straight through it, so a run that passes through a
-sealed column still clears and whatever was in there before the seal is still
-in play. A sealed column is a narrower bottle, not a frozen one.
+*The bound:* a seal lifts on its own after six capsules (`QUARANTINE_MAX`)
+whatever you do, and never takes a spawn column. And it blocks *placement only*
+- gravity, matching and clearing all still see straight through it, so a run
+that passes through a sealed column still clears and whatever was in there
+before the seal is still in play. A sealed column is a narrower bottle, not a
+frozen one. (This bound said "ten capsules" until 11 October 2026;
+`src/constants.js` is the authority.)
+
+### The Organ Trial - `workshop`
+
+*The idea, from the author:* "oregon trail by organ trial?", then "yes, add the
+organ trial too." The pun came with three threads:
+
+- **the trail:** the Oregon Trail's loop of landmarks, supplies that run out,
+  hazards, a choice of pace and provisions, and a tombstone;
+- **organ:** a body map where each stop is an organ with its own twist;
+- **trial:** the clinical trial, from James Lind's scurvy comparison to the
+  1948 streptomycin trial.
+
+Filed at `workshop`. Three designs were drafted, one led by each thread. A
+designer and an engineer judged them against the code. This entry builds on the
+**trial** and grafts the organ and the tombstone onto it. The other two designs
+are under Rejected, with the evidence against each. Nothing here is built.
+
+#### What it is reaching for
+
+On about a third of days the daily already draws exactly one modifier (rolls
+2-3 of 6 in `dailyModifiers`). On those days everyone plays the same condition,
+and the question is *can you beat it*. The trial asks a different question of
+the same bottle: *what does this condition do to this patient?*
+
+That takes the laboratory frame of the 12 September addendum a step further.
+The same sample still goes to every lab, but each lab is handed one regimen.
+
+It is also the tool this page keeps asking for and does not have:
+
+- Phototherapy's forks ship as toggles because they have to be settled "on
+  evidence" by "a hand".
+- Rationing's verdict has already inverted once, on a badly chosen measure.
+
+A matched comparison on one patient is how that evidence gets gathered, and the
+gauntlet's determinism makes the match exact. Lind could only approximate a
+matched pair, "as similar as I could have them". A seed hands both arms the
+identical patient.
+
+From the Oregon Trail it keeps the pun and the tombstone. A journey version was
+designed and cut; see Rejected.
+
+#### Where the judges split
+
+The designer chose the trial: it found no fatal flaw, and it called the
+open-label second arm the most novel and cheapest feature in any of the three
+designs. The engineer chose the body map, whose strain carries tolerance from
+stop to stop.
+
+The tie broke on one fact, checked against `src/constants.js`: the body map's
+memory does not survive one resistance tick. A carried virus arrives at
+`TOLERANCE_AT` (2). With resistance forced on, it reaches `RESISTANCE_MAX` (3)
+at `RESISTANCE_INTERVAL` (8) capsules, and then mutates like any other.
+
+The engineer's objections to the trial still stand, and are listed under
+"What must be true first":
+
+- it changes no rule inside the bottle;
+- it bends the daily's "same for everyone" promise on a third of days;
+- intention-to-treat makes the daily harsher;
+- its comparisons are small numbers.
+
+#### The shape: one patient, two arms, a sealed envelope
+
+1. **The card.** A trial day's card reads, for example: "Trial: outbreak
+   against standard care. The patient presents at the lungs. Level 8 · LOW ·
+   Resistance. Open the envelope to enrol." Pair days and plain days look
+   exactly as they do now.
+2. **The envelope.** Confirm opens it, and **opening it enrols the patient.**
+   - It reads either *standard care* or the day's modifier.
+   - The arm comes from a per-device series seed and the UTC date key. It is
+     fixed for that day on that device, and a reload cannot re-roll it.
+   - Once opened, the attempt is registered whatever happens: this is
+     intention-to-treat.
+   - In 1948 the envelope was opened only after the patient had been accepted,
+     so nobody could see the allocation and then decline to enrol. Enrolling
+     at the envelope keeps that property. A design that enrolled at the first
+     locked capsule would let a player read their arm and walk away.
+3. **The patient.** Both arms share seed, level, speed, resistance flag and
+   starting grid, cell for cell, because `generateLevel(board, level, rng)`
+   never reads the modifiers. Standard care is the plain bottle, 1948's "bed
+   rest alone". The intervention is the same bottle plus the day's one
+   modifier.
+4. **Withdrawal.** Any exit after the envelope opens withdraws the patient,
+   recorded as "not cured at dose N". That covers restart, quit to title,
+   reload, closing the tab, and `pagehide`. Every later attempt that day is
+   open-label and never replaces the registered one.
+5. **The endpoints.**
+   - Primary: cured or lost.
+   - Secondary: doses (capsules placed) and cures (`virusesClearedThisLevel`).
+   - "Resistance emerged ×N", counted from `mutate` events.
+   - "The older medicine used ×N", counted from `clear` events' `collateral`.
+   - "The slow answer used ×N", counted from `resist` events: clears that
+     bounced off tolerant viruses.
+
+   The reducer that counts these reads events only and is never given the arm.
+   That is a property of the code, not blinding: the player knows their arm.
+6. **The case report.** The registered attempt is the share line, led by the
+   arm and the site: "RxDrop Trial 2026-10-15 · Outbreak arm · Lungs · Lost at
+   dose 63 · 18 cured · resistance emerged ×3". Score leaves the trial line.
+7. **The other arm.** After the case report, a follow-on screen offers the
+   other arm, open-label: the same patient under the other regimen. It is shown
+   beside the registered result, and is never registered or shared. No real
+   trial can observe that counterfactual; a seeded game can.
+
+On a phototherapy day the protocol pins the lamp's width and exit to the
+shipped defaults, so every centre gives the same regimen. See "What it bends".
+
+#### The organ: where the patient presents
+
+Grafted from the body map, **as copy only**. The day's single modifier names
+the site the patient presents at. No geometry changes, and the era still follows
+the level.
+
+The card and the HUD show **only the site's name**. The dated anchors below are
+protocol-voice footnotes for the case report and the ledger, outside the era
+frame. They do not belong to the bottle's era, and daily bottles run from the
+Swnw to Patent Medicine, so an anchor shown on the card could put 1948 over an
+Egyptian bottle. An anchor that falls where two era bands overlap is never
+attributed to either one.
+
+| Site | Intervention arm | Anchor, for the case report | Confidence |
+| --- | --- | --- | --- |
+| Lungs | outbreak | the MRC streptomycin trial in pulmonary tuberculosis, 1948; Koch's identification of the tubercle bacillus, 1882 | confident |
+| Gut | contaminated batch | Snow and the Broad Street pump, Soho, 1854; the US Pure Food and Drug Act, 1906, on adulterated nostrums | confident. Do not claim that removing the pump handle ended the outbreak: it was already waning |
+| Skin | phototherapy | Finsen's Nobel Prize, 1903, for light treatment of lupus vulgaris | confident; `src/formulary.js` already names him |
+| Heart | rationing | Harvey, *De motu cordis*, 1628 | confident on the book. Fairly confident on his argument from quantity; check before quoting |
+| Skull | quarantine | Neolithic trepanned skulls, many with healed edges, showing the patient lived | confident. Why it was done is unknown, and the copy says so |
+
+The anchors speak in a neutral protocol voice, never in the era practitioner's
+mouth. Most of the daily bottles' practitioners predate the controlled trial as
+1948 knew it, though comparisons were made earlier (al-Razi, c. 900; Paré,
+1537; see "The history it may lean on"). #47's Historian could take that voice
+later; this entry does not wait for it.
+
+#### The tombstone and the ledger
+
+Grafted from the trail.
+
+**The tombstone.** The registered attempt is kept on the device as the
+patient's record: what happened to the patient you enrolled, even after twenty
+better attempts that day. It carries one line about the patient, in the voice of
+the era the bottle was in. The line is chosen with left and right, the way the
+title's level picker works, because a D-pad has no keyboard. Anything about the
+protocol stays in the protocol voice.
+
+**The ledger.** Beside it sits a per-device ledger by arm across your trial
+days, for example "Outbreak arm: 3 cured, 2 lost · standard care: 4 cured, 1
+lost". It reports outcomes and never computes a verdict or a "significance". A
+group chat's pooled table is noise, and learning to read it as noise is part of
+the lesson; the game does not get to make that claim itself.
+
+**Storage.** The series seed, the register by day and the ledger live under a
+new key, `rxdrop.trial.v1`. They do not go into `rxdrop.daily.v1`, which holds
+one day's result, is overwritten whole on every attempt, and would lose an extra
+field to an older cached build. This is a save-format addition under portability
+finding 11.
+
+#### What it bends
+
+| Existing rule | What it comes to mean |
+| --- | --- |
+| `dailyModifiers`: a day is plain, one modifier, or a pair | A one-modifier day becomes a trial. The modifier is the intervention, and the plain bottle on the same patient is the control. Pair days stay as they are: a pair varies two things at once, so a result could not name a cause. Lind gave each pair one supplement on a common diet, which is what lets his comparison name a cause. |
+| `recordDaily`: "Keep the best attempt of the day rather than the most recent" | The first enrolled attempt is registered. Best-of-N is selective reporting, the investigator's hand on the scale, and registering the first attempt is the protection a modern protocol uses. The 1948 envelopes took away a different hand: choosing who got which treatment. A best-of-twenty line is also not comparable between players. |
+| `shareText`: badges, viruses cleared, score | The line leads with the arm and the site. Chains still count as cures, but a setup that spends six capsules for style becomes a worse treatment on the form. |
+| `mutate` and the resistance meter | Each mutation is an adverse outcome on the form. The player treats the viruses closest to mutating first, not whatever is convenient. |
+| The shrug (`resist`) and collateral sensitivity | Both become secondary endpoints: whether the older medicine was used, or the slow answer. |
+| The phototherapy variants (the lamp's width and exit, today the player's choice) | On a phototherapy trial day both are pinned to the shipped defaults, which is also what the playability check plays. |
+| The `determinism` stage: "A seed must reproduce a game exactly" | A developer guarantee becomes a player-facing promise that both arms are the same patient, and the open-label arm lets you see it. |
+
+To be honest about what is missing: **none of this changes a rule inside the
+bottle.** Both judges scored its depth at 2. What changes is what the player
+optimises for. By this page's own test that is the entry's weakest point, and it
+is the price of a bound that costs nothing.
+
+#### The bound
+
+> A trial varies exactly one thing and invents no bottle. Both arms are the
+> same patient (level, speed, resistance flag, seed and starting grid, cell for
+> cell), and both are bottles the game already deals: the plain bottle, and the
+> same bottle with a single shipped modifier. So neither arm can strand a virus.
+> The plain rules have their own checks, and each modifier's bound in
+> `src/modifiers.js` holds whatever the configuration. The endpoint, the
+> register, the site, the tombstone and the ledger read the game's events and
+> never write to it. The envelope decides which bottle you are handed, never
+> whether its viruses have an answer.
+
+The gate's playability check ("every modifier, alone and all at once, keeps the
+bottle playable") measures each single modifier at one configuration, not at
+every trial day's level and speed. Before promotion, either add a sampled sweep
+of real trial-day setups (both arms) to the `modifiers` stage, or keep saying
+plainly that the gate certifies one configuration.
+
+"Same patient" means the same starting state, not the same course. The arms
+share one `rng`, so the capsule stream diverges from the first draw that play or
+the modifier causes: a spread, a seal, a lamp visit, a stock-out pick, or a
+recolouring mutation. Copy must never claim "the same capsules". On a rationing
+day with resistance off, the two arms also look different from the first
+capsule: rationing switches tolerance on, and the third of viruses the generator
+seeded at the threshold refuse their own colour in the intervention arm only.
+The card must say that a stock-out patient presents with tolerance.
+
+#### The check
+
+Three new checks, one existing check tightened, and one browser check.
+
+1. **'both arms of a trial are the same patient, one shipped modifier apart'**
+   (`determinism` stage). For every UTC day of 2028 (366 keys, the leap day
+   included), build `dailySetup`. On a trial day, build a `Game` for each arm
+   and assert:
+   - `JSON.stringify(board.grid)` is equal across arms. That compares full
+     cells, because `toStrings()` drops resistance (portability finding 8);
+   - level, speed, resistance and seed are equal;
+   - the control's modifiers are `[]`;
+   - the intervention's modifiers are one id from `MODIFIER_IDS`.
+
+   On any other day, `armSetup` must return `dailySetup` unchanged.
+
+   **The arm.** `trialArm(series, key)` is FNV-1a over the series and the key,
+   then a 32-bit avalanche finaliser (murmur3's `fmix32`, with `Math.imul`).
+   The arm is the top bit (`>>> 31`). Over about 1,000 series seeds, assert
+   that each arm's mean share of the year's trial days is about 0.5, and that
+   day-by-day agreement between any two series is 0.4-0.6.
+
+   Measure the stage, so the eleven fast stages stay near three seconds.
+2. **'the trial endpoint is blind and read-only'** (`determinism` stage, capped
+   at 2,000 frames per bottle; the read-only property does not need a finished
+   game). If it costs more than half a second, move it to `modifiers`. Play the
+   plain bottle and each single modifier with the existing bot twice: once
+   feeding events through `tallyEndpoint`, once not. Assert:
+   - grid, score and event sequence are identical;
+   - doses equal `pillsPlaced`;
+   - cures equal `virusesClearedThisLevel`;
+   - mutations, collateral kills and shrugs equal the summed `mutate`,
+     `clear.collateral` and `resist` counts.
+
+   `tallyEndpoint` takes events and nothing else.
+3. **'a registered trial result is the first enrolled attempt, whatever comes
+   after'.** This tests the pure reducer `registerAttempt`:
+   - an attempt whose envelope was never opened does not register;
+   - the first enrolled loss does, even at dose 0;
+   - a later cure with a higher score does not replace it;
+   - an open-label attempt never registers and never reaches the ledger;
+   - a `?daily=` key other than today's plays open-label;
+   - the next day registers fresh;
+   - non-trial days keep best-of, exactly as now.
+4. **Tightened:** "the daily is the same puzzle for everyone" compares the
+   grid, not `toStrings()`.
+5. **Browser:** open the envelope, lock one capsule, then do each of restart,
+   reload and quit to title, and finish a better attempt after each. The share
+   line shown must still be the first attempt's.
+
+Falsify each one, and say so in the commit:
+
+- Seed the intervention arm with `seed ^ 1`: check 1 fails on the first trial
+  day.
+- Re-roll starting resistance in one arm: a `toStrings`-only version of check 1
+  still passes, while the grid compare fails. That is why the grid compare is
+  there.
+- Let pair days through as trials: the one-modifier assertion fails.
+- Pick the arm from the raw FNV-1a hash with `& 1`: the agreement assertion
+  fails, because every device then gets one of two complementary schedules set
+  by the date.
+- Make the tally drain the game's events itself, or touch the score: check 2
+  fails.
+- Restore best-score registration: check 3 fails.
+- Write the enrolment only at level end: the browser check fails on reload.
+
+A unit test also pins that the site table covers `MODIFIER_IDS` exactly; delete
+a row and it fails.
+
+`tools/reference-traces.mjs` must pass all nine traces without `--write`.
+`src/daily.js` is in the rules layer of the porting contract. It gains pure
+functions, but `dailySetup` does not change, so the traces still replay. The
+`daily-2026-10-10` trace is itself a trial day (one modifier, rationing). Once
+this is built, that trace's purpose line and `docs/portability.md` §3 should
+name it as the intervention arm.
+
+While iterating, run the eleven fast stages. Add `browser` once, because
+`main.js`, `index.html` and `sw.js` change. Add `modifiers` if check 2 moves
+there.
+
+#### Determinism and input
+
+- **The rules are untouched.** `board.js`, `pill.js`, `game.js`, `light.js`,
+  `modifiers.js` and `rng.js` do not change. Versus, every daily that is not a
+  trial, and the nine reference traces stay byte-identical.
+- **The arm is an input, like the seed.**
+  - The platform layer picks one series seed per device, once, with
+    `Math.random`. That is how `main.js` already picks non-daily seeds
+    (portability finding 4).
+  - `trialArm` is pure, lives in `daily.js`, and never draws from `game.rng`.
+- **The reducers port as logic.**
+  - Endpoint, register and ledger are pure functions in `daily.js`.
+  - They read events the rules already raise: `lock`, `clear`, `resist`,
+    `mutate`, `levelComplete` and `gameOver`.
+  - A port needs only its own save in place of `localStorage`. The tombstone
+    and ledger are platform state, as the formulary is (finding 11).
+- **No new command, and no new kind of navigation.**
+  - The envelope opens on confirm.
+  - Withdrawing asks for restart to be pressed twice.
+  - The other arm is offered on a follow-on screen after the case report,
+    taken with confirm.
+  - The tombstone line is chosen with left and right.
+
+  Nothing assumes D-pad focus navigation on the result screens, which those
+  screens do not have today.
+
+#### What it would cost
+
+About a day for the trial, by its designer's estimate. Almost all of it is in
+`main.js`'s daily flow rather than the rules:
+
+- about 70 pure lines in `src/daily.js`: `isTrialDay`, `trialArm`, `armSetup`,
+  `registerAttempt`, `tallyEndpoint`, and a trial branch in `shareText`;
+- about 60 lines in `test/daily.test.js`;
+- 60-90 lines in four places in `src/main.js`: `startGame`'s daily branch, the
+  daily card, `recordDaily`, and the `restart` case;
+- a line and a screen in `index.html`, and a rule or two of CSS;
+- a cache bump in `sw.js`.
+
+The grafts (site table, tombstone and ledger) are presentation and storage on
+top of that. Nobody has estimated their cost.
+
+#### What must be true first
+
+1. **A Principal call on the daily's promise.**
+   - "One bottle a day, the same for everyone" is written in four places:
+     `src/daily.js`, the daily card in `src/main.js`, `README.md`, and this
+     page's table.
+   - On a trial day the patient is the same everywhere, but the regimen
+     differs by device, so half the players on a single-modifier day never see
+     that day's modifier.
+   - The designer read this as still "the same sample sent to every lab". The
+     engineer read it as breaking the daily's identity on a third of days.
+     That disagreement is the Principal's to settle.
+2. **A Principal call on the title and the scope.**
+   - *The Oregon Trail* is a trademark, so even the pun needs a decision.
+   - Per direction §28 nothing else is borrowed: no "You have died of", no
+     wagon, no MECC art, no typed epitaph.
+   - `docs/status.md` treats new mechanics as expansion work, so this must not
+     delay the web-complete/freeze decision.
+   - It overlaps #47 but does not depend on it.
+3. **Intention-to-treat tuned by hand.** Enrolling at the envelope is harsh on
+   an accidental exit. Opening the envelope is an explicit confirm, and
+   withdrawing asks for restart twice. Whether that is enough is a playtest
+   question.
+4. **The edges that would let the allocation be gamed are closed.**
+   - The enrolment is written to storage when the envelope opens, before play.
+   - When storage is unavailable, the trial runs open-label and never
+     registers, rather than re-rolling on every reload.
+   - A `?daily=` link to any day but today plays open-label and carries no
+     arm.
+   - The arm stays visible on the HUD for the whole attempt.
+   - Clearing site data, or a private window, starts a fresh series. That is
+     like tampering with a real trial, and it is accepted as such.
+5. **Survival stays the primary endpoint.** It is the outcome nobody can
+   misread, and the one that does not reward style. Doses are a biased measure:
+   the lamp places no capsules, so the lamp is free on that measure, and
+   outbreak breeds extra viruses to cure.
+6. **Every flagged historical line below is checked** before it reaches copy.
+7. **The two `recordDaily` quirks are fixed first** (issue #60), because
+   the trial reuses that code:
+   - it counts cleared viruses as `startingViruses - virusesLeft`, which
+     undercounts under outbreak;
+   - it saves the best attempt but builds the share line from the latest one.
+
+#### The history it may lean on
+
+- **The Oregon Trail** was created in 1971 by Don Rawitsch, Bill Heinemann and
+  Paul Dillenberger, student teachers at Carleton College, and first played in
+  December 1971. MECC, founded in 1973, distributed it from the mid-1970s.
+  - The 1985 Apple II version (MECC; lead designer R. Philip Bouchard) has the
+    landmarks; the river crossings (ford, caulk the wagon and float it, or take
+    a ferry); the pace and rations settings; and the tombstones.
+  - The player-written epitaph shown to later players is documented. It is
+    still not borrowed (direction §28).
+  - *Unverified, keep out of copy:* that the banker, carpenter and farmer were
+    paid ×1, ×2 and ×3 at the finish.
+- **James Lind, HMS *Salisbury*, 20 May 1747** (Old Style; 31 May in the
+  Gregorian calendar).
+  - Twelve scurvy patients in six pairs, on a common diet. Each pair was given
+    one supplement: cider, elixir of vitriol, vinegar, seawater, two oranges
+    and a lemon, or an electuary. The citrus pair recovered fastest.
+  - Published in *A Treatise of the Scurvy*, 1753. It sits in the Plague Years
+    band (1619-1799).
+  - "As similar as I could have them" is his phrase; check the wording against
+    the 1753 page images.
+  - Lind allocated by hand, and every pair received something. Never call his
+    trial randomised, and never call any of his arms a control or a placebo.
+- **Lind's citrus ran out.** "Continued but six days under this course, having
+  consumed the quantity that could be spared" is confirmed in several
+  transcriptions of the *Treatise*. Check the wording against the page image
+  before copy uses it. If it holds, the trail's "supplies run out" thread is
+  already inside Lind's own trial.
+- **Earlier comparisons, as era-native anchors.** Both need checking against a
+  primary source before copy uses them:
+  - al-Razi (c. 900), a hospital physician in the Bimaristan band, describes
+    leaving one group of brain-fever patients unbled "to remove doubt". The
+    James Lind Library records this as an early comparison with a control
+    group.
+  - Paré at Turin, 1537 (some sources give 1536), in the Apothecary band. His
+    boiling oil ran out, and he compared the oil with a dressing of egg yolk,
+    oil of roses and turpentine.
+- **The MRC streptomycin trial, *BMJ*, 30 October 1948.** Streptomycin with bed
+  rest against bed rest alone, in pulmonary tuberculosis. It sits in the
+  Pharmaceutical band (1928-1999).
+  - Confident:
+    - Austin Bradford Hill was the statistician; Philip D'Arcy Hart and Marc
+      Daniels were on the team.
+    - Allocation was by numbered sealed envelopes, a series per sex per
+      centre, each holding a card marked S or C. An envelope was opened only
+      after the patient had been accepted.
+    - Every patient was graded at six months on one scale, from considerable
+      improvement down to death.
+    - Copy may say "resistant strains emerged during treatment".
+  - Secondary source only (Crofton's memoir); check *BMJ* 1948;2:769-82 before
+    copy uses any of these:
+    - that resistance emerged especially after the fourth month;
+    - that three specialists, blind to allocation, read the X-rays;
+    - that the government had bought only a limited amount of the drug;
+    - that the course was cut from six months to four.
+  - Call it a landmark trial, never "the first", and attribute no quotation to
+    Hill.
+- **The 1948 deaths: 4 of 55 against 14 of 52, within six months.** Those
+  figures reproduce the chi-square of 7.38 (6.04 with continuity correction)
+  reported in Armitage P (2009), *A statistical note on the analysis of the
+  1948 MRC streptomycin trial*, James Lind Library; 15 would give 8.52. Both
+  arms had more deaths by twelve months. Read the primary paper before copy
+  quotes either number.
+- **Streptomycin with PAS** reduced resistance in later MRC trials. The first
+  full MRC report appeared in the *BMJ*, 11 November 1950, and a combined
+  analysis followed in the *BMJ* in 1952. It is the natural future link to
+  hybrids and antibodies, as combination therapy. It is not copy yet.
+- **Cholera among overland emigrants**, around 1849 to the early 1850s, is
+  widely reported. We are confident about 1849-50, but not the end year or any
+  numbers. That puts the Oregon Trail's killer in the Patent Medicine band.
+  Typhoid on the trail is not confirmed, so keep it out.
+
+#### Rejected
+
+- ~~**The trail: a chest of doses, and a crossing at every era.**~~ This design
+  played the campaign as a journey:
+  - ten landmarks at the era entries (levels 0, 2 ... 18);
+  - a chest of doses, one drawn per capsule and refilled at each landmark;
+  - a card at each crossing: Push (a faster leg), Trade (a seeded hazard,
+    accepted in exchange for doses) or Pay (a plain leg, paid for in doses);
+  - an empty chest that put the leg on "bare bones", which was simply
+    rationing.
+
+  It lost because **the punishment helps**. With the shipped bot, rationing
+  finishes more levels than the plain bottle, not fewer (see the note in the
+  Rationing entry). So doses are worth nothing, Trade is dominated, and the
+  crossing collapses to Push or Pay. That cannot be repaired inside the
+  design's own premise, that an empty chest only ever switches on a rule that
+  is already bounded.
+
+  **Kept, for any future journey:**
+  - its crossing interface: left, right and confirm at a level boundary,
+    handed to `advanceLevel` as a platform input (portability finding 10);
+  - its getter that leaves the shipped rule exactly as it is when there is no
+    chest.
+- ~~**The body map: five organs, five modifiers, a strain that remembers.**~~
+  Skull/quarantine, heart/rationing, gut/contaminated batch, skin/phototherapy
+  and lungs/outbreak, visited in any order from an anatomical chart. Each stop
+  handed up to three tolerant viruses to the next. It was the engineer's winner
+  and the closest call here. It lost on:
+  - the memory dying on capsule 8 (above);
+  - the heart. Rationing ages red from the first capsule, so it neutralises a
+    red carry;
+  - its bound sentence. Its bound claimed that a stop's layout and deal match
+    the same stop played without the carry. That is false once play starts,
+    because mutation, the bag shuffle and every modifier share `this.rng`;
+  - the frame. One patient through five rooms contradicts the addendum's
+    caseload;
+  - Restart and Retry, which rebuild through `startGame`'s non-daily branch and
+    erase the carry.
+
+  **Kept:** the site-to-modifier mapping, as copy, and the shrug tally, as an
+  endpoint.
+
+  **If a journey is wanted after all, start here, with these repairs:**
+  - eras by level;
+  - a ward-round frame. `src/formulary.js` already says "The organism from bed
+    four is in bed five by morning";
+  - registration at enrolment;
+  - a whole-run replay check from seed, route and inputs.
+- **A supply that ends the run when it runs out.** A supply that can run dry
+  makes a virus unanswerable however well the bottle is played. Rationing is
+  already the bounded supply.
+- **Restart or Retry as a free re-roll, or party members as lives.** Both are a
+  continue system, and both make the tombstone cheap. Hence enrolment at the
+  envelope.
+- **Enrolment at the first locked capsule.** It is gentler on accidents, but it
+  lets a player see their arm and decline to enrol. That is the selection bias
+  the 1948 envelopes were designed to prevent.
+- **Typed epitaphs.** A D-pad has no keyboard.
+- **Organ-shaped or variable-width bottles.** `BOARD_WIDTH` is part of the trace
+  contract. Quarantine is already the narrower bottle, and in a trial a bottle
+  shape would be a second variable.
+- **New organ modifiers** (kidney filtration, liver detox). Each is a parallel
+  rule needing its own bound, when five shipped modifiers already map onto five
+  sites.
+- **Two bottles driven by one set of inputs.** They diverge at the first
+  collision that differs. From then on, a virus in one bottle is answerable only
+  by ruining the other.
+- **Pair days as a head-to-head.** It deletes the interaction the pair exists
+  for, and varies two things at once.
+- **One arm for everyone on a given day.** It keeps "the same for everyone", but
+  it is alternation by date, with no concurrent control.
+- **A placebo arm through the contaminated batch.** Inert halves come on a fixed
+  schedule, so they are not blind.
+- **The bot as the control arm, or as par.** It ships `tools/bot.mjs` into the
+  game, and lets bot tuning silently move every player's comparison.
+- **A separate `rng` stream, so both arms get identical capsules.** It is a
+  better match, but it changes `game.js`'s rng contract and every reference
+  trace. The divergence is stated instead.
+- **Score, cures per dose or time-to-cure as the primary endpoint.** Score
+  rewards style. Cures per dose is inflated by outbreak. Time-to-cure rides the
+  web's variable frame deltas (portability finding 1).
+- **Stopping rules, or "rest or continue".** They would be a parallel
+  push-your-luck rule.
+- **"Under-dosing breeds resistance" as a rule.** Making 1948's lesson
+  mechanical would punish the setups that are the core of play.
+- **Random hazards between or during bottles.** That is randomness rather than
+  interaction.
+- **Lind's trial as a stop.** Scurvy is a deficiency, not an infection, so Lind
+  survives as the trial's shape and not as a patient.
+- **A versus Organ Trial.** Versus takes no modifiers, which is knowingly not
+  done.
+- **A Formulary page for the trial.** Deferred. A trial compares bottles, so it
+  would be the first page the rules cannot write.
+- *Deferred, not rejected:* **putting phototherapy's three forks to trial.**
+  This page says they must be settled on evidence by a hand. A trial is how,
+  once the format has proved itself on the daily.
 
 ## Axis 3 - noticing what you found
 
@@ -1301,6 +1855,14 @@ so it serves as an index only. The bound is a unit check that rejects any
 quotation without a public-domain citation dated inside the era. Promotion
 waits on the check, a page-image reading of each quotation, and three
 decisions: the place, the date, and the beak's herbs.
+
+**The Organ Trial** is at `workshop` - see above. On the third of days when the
+daily already draws one modifier, that modifier would become one arm of a
+two-arm trial on the identical patient. The patient presents at an organ, is
+enrolled when the envelope opens, and is kept on the device as a case report;
+nothing inside the bottle changes. It waits on Principal calls about the daily's
+"same for everyone" promise, the title, and its place behind the web-complete
+decision.
 
 **Phototherapy** shipped and replaced the blackout, which worked and did not
 mean anything. Its three open forks ship as toggles rather than as decisions -

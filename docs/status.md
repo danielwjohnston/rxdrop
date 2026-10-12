@@ -60,7 +60,7 @@ Two consequences:
 
 The gate consists of:
 
-- **336 unit tests** on Node 20 and Node 22;
+- **338 unit tests** on Node 20 and Node 22;
 - the thirteen-stage UltraGauntlet;
 - **43 browser checks** covering menus, input, daily, versus, offline/mobile
   behavior, and the campaign-complete path.

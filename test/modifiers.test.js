@@ -144,6 +144,39 @@ describe('outbreak', () => {
     assert.deepEqual(outbreakTargets(board, createRng(1), 4, 4), []);
   });
 
+  it('never crowds a hybrid below two open sides', () => {
+    // A strain in the corner has two open sides, right and above, and each has
+    // a parent beside it with nowhere else to go. Without the guard one tick
+    // fills both and boxes the strain in.
+    const board = new Board();
+    const floor = board.height - 1;
+    board.set(0, floor, cell(hybridOf(COLORS.RED, COLORS.BLUE), VIRUS, null));
+    board.set(2, floor, cell(COLORS.YELLOW, VIRUS, null));
+    board.set(0, floor - 2, cell(COLORS.YELLOW, VIRUS, null));
+    for (const [x, y] of [[3, floor], [2, floor - 1], [1, floor - 2], [0, floor - 3]]) {
+      board.set(x, y, cell(COLORS.RED, PILL, null));
+    }
+    for (let seed = 0; seed < 20; seed += 1) {
+      assert.deepEqual(outbreakTargets(board, createRng(seed), 4, 4), [], `seed ${seed}`);
+    }
+  });
+
+  it('never lets two children placed together crowd a hybrid between them', () => {
+    // Three open sides. Either child alone leaves two, both together leave one.
+    const board = new Board();
+    const floor = board.height - 1;
+    board.set(3, floor, cell(hybridOf(COLORS.RED, COLORS.BLUE), VIRUS, null));
+    board.set(1, floor, cell(COLORS.YELLOW, VIRUS, null));
+    board.set(5, floor, cell(COLORS.YELLOW, VIRUS, null));
+    for (const [x, y] of [[0, floor], [1, floor - 1], [6, floor], [5, floor - 1]]) {
+      board.set(x, y, cell(COLORS.RED, PILL, null));
+    }
+    for (let seed = 0; seed < 20; seed += 1) {
+      const picks = outbreakTargets(board, createRng(seed), 4, 4);
+      assert.equal(picks.length, 1, `seed ${seed} closed both sides`);
+    }
+  });
+
   it('caps how far a level can grow', () => {
     assert.ok(outbreakCeiling(10) > 10, 'an outbreak should be able to grow');
     assert.ok(outbreakCeiling(10) < 20, 'but not without limit');

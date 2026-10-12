@@ -13,7 +13,7 @@
  * a virus unanswerable. If you cannot write that sentence for a new modifier,
  * the modifier is not ready, whatever it does for variety.
  */
-import { createsRun, isHybrid } from './board.js';
+import { createsRun, isHybrid, treatableFrom } from './board.js';
 import {
   BOARD_WIDTH,
   COLOR_COUNT,
@@ -40,7 +40,9 @@ export const MODIFIERS = Object.freeze([
       + 'capsules in the same minute. The empty space you were saving is now a '
       + 'liability.',
     bound: 'A virus replicates once and never again, never above the virus '
-      + 'ceiling, and never past 1.6 times the viruses the level started with.',
+      + 'ceiling, and never past 1.6 times the viruses the level started with. '
+      + 'A copy never completes a line for you, and never leaves a combined '
+      + 'strain fewer than two sides to treat it from.',
   }),
   Object.freeze({
     id: 'phototherapy',
@@ -143,6 +145,9 @@ export function describeModifiers(ids) {
  * it completes a run: the threat is more disease, not a free clear. And no
  * strain appears with fewer than two open sides to be treated from, which is
  * why a hybrid never replicates - a copy would skip the guard combining obeys.
+ * Nor does a strain that has formed ever drop below two: outbreak is the only
+ * thing that adds a virus to a settled bottle, so it is the only thing that
+ * could take a side away.
  */
 export function outbreakTargets(board, rng, limit, topRow) {
   const parents = [];
@@ -178,14 +183,28 @@ export function outbreakTargets(board, rng, limit, topRow) {
       // need not pass through the parent - a row along the floor beneath it,
       // say - and nothing would have cleared that line already.
       if (createsRun(after, nx, ny, color, MATCH_LENGTH)) continue;
+      // Against `after` too: two children from one tick can close two sides
+      // of the same strain between them.
+      if (crowdsHybrid(after, nx, ny)) continue;
       open.push({ x: nx, y: ny });
     }
     if (open.length === 0) continue;
     const target = open[rng.int(open.length)];
-    taken.set(`${target.x},${target.y}`, { color });
+    taken.set(`${target.x},${target.y}`, { type: VIRUS, color });
     picks.push({ from: { x, y }, ...target, color });
   }
   return picks;
+}
+
+/**
+ * True if a virus at the empty cell (x, y) would leave a hybrid beside it with
+ * fewer than two open sides. That cell is one of the strain's open sides now,
+ * so filling it costs the strain one.
+ */
+function crowdsHybrid(board, x, y) {
+  return [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => (
+    isHybrid(board.get(x + dx, y + dy)) && treatableFrom(board, x + dx, y + dy) - 1 < 2
+  ));
 }
 
 /** The most viruses an outbreak may grow a level to. */

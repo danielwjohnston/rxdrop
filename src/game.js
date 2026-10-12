@@ -1048,9 +1048,10 @@ export class Game {
     this.phaseTimer += dt;
     if (this.phaseTimer < MUTATION_ANIMATION) return;
     this.spreading = [];
-    // A new virus never lands where it completes a run, because it only ever
-    // goes into an empty cell beside its parent - and a run through that cell
-    // would have cleared the parent already. The board is still settled.
+    // A new virus never lands where it completes a run, because outbreakTargets
+    // refuses any cell that would - so the board is still settled. Being beside
+    // its parent is not what guarantees it: a row along the floor under a
+    // parent runs through the child and not the parent.
     this.finishResolution();
   }
 

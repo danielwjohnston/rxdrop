@@ -53,10 +53,10 @@ Run them all with `node tools/gauntlet.mjs`, or a few with
 | 2 | `determinism` | A seed reproduces a game. Replays solo, versus and the daily and compares boards and scores. |
 | 3 | `timing` | The clock is well behaved. Feeds zero, negative, sub-millisecond and 60-second frames, pauses mid-cascade, and pokes input into phases that should refuse it. |
 | 4 | `boundaries` | The interesting cases are in the middle. Checks all 21 levels for virus quota and ceiling, every speed, both walls, a blocked spawn and garbage aimed at a full column. |
-| 5 | `fuzz` | Play is orderly. Runs long random games across four setups and asserts after every single frame that nothing floats, no match survives resolution, and viruses are conserved. |
+| 5 | `fuzz` | Play is orderly. Runs long random games across six setups, two of them with outbreak writing viruses into the bottle, and asserts after every single frame that nothing floats, no match survives resolution, and viruses are conserved once the ones an outbreak announced are counted. |
 | 6 | `resistance` | The new mechanic obeys the old rules. 200 seeded boards mutated repeatedly, checking a mutation never creates a free clear, never changes the virus count, and always hands play back. |
 | 7 | `collateral` | No virus may become unanswerable. Sweeps every colour at every resistance level to prove something still kills it, checks that a collateral kill only ever takes tolerant viruses, and that resolution terminates on a board where everything shrugs. |
-| 8 | `hybrid` | A combined strain must still come apart. Proves no capsule is ever dealt in a hybrid colour and no hybrid ever appears in a match; that both parents cure every strain in either order; that both in one cascade always synthesise an antibody; that one parent alone always breaks it in the end; and that a hybrid never forms anywhere it cannot be treated from. |
+| 8 | `hybrid` | A combined strain must still come apart. Proves no capsule is ever dealt in a hybrid colour and no hybrid ever appears in a match; that both parents cure every strain in either order; that both in one cascade always synthesise an antibody; that one parent alone always breaks it in the end; and that a hybrid never forms with fewer than two open sides to be treated from, whether by combining or by an outbreak copying one. |
 | 9 | `modifiers` | A modifier may change a run, never end it. Executes the bound each modifier writes down: outbreak's three caps and its gravity floor, phototherapy's film ceiling and its guarantee that a line always scrubs the lowest filmed row and that the lamp never traps or abandons you, rationing's rotation and the cost it has to impose, the contaminated batch washing out, quarantine's expiry and its placement-only reach - then plays every modifier alone and all five at once with the same bot the playtest uses, and finally plays the whole formulary at once to prove every discovery in the notebook is one that playing can actually trigger. |
 | 10 | `versus` | Two games in one page stay separate. Asserts every attack sent is an attack received, that a match always resolves to exactly one winner, and that one player's input cannot touch the other's board. |
 | 11 | `playtest` | The game is playable, not merely legal. Asserts a hurried capsule never falls faster than a hand can place a lateral into it, and that a capsule always lands with time to be steered. `npm run playtest` runs the full version: a bot plays whole games and reports reaction budgets, juggling room, hybrid cures, what pressing hurry does at each point of a cell, and how far it gets. |
@@ -131,6 +131,15 @@ The stages are not ceremony. Building this set surfaced real defects:
   the bottle. They kept passing on a 16-row board for the wrong reason and went
   red the moment the neck row made the board 17 rows tall - which is exactly
   what a check pinned to a constant should do.
+- **`fuzz`** and **`hybrid`** are on this list for something they *missed*.
+  Outbreak shipped with two defects that a measurement found and the gate did
+  not. A replicated virus could complete a run nobody resolved, and a hybrid
+  could replicate past the two-open-sides guard that combining obeys. `fuzz` was
+  silent because it played only plain games. `hybrid` was silent because the
+  only route to a strain it tried was combining, and it asserted one open side
+  where the rule says two. Now `fuzz` plays two outbreak setups and `hybrid`
+  checks copies at two sides. Take either guard out of `outbreakTargets` and the
+  matching check goes red.
 
 ## Using it
 

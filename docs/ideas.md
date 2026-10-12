@@ -150,6 +150,19 @@ hurry is floored at, so "twice as fast" never becomes "unplaceable".
 Take the generation cap out and the gauntlet's playability check goes red: the
 bot stops being able to keep up at all.
 
+*What measurement found, 11 October:* outbreak broke two promises that mutation
+keeps, and the gauntlet missed both. First, a child could complete a run. Being
+beside its parent does not keep it out of a line: a row along the floor under
+the parent runs through the child and not the parent. Nothing resolved that
+run, so the next capsule fell onto a free clear. Bot play hit this on 24 of 319
+outbreak ticks over 40 seeds. Second, a hybrid could replicate, which skipped
+the two-open-sides guard that combining obeys: 20 of 71 copies were born with
+fewer than two. Now a child never lands where it completes a run, alone or together
+with another child from the same tick, and a hybrid never replicates. The
+same-tick case is real, not theoretical: without it, bot play still produced
+one such clear per 300 or so ticks. `fuzz` now plays outbreak, and the
+`hybrid` stage's formation check covers copies as well as combining.
+
 ### Blackout, and light therapy - `cut`, and replaced by Phototherapy below
 
 The bottle goes dark. A light-therapy switch brings it back for a few seconds,
@@ -941,6 +954,14 @@ Worth writing down so nobody has to rediscover it:
 - **Rationing is the slow grind, not the deadly one.** It is honest about that
   above. If the wanted texture is a difficulty spike rather than a longer game,
   that is a different modifier and should be argued for as one.
+- **An outbreak can still crowd a hybrid that has already formed.** An ordinary
+  child can land beside an existing strain and leave it one open side where it
+  formed with two. Bot play did this 4 times in 296 outbreak ticks over 40
+  seeds, never down to zero sides. The hybrid bound is about where a strain
+  *forms*, and the new neighbour is an ordinary virus that a line clears, so
+  this is slow rather than fatal. Whether a strain should keep two open sides
+  for its whole life is a design call. It was left out of the 11 October
+  outbreak fix on purpose.
 
 **Suggest one:** [mechanic](https://github.com/danielwjohnston/rxdrop/issues/new?template=mechanic.yml)
 · [challenge](https://github.com/danielwjohnston/rxdrop/issues/new?template=challenge.yml)

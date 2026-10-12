@@ -40,7 +40,9 @@ export const MODIFIERS = Object.freeze([
       + 'capsules in the same minute. The empty space you were saving is now a '
       + 'liability.',
     bound: 'A virus replicates once and never again, never above the virus '
-      + 'ceiling, and never past 1.6 times the viruses the level started with.',
+      + 'ceiling, and never past 1.6 times the viruses the level started with. '
+      + 'A copy never completes a line for you, and never leaves a combined '
+      + 'strain fewer than two sides to treat it from.',
   }),
   Object.freeze({
     id: 'phototherapy',

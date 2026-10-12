@@ -19,6 +19,11 @@ codebase.
 Play the web build on GitHub Pages:
 https://danielwjohnston.github.io/rxdrop/
 
+New to it? The **field guide** walks through every mode, virus type and
+modifier with step-by-step screenshots:
+https://danielwjohnston.github.io/rxdrop/guide.html - it is also linked from
+**How to play** on the title screen, and works offline once the game is installed.
+
 No frameworks and no build step: every pill, virus and sound effect is drawn or
 synthesised at runtime. It installs to a home screen, plays with the network
 off, has a daily challenge and local two-player versus.

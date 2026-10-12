@@ -6,12 +6,33 @@
  * Bump CACHE when the file list or any cached file changes: the new worker
  * precaches under the new name and deletes the old cache on activate.
  */
-const CACHE = 'rxdrop-v25';
+const CACHE = 'rxdrop-v26';
 
 const PRECACHE = [
   './',
   './index.html',
   './manifest.webmanifest',
+  './guide.html',
+  './assets/guide/basic-1.webp',
+  './assets/guide/basic-2.webp',
+  './assets/guide/basic-3.webp',
+  './assets/guide/hyb-1.webp',
+  './assets/guide/hyb-2.webp',
+  './assets/guide/hyb-3.webp',
+  './assets/guide/hyb-4.webp',
+  './assets/guide/mod-contaminated.webp',
+  './assets/guide/mod-outbreak.webp',
+  './assets/guide/mod-photo-chamber.webp',
+  './assets/guide/mod-photo.webp',
+  './assets/guide/mod-quarantine.webp',
+  './assets/guide/mod-rationing.webp',
+  './assets/guide/overview.webp',
+  './assets/guide/resist-1.webp',
+  './assets/guide/title.webp',
+  './assets/guide/tol-1.webp',
+  './assets/guide/tol-2.webp',
+  './assets/guide/tol-3.webp',
+  './assets/versus.png',
   './src/styles.css',
   './src/main.js',
   './src/game.js',

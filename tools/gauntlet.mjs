@@ -655,6 +655,43 @@ stage('hybrid', 'A combined strain must still come apart', (check) => {
     }
   });
 
+  check('an outbreak never crowds a strain below two open sides', () => {
+    // The Principal's question, 12 October: "Should a strain keep two open
+    // sides for its whole life, at least against outbreak (the only mechanic
+    // that adds viruses mid-game)?" Yes, DEC-0003. Combining demands two sides;
+    // this is the promise that they stay. Let a child land beside a strain
+    // regardless and this goes red.
+    for (let seed = 0; seed < 40; seed += 1) {
+      const game = new Game({ level: 16, speed: 'LOW', seed, resistance: true, modifiers: ['outbreak'] });
+      // The same scattering as the formation check above: strains all through
+      // a crowded bottle, so children have every chance to land beside one.
+      game.board.forEachCell((c, x, y) => {
+        if (c.type !== VIRUS || (x + y + seed) % 3 !== 0) return;
+        c.color = hybridOf(c.color, (c.color + 1) % COLOR_COUNT);
+        c.cured = [];
+        c.decay = 0;
+      });
+      for (let tick = 1; tick <= 30; tick += 1) {
+        const before = new Map();
+        game.board.forEachCell((c, x, y) => {
+          if (isHybrid(c)) before.set(`${x},${y}`, treatableFrom(game.board, x, y));
+        });
+        game.pillsPlaced = tick * OUTBREAK_INTERVAL;
+        if (!game.tickOutbreak()) continue;
+        game.spreading = [];
+        for (const [key, was] of before) {
+          const [x, y] = key.split(',').map(Number);
+          const now = treatableFrom(game.board, x, y);
+          // A strain scattered in boxed starts below two. What it has, it keeps.
+          assert.ok(
+            now >= Math.min(was, 2),
+            `seed ${seed} tick ${tick} crowded the strain at ${key} from ${was} open sides to ${now}`,
+          );
+        }
+      }
+    }
+  });
+
   return 'both parents cure it, and one alone still wins in the end';
 });
 
@@ -714,6 +751,36 @@ stage('modifiers', 'A modifier may change a run, never end it', (check) => {
         }
         game.spreading = [];
         assert.ok(game.virusesLeft <= cap, `seed ${seed} grew to ${game.virusesLeft} past ${cap}`);
+      }
+    }
+  });
+
+  check('a strain keeps two open sides for its whole life', () => {
+    // DEC-0003. Combining demands two open sides, and an outbreak child is the
+    // only thing that can take one away afterwards. So in real play every
+    // strain has two on every frame. A future mechanic that adds viruses some
+    // other way has to keep that too, or this goes red.
+    for (let seed = 0; seed < 12; seed += 1) {
+      const game = new Game({ level: 8, speed: 'LOW', seed, resistance: true, modifiers: ['outbreak'] });
+      let target = plan(game);
+      for (let f = 0; f < 250000 && !game.isOver; f += 1) {
+        if (game.phase === PHASE.FALLING) game.setSoftDrop(!steer(game, target));
+        game.update(FRAME);
+        for (const event of game.drainEvents()) {
+          if (event.type === 'spawn') {
+            target = plan(game);
+            game.setSoftDrop(false);
+          }
+          if (event.type === 'levelComplete') {
+            game.advanceLevel();
+            target = plan(game);
+          }
+        }
+        game.board.forEachCell((c, x, y) => {
+          if (!isHybrid(c)) return;
+          const open = treatableFrom(game.board, x, y);
+          assert.ok(open >= 2, `seed ${seed} frame ${f}: the strain at ${x},${y} has ${open} open sides`);
+        });
       }
     }
   });

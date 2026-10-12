@@ -90,7 +90,9 @@ through no fault the player can see. Three guardrails, all of them enforced by
 the gauntlet rather than by good intentions:
 
 - A hybrid never forms where it cannot be reached. Combining requires two open
-  sides to treat from; with fewer, the virus mutates the old way instead.
+  sides to treat from; with fewer, the virus mutates the old way instead. And it
+  keeps them: an outbreak child never lands where it would leave a strain with
+  fewer than two.
 - **Deliveries persist.** Each parent cleared beside the strain is remembered,
   so the two never have to arrive together. Landing both at once is the skilled
   version, not the only version.
@@ -162,6 +164,18 @@ with another child from the same tick, and a hybrid never replicates. The
 same-tick case is real, not theoretical: without it, bot play still produced
 one such clear per 300 or so ticks. `fuzz` now plays outbreak, and the
 `hybrid` stage's formation check covers copies as well as combining.
+
+*What was decided, 12 October:* a strain keeps its two open sides for its whole
+life, not only where it forms. An ordinary child could still land beside an
+existing strain and take a side away. Over 1,000 bot games that happened on 295
+of 7,786 outbreak ticks, never down to zero. But one tick places up to two
+children, and a constructed board shows them landing on both open sides of one
+strain at once, boxing it in. Now a child never takes a side that would leave a strain
+fewer than two, alone or together with another child from the same tick. It
+cost 0.9% of children and moved no reference trace. `hybrid` checks it tick by
+tick, and `modifiers` checks it on every frame of play. The evidence, and the
+alternatives turned down, are in
+[DEC-0003](../.agents/decisions/DEC-0003-outbreak-keeps-hybrids-reachable.md).
 
 ### Blackout, and light therapy - `cut`, and replaced by Phototherapy below
 
@@ -954,14 +968,6 @@ Worth writing down so nobody has to rediscover it:
 - **Rationing is the slow grind, not the deadly one.** It is honest about that
   above. If the wanted texture is a difficulty spike rather than a longer game,
   that is a different modifier and should be argued for as one.
-- **An outbreak can still crowd a hybrid that has already formed.** An ordinary
-  child can land beside an existing strain and leave it one open side where it
-  formed with two. Bot play did this 4 times in 296 outbreak ticks over 40
-  seeds, never down to zero sides. The hybrid bound is about where a strain
-  *forms*, and the new neighbour is an ordinary virus that a line clears, so
-  this is slow rather than fatal. Whether a strain should keep two open sides
-  for its whole life is a design call. It was left out of the 11 October
-  outbreak fix on purpose.
 
 **Suggest one:** [mechanic](https://github.com/danielwjohnston/rxdrop/issues/new?template=mechanic.yml)
 · [challenge](https://github.com/danielwjohnston/rxdrop/issues/new?template=challenge.yml)

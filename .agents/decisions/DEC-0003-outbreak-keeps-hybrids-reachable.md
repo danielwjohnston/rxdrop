@@ -77,6 +77,24 @@ candidate.
 The recommendation was option 1. The Principal chose option 1 on 12 October
 2026.
 
+## Implementation
+
+- **Guard:** `crowdsHybrid` in `src/modifiers.js`, called from `outbreakTargets`
+  against the run guard's `after` view. This tick's earlier picks are stored
+  in that view as viruses, so two children cannot close two sides of one strain
+  between them.
+- **Checks**, each falsified by removing the guard and watching it go red:
+  - Two unit tests in `test/modifiers.test.js`: the corner board above, and the
+    same-tick case. The same-tick test alone also goes red if the picks are
+    stored without their virus type.
+  - `hybrid` stage, "an outbreak never crowds a strain below two open sides":
+    tick by tick over 40 seeds, with strains scattered through a level-16
+    bottle.
+  - `modifiers` stage, "a strain keeps two open sides for its whole life": every
+    frame of 12 bot-played outbreak games.
+- **Reference traces:** all nine replay unchanged against the base fix's
+  re-recorded set, so none was re-recorded.
+
 ## Confidence
 
 High that zero open sides is reachable without the guard: it is constructed,

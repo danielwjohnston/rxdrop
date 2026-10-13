@@ -73,6 +73,12 @@ describe('service-worker precache', () => {
       /<a\b[^>]*href=["']guide\.html["'][^>]*target=["']_blank["']/.test(pause),
       'the pause card should open the field guide in a new tab',
     );
+    // "add a guide link to the level clear screen too" - player request.
+    const clear = index.match(/<div[^>]*id="screen-clear"[\s\S]*?<!-- Game over -->/)?.[0] ?? '';
+    assert.ok(
+      /<a\b[^>]*href=["']guide\.html["'][^>]*target=["']_blank["']/.test(clear),
+      'the level clear card should open the field guide in a new tab',
+    );
     const guide = read('guide.html');
     const images = relativePaths(
       [...guide.matchAll(/<img\b[^>]*>/gi)].map((match) => attribute(match[0], 'src')),

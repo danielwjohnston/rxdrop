@@ -332,6 +332,15 @@ stage('fuzz', 'Long random games must keep the board legal', (check) => {
         if (game.phase === PHASE.FALLING) {
           assert.equal(game.board.findMatches().size, 0, `match survived (${JSON.stringify(setup)})`);
           assertNothingFloats(game.board, JSON.stringify(setup));
+          // Every virus the board held is cleared once or still there, on every
+          // settled frame. The result card and the share line read these counts
+          // (#60), so the game's own bred tally must match the outbreaks announced.
+          assert.equal(game.virusesBredThisLevel, grown, 'the bred tally drifted');
+          assert.equal(
+            game.virusesLeft + game.virusesClearedThisLevel,
+            game.virusesThisLevel,
+            `viruses appeared, vanished or were counted twice (${JSON.stringify(setup)})`,
+          );
         }
         if (game.isOver) {
           assert.equal(

@@ -93,8 +93,8 @@ every virus, move on to the next level.
 
 **Daily** — one bottle a day, the same for everyone, derived from the UTC date
 alone. No server and no accounts: your device computes the same seed as
-everyone else's. Finishing gives you a spoiler-free result line to share, and
-your best attempt of the day is kept.
+everyone else's. Finishing gives you a spoiler-free result line for the attempt
+you just played, and your best attempt of the day is kept.
 
 **Versus** — two players on one keyboard (or a gamepad each). Both bottles get
 the same layout and the same capsules, so it is a contest of play rather than
@@ -305,7 +305,7 @@ clipped inside.
 ## Development
 
 ```sh
-npm test           # 339 unit tests, no dependencies, about two seconds
+npm test           # 342 unit tests, no dependencies, about two seconds
 npm run test:watch # re-run on change
 
 # End-to-end checks in a real browser (Playwright is not a dependency):

@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { dailyKey, dailySeed, dailySetup, isToday, shareText } from '../src/daily.js';
-import { SPEEDS } from '../src/constants.js';
+import {
+  dailyKey, dailyResult, dailySeed, dailySetup, isToday, keptResult, shareText,
+} from '../src/daily.js';
+import { OUTBREAK_INTERVAL, SPEEDS } from '../src/constants.js';
+import { Game } from '../src/game.js';
 
 describe('daily key', () => {
   it('is the UTC date, so everyone in the world gets the same puzzle', () => {
@@ -88,5 +91,35 @@ describe('results', () => {
     const text = shareText({ ...result, won: false, cleared: 19 });
     assert.match(text, /19\/32 viruses/);
     assert.ok(!text.includes('Cleared'));
+  });
+
+  it('keeps the best attempt of the day, and the earlier one on a tie', () => {
+    const better = { ...result, score: result.score + 1 };
+    assert.equal(keptResult(result, better), better);
+    assert.equal(keptResult(better, result), better);
+    assert.equal(keptResult(result, { ...result }), result, 'a tie keeps the earlier');
+    const yesterday = { ...better, key: '2026-09-08' };
+    assert.equal(keptResult(yesterday, result), result, 'another day never competes');
+    assert.equal(keptResult(null, result), result);
+  });
+});
+
+describe('a daily result under outbreak (#60)', () => {
+  it('counts the cures out of every virus the board held, bred ones included', () => {
+    // Dealt minus left was the cleared count. A bred virus raises what is left,
+    // so that undercounted every outbreak run and could go below zero.
+    const game = new Game({ ...dailySetup('2026-09-09'), modifiers: ['outbreak'] });
+    game.pillsPlaced = OUTBREAK_INTERVAL;
+    assert.ok(game.tickOutbreak(), 'the outbreak breeds');
+    const bred = game.virusesLeft - game.startingViruses;
+    assert.ok(bred > 0);
+
+    const lost = dailyResult(game, '2026-09-09', false);
+    assert.equal(lost.cleared, 0, 'nothing has been cured yet, so nothing is counted');
+    assert.equal(lost.total, game.startingViruses + bred, 'the bred viruses are out of the total');
+    assert.match(shareText(lost), new RegExp(`0/${lost.total} viruses`));
+
+    game.virusesClearedThisLevel = 3;
+    assert.equal(dailyResult(game, '2026-09-09', false).cleared, 3, 'the cures it made');
   });
 });

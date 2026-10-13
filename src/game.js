@@ -122,7 +122,9 @@ export class Game {
     this.board = new Board(this.width, this.height);
     generateLevel(this.board, this.level, this.rng);
     this.startingViruses = this.board.countViruses();
-    /** Cleared on this board only, so it always pairs with startingViruses. */
+    /** Viruses an outbreak has bred on this board since it was dealt. */
+    this.virusesBredThisLevel = 0;
+    /** Cleared on this board only, so it always pairs with virusesThisLevel. */
     this.virusesClearedThisLevel = 0;
     this.pillsPlaced = 0;
     this.softDropping = false;
@@ -240,6 +242,15 @@ export class Game {
 
   get virusesLeft() {
     return this.board.countViruses();
+  }
+
+  /**
+   * Every virus this board has held: the ones it was dealt and any an outbreak
+   * bred since. This, not startingViruses, is what the cleared count is out of.
+   * Under outbreak, dealt minus left undercounts the cures and can go negative.
+   */
+  get virusesThisLevel() {
+    return this.startingViruses + this.virusesBredThisLevel;
   }
 
   get nextColors() {
@@ -742,7 +753,11 @@ export class Game {
     // cells an antibody takes are part of the clear the player watches.
     this.cured = this.board.cureHybrids(this.outcome.deliveries ?? [], this.chain);
     this.outcome.cured = this.cured;
-    const dying = new Set(this.outcome.cleared.map(({ x, y }) => `${x},${y}`));
+    // A cell the clear already takes is not the antibody's to take again, or
+    // one virus would be counted, and paid for, twice. That includes a
+    // collateral kill inside the ring, not only a cell of the run itself.
+    const dying = new Set([...this.outcome.cleared, ...this.outcome.collateral]
+      .map(({ x, y }) => `${x},${y}`));
     this.outcome.antibody = this.board
       .burstFor(this.cured)
       .filter(({ x, y }) => !dying.has(`${x},${y}`));
@@ -1037,6 +1052,7 @@ export class Game {
       child.spread = true;
       this.board.set(x, y, child);
     }
+    this.virusesBredThisLevel += targets.length;
     this.spreading = targets;
     this.phase = PHASE.SPREADING;
     this.phaseTimer = 0;

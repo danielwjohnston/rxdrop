@@ -9,7 +9,7 @@ import {
 } from './constants.js';
 import { Game } from './game.js';
 import { VersusMatch } from './versus.js';
-import { dailyKey, dailySetup, isToday, shareText } from './daily.js';
+import { dailyKey, dailyResult, dailySetup, isToday, keptResult, shareText } from './daily.js';
 import { Renderer, drawMatchDiagram, drawPillPreview, drawVirusTally } from './renderer.js';
 import { ERAS, eraFor, entersEra } from './eras.js';
 import { collateralOf, hybridOf, isHybrid } from './board.js';
@@ -619,7 +619,7 @@ function syncHud(force = false) {
   dom.speed.textContent = SPEEDS[game ? game.speedName : previewSpeed()].name;
   dom.viruses.textContent = shown ? shown.virusesLeft : '-';
   dom.seed.textContent = game ? game.seed : '-';
-  const ratio = shown && shown.startingViruses ? shown.virusesLeft / shown.startingViruses : 1;
+  const ratio = shown && shown.virusesThisLevel ? shown.virusesLeft / shown.virusesThisLevel : 1;
   dom.virusBar.style.width = `${Math.round(ratio * 100)}%`;
   dom.chooseLevel.textContent = settings.level;
 
@@ -848,7 +848,7 @@ function finishGameOver() {
     return;
   }
   dom.overSummary.textContent =
-    `${game.startingViruses - game.virusesLeft} of ${game.startingViruses} viruses cleared ` +
+    `${game.virusesClearedThisLevel} of ${game.virusesThisLevel} viruses cleared ` +
     `on level ${game.level}. Final score ${game.score.toLocaleString()}.`;
   dom.overBest.hidden = game.score <= topScoreAtStart;
   showScreen('over');
@@ -856,25 +856,20 @@ function finishGameOver() {
 
 function recordDaily(won) {
   const daily = settings.activeDaily ?? dailySetup(dailyKey());
-  const result = {
-    key: daily.key,
-    level: game.level,
-    speed: SPEEDS[game.speedName].name,
-    score: game.score,
-    cleared: game.startingViruses - game.virusesLeft,
-    total: game.startingViruses,
-    won,
-    resistance: Boolean(game.resistance),
-    modifiers: [...game.modifiers],
-  };
-  const previous = loadDailyResult();
-  // Keep the best attempt of the day rather than the most recent.
-  if (!isToday(previous, result.key) || previous.score < result.score) saveDailyResult(result);
+  const result = dailyResult(game, daily.key, won);
+  // The day keeps its best attempt, but this card and its share line are the
+  // attempt just played. When an earlier one stays the best, say so, so the
+  // saved result and the line on screen never silently disagree.
+  const kept = keptResult(loadDailyResult(), result);
+  if (kept === result) saveDailyResult(result);
 
   dom.dailyTitle.textContent = won ? 'Daily cleared!' : 'Daily over';
-  dom.dailySummary.textContent = won
+  const summary = won
     ? `Every virus gone on ${result.key}.`
     : `${result.cleared} of ${result.total} viruses on ${result.key}.`;
+  dom.dailySummary.textContent = kept === result
+    ? summary
+    : `${summary} Your best today, ${kept.score.toLocaleString()}, is still the one kept.`;
   dom.dailyShare.textContent = shareText(result, `${location.origin}${location.pathname}`);
   showScreen('daily');
 }

@@ -1258,10 +1258,13 @@ top of that. Nobody has estimated their cost.
    outbreak breeds extra viruses to cure.
 6. **Every flagged historical line below is checked** before it reaches copy.
 7. **The two `recordDaily` quirks are fixed first** (issue #60), because
-   the trial reuses that code:
-   - it counts cleared viruses as `startingViruses - virusesLeft`, which
-     undercounts under outbreak;
-   - it saves the best attempt but builds the share line from the latest one.
+   the trial reuses that code. *Done on 13 October 2026:*
+   - it counted cleared viruses as `startingViruses - virusesLeft`, which
+     undercounts under outbreak. The count is now out of every virus the board
+     held, bred ones included (`Game.virusesThisLevel`);
+   - it saved the best attempt but built the share line from the latest one. It
+     still shares the attempt just played, and now says so when an earlier one
+     stays the day's best (`keptResult` in `src/daily.js`).
 
 #### The history it may lean on
 

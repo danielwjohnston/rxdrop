@@ -66,6 +66,13 @@ describe('service-worker precache', () => {
   // follows that link must get the page and every picture in it.
   it('contains the field guide and everything it shows', () => {
     assert.ok(/href=["']guide\.html["']/.test(index), 'index.html should link the field guide');
+    // "add a link to the guide on the pause screen too" - player request. A new
+    // tab, so following it never throws away the paused run.
+    const pause = index.match(/<div[^>]*id="screen-pause"[\s\S]*?<\/div>/)?.[0] ?? '';
+    assert.ok(
+      /<a\b[^>]*href=["']guide\.html["'][^>]*target=["']_blank["']/.test(pause),
+      'the pause card should open the field guide in a new tab',
+    );
     const guide = read('guide.html');
     const images = relativePaths(
       [...guide.matchAll(/<img\b[^>]*>/gi)].map((match) => attribute(match[0], 'src')),

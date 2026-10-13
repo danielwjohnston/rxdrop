@@ -90,7 +90,9 @@ through no fault the player can see. Three guardrails, all of them enforced by
 the gauntlet rather than by good intentions:
 
 - A hybrid never forms where it cannot be reached. Combining requires two open
-  sides to treat from; with fewer, the virus mutates the old way instead.
+  sides to treat from; with fewer, the virus mutates the old way instead. And it
+  keeps them: an outbreak child never lands where it would leave a strain with
+  fewer than two.
 - **Deliveries persist.** Each parent cleared beside the strain is remembered,
   so the two never have to arrive together. Landing both at once is the skilled
   version, not the only version.
@@ -149,6 +151,31 @@ hurry is floored at, so "twice as fast" never becomes "unplaceable".
 
 Take the generation cap out and the gauntlet's playability check goes red: the
 bot stops being able to keep up at all.
+
+*What measurement found, 11 October:* outbreak broke two promises that mutation
+keeps, and the gauntlet missed both. First, a child could complete a run. Being
+beside its parent does not keep it out of a line: a row along the floor under
+the parent runs through the child and not the parent. Nothing resolved that
+run, so the next capsule fell onto a free clear. Bot play hit this on 24 of 319
+outbreak ticks over 40 seeds. Second, a hybrid could replicate, which skipped
+the two-open-sides guard that combining obeys: 20 of 71 copies were born with
+fewer than two. Now a child never lands where it completes a run, alone or together
+with another child from the same tick, and a hybrid never replicates. The
+same-tick case is real, not theoretical: without it, bot play still produced
+one such clear per 300 or so ticks. `fuzz` now plays outbreak, and the
+`hybrid` stage's formation check covers copies as well as combining.
+
+*What was decided, 12 October:* a strain keeps its two open sides for its whole
+life, not only where it forms. An ordinary child could still land beside an
+existing strain and take a side away. Over 1,000 bot games that happened on 295
+of 7,786 outbreak ticks, never down to zero. But one tick places up to two
+children, and a constructed board shows them landing on both open sides of one
+strain at once, boxing it in. Now a child never takes a side that would leave a strain
+fewer than two, alone or together with another child from the same tick. It
+cost 0.9% of children and moved no reference trace. `hybrid` checks it tick by
+tick, and `modifiers` checks it on every frame of play. The evidence, and the
+alternatives turned down, are in
+[DEC-0003](../.agents/decisions/DEC-0003-outbreak-keeps-hybrids-reachable.md).
 
 ### Blackout, and light therapy - `cut`, and replaced by Phototherapy below
 

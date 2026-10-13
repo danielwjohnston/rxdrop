@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d1424">
+<title>RxDrop Field Guide</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<style>
+/* Layout: a clinician's case book. One narrow reading column; each scenario is a numbered
+   sequence of bottle snapshots laid side by side like a strip of lab slides. Single dark look,
+   matching the game's own glassware. */
+:root {
+  color-scheme: dark;
+  --bg: #0d1424;
+  --panel: #142037;
+  --line: #24365a;
+  --fg: #e6ecf7;
+  --muted: #9aa8c4;
+  --accent: #f0b43c;
+  --red: #ff5a5a; --yellow: #f6c945; --blue: #4aa8ff;
+  /* System faces only: the guide is precached and must read offline. */
+  --display: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+  --body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; }
+img { max-width: 100%; height: auto; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.6 var(--body); }
+.wrap { max-width: 980px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 80px; }
+h1, h2, h3 { font-family: var(--display); line-height: 1.15; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2.2rem, 6vw, 3.4rem); }
+h1 span { color: var(--red); }
+h2 { font-size: 1.7rem; margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line); }
+h3 { font-size: 1.2rem; color: var(--accent); margin-top: 32px; }
+p, li { max-width: 68ch; }
+.lede { color: var(--muted); font-size: 1.1rem; }
+.eyebrow { font: 600 .78rem var(--display); letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
+a { color: var(--blue); }
+nav { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
+nav a { text-decoration: none; color: var(--fg); border: 1px solid var(--line); border-radius: 999px; padding: 4px 14px; font-size: .9rem; }
+nav a:hover, nav a:focus-visible { border-color: var(--accent); outline: none; }
+.r { color: var(--red); font-weight: 700 } .y { color: var(--yellow); font-weight: 700 } .b { color: var(--blue); font-weight: 700 }
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; margin: 20px 0 8px; counter-reset: step; }
+.step { min-width: 0; counter-increment: step; }
+.step img { display: block; width: 100%; max-width: 260px; border-radius: 10px; border: 1px solid var(--line); background: #000; }
+.step p { font-size: .92rem; margin: 10px 0 0; color: var(--muted); }
+.step p::before { content: "Step " counter(step); display: block; font: 700 .75rem var(--display); letter-spacing: .1em; text-transform: uppercase; color: var(--fg); }
+figure { margin: 20px 0; }
+figure img { border-radius: 12px; border: 1px solid var(--line); display: block; }
+figcaption { color: var(--muted); font-size: .9rem; margin-top: 8px; }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+.two > * { min-width: 0; }
+.tip { background: var(--panel); border-left: 3px solid var(--accent); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 16px 0; max-width: 68ch; }
+.tip strong { color: var(--accent); }
+.table { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: .95rem; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-family: var(--display); color: var(--muted); font-weight: 600; letter-spacing: .04em; }
+kbd { font: .85em var(--body); background: var(--panel); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 6px; }
+.cycle { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font: 700 1.05rem var(--display); margin: 12px 0; }
+.cycle span.arrow { color: var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <p><a href="./">&larr; Back to the game</a></p>
+  <div class="eyebrow">Player's field guide</div>
+  <h1>Rx<span>Drop</span>, step by step</h1>
+  <p class="lede">Every mode, every kind of virus, and every modifier, shown as real moments from the game. Each sequence was staged in the game itself and captured frame by frame.</p>
+  <nav aria-label="Sections">
+    <a href="#basics">Basics</a><a href="#modes">Modes</a><a href="#resistance">Resistance</a>
+    <a href="#tolerant">Tolerant viruses</a><a href="#hybrid">Hybrids</a><a href="#modifiers">Modifiers</a>
+    <a href="#controls">Controls</a><a href="#cheatsheet">Cheat sheet</a>
+  </nav>
+
+  <h2 id="basics">The basics</h2>
+  <div class="two">
+    <figure><img src="assets/guide/overview.webp" alt="A level 2 game: the bottle with twelve viruses, score panel on the left and virus count on the right"><figcaption>A game in progress. Left: score, level, speed, the era's physician and the next capsule. Right: viruses left, by colour.</figcaption></figure>
+    <div>
+      <p>Capsules fall in two halves. Line up <strong>four of one colour</strong> in a row or column and they burst. <strong>Viruses count toward the four.</strong> Clear every virus to finish the level.</p>
+      <p>You only lose when capsules back up out of the <strong>neck</strong>, the small chamber at the top of the bottle. A full bottle is not a loss by itself.</p>
+      <p>The twenty levels run through ten eras of medicine. The bottle and the physician change, but red, yellow and blue always keep the same hue.</p>
+    </div>
+  </div>
+  <h3>Clearing a virus</h3>
+  <div class="steps">
+    <div class="step"><img src="assets/guide/basic-1.webp" alt="A yellow virus and one yellow half on the floor, a yellow-yellow capsule falling above"><p>A <span class="y">yellow</span> virus and one yellow half sit on the floor. Steer the yellow capsule into the gap beside them.</p></div>
+    <div class="step"><img src="assets/guide/basic-2.webp" alt="Four yellow cells bursting on the floor"><p>Virus + 3 halves = four in a row. They burst together.</p></div>
+    <div class="step"><img src="assets/guide/basic-3.webp" alt="The floor is clear, only the red and blue viruses remain"><p>The virus is gone. Two left to go, and the next capsule is already coming.</p></div>
+  </div>
+  <div class="tip"><strong>Tip.</strong> The ghost outline on the floor shows where the capsule will land. Use it with hard drop (<kbd>Space</kbd>) to place quickly and accurately.</div>
+
+  <h2 id="modes">The three modes</h2>
+  <div class="two">
+    <figure><img src="assets/guide/title.webp" alt="Title screen with the Play button and Solo, Daily and Versus selector"><figcaption>Pick the mode on the title screen, under Play. Options holds level, speed, Resistance and the modifiers.</figcaption></figure>
+    <div class="table"><table>
+      <tr><th>Mode</th><th>What you do</th></tr>
+      <tr><td><strong>Solo</strong></td><td>The ladder. Choose a level (0–20) and speed. Clear the bottle to move up. Beating level 20 finishes the campaign.</td></tr>
+      <tr><td><strong>Daily</strong></td><td>One bottle a day, the same for everyone. It always comes with <strong>two modifiers</strong>, named on the card. That's why Daily feels different. Read them before you start. Your best try of the day is kept.</td></tr>
+      <tr><td><strong>Versus</strong></td><td>Two players, one keyboard. Same layout, same capsules. Clear more than four at once, or chain clears, to drop garbage halves on your opponent. Clear your viruses first, or outlast them.</td></tr>
+    </table></div>
+  </div>
+  <figure><img src="assets/versus.png" alt="Two bottles side by side in versus mode"><figcaption>Versus: both bottles get the identical deal, so it's skill, not luck. Player 1 uses <kbd>A</kbd><kbd>D</kbd><kbd>S</kbd>, <kbd>Q</kbd>/<kbd>W</kbd> rotate, <kbd>E</kbd> drop. Player 2 uses the arrows, <kbd>,</kbd>/<kbd>.</kbd> rotate, <kbd>/</kbd> drop.</figcaption></figure>
+
+  <h2 id="resistance">Resistance: viruses that change colour</h2>
+  <div class="two">
+    <figure><img src="assets/guide/resist-1.webp" alt="A red virus with a ring around it, flanked by red halves"><figcaption>The red virus wears a ring: it is about to mutate.</figcaption></figure>
+    <div>
+      <p>Turn on <strong>Resistance</strong> in Options and viruses age. Every 8 capsules each one ages by a step. When one reaches the limit it <strong>changes to a different colour</strong>.</p>
+      <p>A virus close to turning shows a <strong>pulsing dashed ring</strong>. The panel shows how close the board is to its next mutation.</p>
+      <div class="tip"><strong>How to beat it.</strong> Don't hoard. If you have a clean clear on a ringed virus, take it now. A setup built around a red virus is worthless once it turns blue.</div>
+    </div>
+  </div>
+
+  <h2 id="tolerant">Tolerant viruses: use the other colour</h2>
+  <p>Viruses that survive long enough become <strong>tolerant</strong>. Your normal clear through them <em>bounces off</em>: you hear a dull thud, the medicine clears, the virus stays. Each bounce still wears it down one step, so the slow way always works.</p>
+  <p>The fast way is <strong>collateral sensitivity</strong>: a tolerant virus dies to one specific other colour, cleared <strong>beside</strong> it (touching it, not through it). That kill also pays double.</p>
+  <div class="cycle"><span class="r">Tolerant red</span><span class="arrow">dies to</span><span class="b">blue</span>&nbsp;·&nbsp;<span class="y">Tolerant yellow</span><span class="arrow">dies to</span><span class="r">red</span>&nbsp;·&nbsp;<span class="b">Tolerant blue</span><span class="arrow">dies to</span><span class="y">yellow</span></div>
+  <p>You don't need to memorise this. A tolerant virus glows in the colour that kills it.</p>
+  <div class="steps">
+    <div class="step"><img src="assets/guide/tol-1.webp" alt="A red virus with a blue aura on the floor, two blue halves beside it, a blue capsule above"><p>A tolerant <span class="r">red</span> virus, glowing <span class="b">blue</span>. Two blue halves already touch it. Bring the blue capsule down to the right.</p></div>
+    <div class="step"><img src="assets/guide/tol-2.webp" alt="Four blue halves bursting beside the red virus, which bursts too"><p>Four blue clear <em>next to</em> the virus. It dies with them.</p></div>
+    <div class="step"><img src="assets/guide/tol-3.webp" alt="The floor clear, a 'written up' notice at the bottom"><p>Cured, for double points. The first time, the find goes in your formulary notebook.</p></div>
+  </div>
+
+  <h2 id="hybrid">Hybrid strains: clear both parents</h2>
+  <p>A virus kept covered by the wrong colour for too long can <strong>combine</strong> into a hybrid. You'll recognise one because it is <strong>split down the middle into its two parent colours</strong>, for example half <span class="y">yellow</span>, half <span class="b">blue</span>, with a dark seam. Four of one colour won't clear it. There are three ways to beat one:</p>
+  <ol>
+    <li><strong>Both parents, any time.</strong> Clear one parent colour beside it, later clear the other beside it. The game remembers the first one.</li>
+    <li><strong>Same parent twice.</strong> It reverts to a normal virus of that colour. Then clear it the normal way.</li>
+    <li><strong>Both parents in one cascade (expert).</strong> This makes an <strong>antibody</strong>, which destroys the hybrid and the cells around it, for 4× points.</li>
+  </ol>
+  <p>Here is the expert play, frame by frame:</p>
+  <div class="steps">
+    <div class="step"><img src="assets/guide/hyb-1.webp" alt="A half-yellow, half-blue hybrid virus on the floor, three yellow halves beside it, a staircase of blue halves above them, a yellow-blue capsule on the right"><p>A <span class="y">yellow</span>/<span class="b">blue</span> hybrid. Three <span class="y">yellow</span> halves sit beside it, with <span class="b">blue</span> halves stepped above them. Drop the capsule yellow-end-down into the last column.</p></div>
+    <div class="step"><img src="assets/guide/hyb-2.webp" alt="The yellow row bursting next to the hybrid virus"><p>Four yellow clear beside the hybrid. That's parent one.</p></div>
+    <div class="step"><img src="assets/guide/hyb-3.webp" alt="Blue halves have dropped to the floor and burst, with a white flash on the virus"><p>The blues fall into the gap and make four in a row. Parent two, in the same cascade: an antibody fires.</p></div>
+    <div class="step"><img src="assets/guide/hyb-4.webp" alt="The floor is empty"><p>Hybrid gone, area cleaned up, 4× points.</p></div>
+  </div>
+  <div class="tip"><strong>Avoid making hybrids.</strong> They form when you bury a virus under halves of another colour. A hybrid always keeps two open sides, so it can always be reached, but it's still slower to kill than the virus you started with.</div>
+
+  <h2 id="modifiers">Modifiers</h2>
+  <p>Modifiers change the rules of a run. Daily always uses two. In Solo you can switch them on under Options. Each one has a built-in limit, so none can make a level impossible.</p>
+
+  <div class="two">
+    <figure><img src="assets/guide/mod-quarantine.webp" alt="A column of the bottle shaded with diagonal stripes"><figcaption><strong>Quarantine.</strong> The striped column refuses capsules.</figcaption></figure>
+    <div><h3>Quarantine</h3><p>One column is sealed. You can't place in it, but lines still clear through it, and pieces still fall through it.</p><p><strong>To clear it:</strong> make a clear right next to the sealed column, or wait. It lifts on its own after 10 capsules.</p></div>
+  </div>
+  <div class="two">
+    <figure><img src="assets/guide/mod-contaminated.webp" alt="A falling capsule with one half grey and crossed out"><figcaption><strong>Contaminated batch.</strong> The crossed-out half is inert.</figcaption></figure>
+    <div><h3>Contaminated batch</h3><p>Some capsule halves are duds. They stack and fall but never match.</p><p><strong>What to do:</strong> park a dud right next to a clear you're planning. An inert half touching any clear washes out with it.</p></div>
+  </div>
+  <div class="two">
+    <figure><img src="assets/guide/mod-outbreak.webp" alt="A crowded level 10 bottle with the Outbreak badge in the side panel"><figcaption><strong>Outbreak.</strong> Viruses spread into empty neighbouring cells.</figcaption></figure>
+    <div><h3>Outbreak</h3><p>Viruses copy themselves into adjacent empty cells on a timer. In exchange, capsules come twice as fast. Each virus spreads at most once.</p><p><strong>What to do:</strong> kill early, and don't leave empty pockets next to viruses. The space you're "saving" is where they will grow.</p></div>
+  </div>
+  <div class="two">
+    <figure><img src="assets/guide/mod-rationing.webp" alt="A bottle where many viruses wear rings, with Rationing and a Resistance meter in the side panel"><figcaption><strong>Rationing.</strong> Viruses of the missing colour build tolerance (rings).</figcaption></figure>
+    <div><h3>Rationing</h3><p>For a stretch, one colour isn't dealt at all. It rotates back on a fixed timer, so the wait is always predictable. While a colour is out of stock, viruses of that colour build tolerance.</p><p><strong>What to do:</strong> it's a slow grind. Keep spaces open for the returning colour, and expect to use the <a href="#tolerant">collateral colour</a> on viruses that turned tolerant.</p></div>
+  </div>
+  <h3>Phototherapy</h3>
+  <p>The bottle clouds over row by row, worst where viruses are. Press <kbd>Shift</kbd> or <kbd>L</kbd> to enter the light chamber. Your controls now steer falling block-shaped light pieces. Each line of light you complete scrubs the lowest cloudy row clean. Viruses are frozen while you are in there.</p>
+  <div class="steps">
+    <div class="step"><img src="assets/guide/mod-photo.webp" alt="The lower rows of the bottle dimmed by fog, Light therapy meter on the right"><p>The lower rows are fogging up. The Light therapy meter shows how dirty the sample is.</p></div>
+    <div class="step"><img src="assets/guide/mod-photo-chamber.webp" alt="A glowing square light piece falling over the dimmed bottle"><p>In the chamber: a light piece falls. Complete lines with it to clean rows from the bottom up.</p></div>
+  </div>
+  <div class="tip"><strong>Before you go in:</strong> place your capsule first. Entering the chamber drops the current capsule where it stands. The lamp needs a rest between visits, and if you overfill the chamber you're sent back. You can win without ever using it; the fog never hides the falling capsule or where it will land.</div>
+
+  <h2 id="controls">Controls</h2>
+  <div class="table"><table>
+    <tr><th>Action</th><th>Keyboard</th><th>Touch</th><th>Gamepad</th></tr>
+    <tr><td>Move</td><td><kbd>←</kbd> <kbd>→</kbd> or <kbd>A</kbd> <kbd>D</kbd></td><td>Buttons, or drag the bottle</td><td>D-pad / left stick</td></tr>
+    <tr><td>Rotate</td><td><kbd>Z</kbd> / <kbd>X</kbd>, <kbd>↑</kbd></td><td>Tap the bottle, or slide up</td><td>A / B</td></tr>
+    <tr><td>Hurry down</td><td><kbd>↓</kbd> or <kbd>S</kbd></td><td>HURRY, or drag down</td><td>D-pad down</td></tr>
+    <tr><td>Hard drop</td><td><kbd>Space</kbd></td><td>DROP, or flick down</td><td>D-pad up / Y</td></tr>
+    <tr><td>Light chamber</td><td><kbd>Shift</kbd> or <kbd>L</kbd></td><td></td><td></td></tr>
+    <tr><td>Pause / Restart</td><td><kbd>P</kbd> / <kbd>R</kbd></td><td>Pause card</td><td>Start / Select</td></tr>
+  </table></div>
+  <p>Rotation has two shapes, not four. Rotating twice just swaps the colours in place.</p>
+
+  <h2 id="cheatsheet">Cheat sheet: "how do I clear this?"</h2>
+  <div class="table"><table>
+    <tr><th>You see</th><th>Do this</th></tr>
+    <tr><td>Normal virus</td><td>Four of its colour in a line through it.</td></tr>
+    <tr><td>Pulsing dashed ring</td><td>About to change colour. Clear it now if you can.</td></tr>
+    <tr><td>Virus glowing another colour, clears bounce off</td><td>Tolerant. Clear four of the glow colour <em>touching</em> it. Or keep clearing its own colour to wear it down.</td></tr>
+    <tr><td>Virus split into two colours</td><td>Hybrid. Clear both parent colours beside it, or one parent twice.</td></tr>
+    <tr><td>Striped column</td><td>Quarantine. Clear beside it, or wait 10 capsules.</td></tr>
+    <tr><td>Crossed-out grey half</td><td>Dud. Park it next to your next clear.</td></tr>
+    <tr><td>Bottle getting dark</td><td>Phototherapy fog. Place your capsule, then <kbd>L</kbd> for the light chamber.</td></tr>
+    <tr><td>A colour stopped coming</td><td>Rationing. It's back on a timer; leave room for it.</td></tr>
+  </table></div>
+</div>
+</body>
+</html>

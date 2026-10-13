@@ -10,7 +10,7 @@ import {
   quarantineColumn,
   rationedOut,
 } from '../src/modifiers.js';
-import { Board, cell } from '../src/board.js';
+import { Board, cell, hybridOf } from '../src/board.js';
 import { Game, PHASE } from '../src/game.js';
 import { LightChamber } from '../src/light.js';
 import { dailyModifiers, dailySeed, dailySetup } from '../src/daily.js';
@@ -104,6 +104,77 @@ describe('outbreak', () => {
     const { board } = seeded();
     board.get(3, board.height - 1).spread = true;
     assert.deepEqual(outbreakTargets(board, createRng(1), 4, 4), []);
+  });
+
+  it('never lands where it completes a run, even one its parent is not in', () => {
+    // The parent sits over the gap; the run is the floor row through it.
+    const board = new Board();
+    const floor = board.height - 1;
+    for (const x of [0, 1, 2]) board.set(x, floor, cell(COLORS.YELLOW, PILL, null));
+    board.set(3, floor - 1, cell(COLORS.YELLOW, VIRUS, null));
+    for (const [x, y] of [[2, floor - 1], [4, floor - 1], [3, floor - 2]]) {
+      board.set(x, y, cell(COLORS.RED, PILL, null));
+    }
+    assert.deepEqual(outbreakTargets(board, createRng(1), 4, 4), []);
+  });
+
+  it('never lets two children placed together complete a run between them', () => {
+    // Either gap alone makes three in a row along the floor; both make four.
+    const board = new Board();
+    const floor = board.height - 1;
+    board.set(0, floor, cell(COLORS.YELLOW, PILL, null));
+    board.set(3, floor, cell(COLORS.YELLOW, PILL, null));
+    for (const x of [1, 2]) {
+      board.set(x, floor - 1, cell(COLORS.YELLOW, VIRUS, null));
+      board.set(x, floor - 2, cell(COLORS.RED, PILL, null));
+    }
+    board.set(0, floor - 1, cell(COLORS.RED, PILL, null));
+    board.set(3, floor - 1, cell(COLORS.RED, PILL, null));
+    for (let seed = 0; seed < 20; seed += 1) {
+      const picks = outbreakTargets(board, createRng(seed), 4, 4);
+      assert.equal(picks.length, 1, `seed ${seed} filled both gaps`);
+    }
+  });
+
+  it('never copies a hybrid', () => {
+    // A hybrid only forms where it has two open sides to be treated from. A
+    // copy of one is a strain that never passed that test.
+    const board = new Board();
+    board.set(3, board.height - 1, cell(hybridOf(COLORS.RED, COLORS.YELLOW), VIRUS, null));
+    assert.deepEqual(outbreakTargets(board, createRng(1), 4, 4), []);
+  });
+
+  it('never crowds a hybrid below two open sides', () => {
+    // A strain in the corner has two open sides, right and above, and each has
+    // a parent beside it with nowhere else to go. Without the guard one tick
+    // fills both and boxes the strain in.
+    const board = new Board();
+    const floor = board.height - 1;
+    board.set(0, floor, cell(hybridOf(COLORS.RED, COLORS.BLUE), VIRUS, null));
+    board.set(2, floor, cell(COLORS.YELLOW, VIRUS, null));
+    board.set(0, floor - 2, cell(COLORS.YELLOW, VIRUS, null));
+    for (const [x, y] of [[3, floor], [2, floor - 1], [1, floor - 2], [0, floor - 3]]) {
+      board.set(x, y, cell(COLORS.RED, PILL, null));
+    }
+    for (let seed = 0; seed < 20; seed += 1) {
+      assert.deepEqual(outbreakTargets(board, createRng(seed), 4, 4), [], `seed ${seed}`);
+    }
+  });
+
+  it('never lets two children placed together crowd a hybrid between them', () => {
+    // Three open sides. Either child alone leaves two, both together leave one.
+    const board = new Board();
+    const floor = board.height - 1;
+    board.set(3, floor, cell(hybridOf(COLORS.RED, COLORS.BLUE), VIRUS, null));
+    board.set(1, floor, cell(COLORS.YELLOW, VIRUS, null));
+    board.set(5, floor, cell(COLORS.YELLOW, VIRUS, null));
+    for (const [x, y] of [[0, floor], [1, floor - 1], [6, floor], [5, floor - 1]]) {
+      board.set(x, y, cell(COLORS.RED, PILL, null));
+    }
+    for (let seed = 0; seed < 20; seed += 1) {
+      const picks = outbreakTargets(board, createRng(seed), 4, 4);
+      assert.equal(picks.length, 1, `seed ${seed} closed both sides`);
+    }
   });
 
   it('caps how far a level can grow', () => {

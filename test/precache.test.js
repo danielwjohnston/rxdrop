@@ -61,4 +61,18 @@ describe('service-worker precache', () => {
       assert.ok(precached.has(file), `PRECACHE is missing referenced file ${file}`);
     }
   });
+
+  // The field guide is linked from the title screen, so an offline player who
+  // follows that link must get the page and every picture in it.
+  it('contains the field guide and everything it shows', () => {
+    assert.ok(/href=["']guide\.html["']/.test(index), 'index.html should link the field guide');
+    const guide = read('guide.html');
+    const images = relativePaths(
+      [...guide.matchAll(/<img\b[^>]*>/gi)].map((match) => attribute(match[0], 'src')),
+    );
+    assert.ok(images.length > 0, 'the guide should show pictures');
+    for (const file of ['./guide.html', ...images]) {
+      assert.ok(precached.has(file), `PRECACHE is missing guide file ${file}`);
+    }
+  });
 });

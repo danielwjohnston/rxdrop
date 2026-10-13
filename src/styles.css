@@ -1444,6 +1444,11 @@ body.is-versus .apothecary {
   color: var(--ink);
 }
 
+.how__guide {
+  color: var(--accent-warm);
+  font-weight: 700;
+}
+
 .how__diagram {
   width: 100%;
   height: auto;

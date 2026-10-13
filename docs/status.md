@@ -60,7 +60,7 @@ Two consequences:
 
 The gate consists of:
 
-- **333 unit tests** on Node 20 and Node 22;
+- **338 unit tests** on Node 20 and Node 22;
 - the thirteen-stage UltraGauntlet;
 - **43 browser checks** covering menus, input, daily, versus, offline/mobile
   behavior, and the campaign-complete path.
@@ -92,7 +92,8 @@ change rather than inheriting an older green result.
 > **The suite was 318 again, genuinely, on 10 October.** `test/metadata.test.js`
 > added five tests, taking 313 to 318. Both figures are correct for their
 > dates, so do not "correct" that 318 back to 313. The score tests for #40 then
-> took the suite to 327, and the Phase 0 reference-trace tests to 333.
+> took the suite to 327, and the Phase 0 reference-trace tests to 333. The
+> outbreak guards (11 October) took it to 336.
 
 ## Current roadmap
 

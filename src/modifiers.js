@@ -13,9 +13,11 @@
  * a virus unanswerable. If you cannot write that sentence for a new modifier,
  * the modifier is not ready, whatever it does for variety.
  */
+import { createsRun, isHybrid, treatableFrom } from './board.js';
 import {
   BOARD_WIDTH,
   COLOR_COUNT,
+  MATCH_LENGTH,
   OUTBREAK_CEILING,
   QUARANTINE_MAX,
   RATION_SPELL,
@@ -38,7 +40,9 @@ export const MODIFIERS = Object.freeze([
       + 'capsules in the same minute. The empty space you were saving is now a '
       + 'liability.',
     bound: 'A virus replicates once and never again, never above the virus '
-      + 'ceiling, and never past 1.6 times the viruses the level started with.',
+      + 'ceiling, and never past 1.6 times the viruses the level started with. '
+      + 'A copy never completes a line for you, and never leaves a combined '
+      + 'strain fewer than two sides to treat it from.',
   }),
   Object.freeze({
     id: 'phototherapy',
@@ -136,11 +140,19 @@ export function describeModifiers(ids) {
  * below `topRow` - the same ceiling the level generator obeys - so an outbreak
  * can never seed the neck it would take the run away with. The caller enforces
  * the population ceiling.
+ *
+ * It also keeps two promises mutation already makes. A child never lands where
+ * it completes a run: the threat is more disease, not a free clear. And no
+ * strain appears with fewer than two open sides to be treated from, which is
+ * why a hybrid never replicates - a copy would skip the guard combining obeys.
+ * Nor does a strain that has formed ever drop below two: outbreak is the only
+ * thing that adds a virus to a settled bottle, so it is the only thing that
+ * could take a side away.
  */
 export function outbreakTargets(board, rng, limit, topRow) {
   const parents = [];
   board.forEachCell((c, x, y) => {
-    if (c.type !== VIRUS || c.spread) return;
+    if (c.type !== VIRUS || c.spread || isHybrid(c)) return;
     parents.push({ x, y });
   });
   if (parents.length === 0) return [];
@@ -150,24 +162,49 @@ export function outbreakTargets(board, rng, limit, topRow) {
     const j = rng.int(i + 1);
     [parents[i], parents[j]] = [parents[j], parents[i]];
   }
-  const taken = new Set();
+  // The board as it will be once this tick's earlier picks have landed, so two
+  // children placed together cannot complete a run between them either.
+  const taken = new Map();
+  const after = {
+    inBounds: (x, y) => board.inBounds(x, y),
+    get: (x, y) => taken.get(`${x},${y}`) ?? board.get(x, y),
+  };
   const picks = [];
   for (const { x, y } of parents) {
     if (picks.length >= limit) break;
+    const { color } = board.get(x, y);
     const open = [];
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
       const nx = x + dx;
       const ny = y + dy;
       if (ny < topRow || !board.inBounds(nx, ny)) continue;
       if (!board.isEmpty(nx, ny) || taken.has(`${nx},${ny}`)) continue;
+      // Being beside the parent proves nothing: a line through the new cell
+      // need not pass through the parent - a row along the floor beneath it,
+      // say - and nothing would have cleared that line already.
+      if (createsRun(after, nx, ny, color, MATCH_LENGTH)) continue;
+      // Against `after` too: two children from one tick can close two sides
+      // of the same strain between them.
+      if (crowdsHybrid(after, nx, ny)) continue;
       open.push({ x: nx, y: ny });
     }
     if (open.length === 0) continue;
     const target = open[rng.int(open.length)];
-    taken.add(`${target.x},${target.y}`);
-    picks.push({ from: { x, y }, ...target, color: board.get(x, y).color });
+    taken.set(`${target.x},${target.y}`, { type: VIRUS, color });
+    picks.push({ from: { x, y }, ...target, color });
   }
   return picks;
+}
+
+/**
+ * True if a virus at the empty cell (x, y) would leave a hybrid beside it with
+ * fewer than two open sides. That cell is one of the strain's open sides now,
+ * so filling it costs the strain one.
+ */
+function crowdsHybrid(board, x, y) {
+  return [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => (
+    isHybrid(board.get(x + dx, y + dy)) && treatableFrom(board, x + dx, y + dy) - 1 < 2
+  ));
 }
 
 /** The most viruses an outbreak may grow a level to. */

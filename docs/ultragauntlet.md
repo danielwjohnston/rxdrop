@@ -53,7 +53,7 @@ Run them all with `node tools/gauntlet.mjs`, or a few with
 | 2 | `determinism` | A seed reproduces a game. Replays solo, versus and the daily and compares boards and scores. |
 | 3 | `timing` | The clock is well behaved. Feeds zero, negative, sub-millisecond and 60-second frames, pauses mid-cascade, and pokes input into phases that should refuse it. |
 | 4 | `boundaries` | The interesting cases are in the middle. Checks all 21 levels for virus quota and ceiling, every speed, both walls, a blocked spawn and garbage aimed at a full column. |
-| 5 | `fuzz` | Play is orderly. Runs long random games across six setups, two of them with outbreak writing viruses into the bottle, and asserts after every single frame that nothing floats, no match survives resolution, and viruses are conserved once the ones an outbreak announced are counted. |
+| 5 | `fuzz` | Play is orderly. Runs long random games across six setups, two of them with outbreak writing viruses into the bottle, and asserts on every settled frame that nothing floats, no match survives resolution, and every virus the board held, an outbreak's included, is cleared once or still there. |
 | 6 | `resistance` | The new mechanic obeys the old rules. 200 seeded boards mutated repeatedly, checking a mutation never creates a free clear, never changes the virus count, and always hands play back. |
 | 7 | `collateral` | No virus may become unanswerable. Sweeps every colour at every resistance level to prove something still kills it, checks that a collateral kill only ever takes tolerant viruses, and that resolution terminates on a board where everything shrugs. |
 | 8 | `hybrid` | A combined strain must still come apart. Proves no capsule is ever dealt in a hybrid colour and no hybrid ever appears in a match; that both parents cure every strain in either order; that both in one cascade always synthesise an antibody; that one parent alone always breaks it in the end; that a hybrid never forms with fewer than two open sides to be treated from, whether by combining or by an outbreak copying one; and that an outbreak child never crowds an existing strain below two. |
@@ -140,6 +140,12 @@ The stages are not ceremony. Building this set surfaced real defects:
   where the rule says two. Now `fuzz` plays two outbreak setups and `hybrid`
   checks copies at two sides. Take either guard out of `outbreakTargets` and the
   matching check goes red.
+- **`fuzz`** also missed a double count. An antibody's ring could take a virus
+  that a collateral kill had already taken, so one death was paid and tallied
+  twice. Random play almost never synthesises an antibody. A bot sweep found it
+  on 1 of 168 runs, while tracing why the daily card's cleared count drifted
+  under outbreak (#60). `test/hybrid.test.js` now builds that board, and `fuzz`
+  checks the tally on every settled frame rather than only at game over.
 
 ## Using it
 

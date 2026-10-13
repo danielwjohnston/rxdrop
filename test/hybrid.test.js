@@ -17,6 +17,7 @@ import {
   HYBRID_DECAY,
   PILL,
   RESISTANCE_MAX,
+  TOLERANCE_AT,
   VIRUS,
 } from '../src/constants.js';
 import { Game } from '../src/game.js';
@@ -182,6 +183,35 @@ describe('curing a hybrid', () => {
     assert.equal(game.board.get(3, floor), null, 'the strain is gone');
     assert.equal(game.board.get(4, floor - 1), null, 'and the ring around it with it');
     assert.equal(game.virusesClearedThisLevel, 2, 'both count toward the level');
+  });
+
+  it('counts a collateral kill inside the ring once, not twice', () => {
+    // A tolerant virus beside the run of its collateral colour dies to that,
+    // and it also sits inside the ring the antibody takes. It used to go in
+    // twice, which paid it twice and pushed the cleared tally past the number
+    // of viruses that died. Bot play found it on 1 of 168 runs, while tracing
+    // why a daily's cleared count drifted (#60).
+    const game = bareGame();
+    const floor = game.board.height - 1;
+    game.board.set(3, floor, strain());
+    deliverRight(game, COLORS.YELLOW);
+    deliverAbove(game, COLORS.BLUE);
+    const bystander = cell(COLORS.BLUE, VIRUS, null);
+    bystander.resistance = TOLERANCE_AT;
+    game.board.set(4, floor - 1, bystander);
+    game.startingViruses = 2;
+
+    game.beginResolution();
+    assert.equal(game.cured[0]?.antibody, true);
+    assert.ok(
+      game.outcome.collateral.some(({ x, y }) => x === 4 && y === floor - 1),
+      'the bystander dies to the yellow run as a collateral kill',
+    );
+    const keys = game.clearingCells.map(({ x, y }) => `${x},${y}`);
+    assert.equal(new Set(keys).size, keys.length, 'no cell is cleared twice');
+    settle(game);
+    assert.equal(game.board.get(4, floor - 1), null);
+    assert.equal(game.virusesClearedThisLevel, 2, 'two viruses died, so two are counted');
   });
 
   it('synthesises an antibody across a cascade, not just a single clear', () => {

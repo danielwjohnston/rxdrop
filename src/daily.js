@@ -1,4 +1,4 @@
-import { MAX_LEVEL } from './constants.js';
+import { MAX_LEVEL, SPEEDS } from './constants.js';
 import { MODIFIER_IDS, describeModifiers, normaliseModifiers } from './modifiers.js';
 
 /**
@@ -64,6 +64,33 @@ export function dailySetup(key = dailyKey()) {
 /** True when a stored daily result belongs to the day being played. */
 export function isToday(result, key = dailyKey()) {
   return Boolean(result) && result.key === key;
+}
+
+/**
+ * What a finished daily run records. The cleared count is out of every virus
+ * the board held, bred ones included, so an outbreak never makes it read as
+ * fewer cures than the player made.
+ */
+export function dailyResult(game, key, won) {
+  return {
+    key,
+    level: game.level,
+    speed: SPEEDS[game.speedName].name,
+    score: game.score,
+    cleared: game.virusesClearedThisLevel,
+    total: game.virusesThisLevel,
+    won,
+    resistance: Boolean(game.resistance),
+    modifiers: [...game.modifiers],
+  };
+}
+
+/**
+ * The result a day keeps: the best attempt, not the latest. A tie keeps the
+ * earlier one.
+ */
+export function keptResult(previous, result) {
+  return isToday(previous, result.key) && previous.score >= result.score ? previous : result;
 }
 
 /** A short result line to paste somewhere, with no board spoilers in it. */

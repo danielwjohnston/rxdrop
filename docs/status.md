@@ -60,7 +60,7 @@ Two consequences:
 
 The gate consists of:
 
-- **338 unit tests** on Node 20 and Node 22;
+- **339 unit tests** on Node 20 and Node 22;
 - the thirteen-stage UltraGauntlet;
 - **43 browser checks** covering menus, input, daily, versus, offline/mobile
   behavior, and the campaign-complete path.
@@ -93,7 +93,8 @@ change rather than inheriting an older green result.
 > added five tests, taking 313 to 318. Both figures are correct for their
 > dates, so do not "correct" that 318 back to 313. The score tests for #40 then
 > took the suite to 327, and the Phase 0 reference-trace tests to 333. The
-> outbreak guards (11 October) took it to 336.
+> outbreak guards (11 October) took it to 336, DEC-0003's checks (12 October)
+> to 338, and the field guide's precache test (#63) to 339.
 
 ## Current roadmap
 

@@ -29,7 +29,7 @@ export const TRACE_DIR = resolve(ROOT, 'test/fixtures/traces');
 export const ROTATION_FILE = resolve(ROOT, 'test/fixtures/rotation-golden.json');
 const ROTATION_SEED = 20261010;
 const ROTATION_CASES = 600;
-const MAX_FRAMES = 3600; // a minute of play at 16ms
+const MAX_FRAMES = 3600; // 57.6 s of play at 16ms
 const CHECKPOINT_EVERY = 8; // spawns between full snapshots
 
 /**
